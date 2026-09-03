@@ -1,0 +1,15 @@
+{
+  "name": "gestao-rotinas-condominiais",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.7",
+    "express": "^4.21.2"
+  }
+}

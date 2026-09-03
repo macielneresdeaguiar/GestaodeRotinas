@@ -1,0 +1,26 @@
+function ok(c,m){console.log((c?'OK  ':'FAIL')+' '+m); if(!c)process.exitCode=1}
+session=USERS[0];
+const item=estoque[0]; item.qtd=2; item.minimo=10;
+ok(faltaParaMinimo(item)===8,'falta para o mínimo = 8');
+pedidos=[]; ok(itensSemPedido().some(i=>i.id===item.id),'entra na lista de reposição');
+novoPedido(1);
+const linha=pedItens.find(x=>x.itemId===item.id);
+ok(!!linha&&linha.auto===true&&linha.min===8,'carregado automático com piso 8');
+setPedQtd(pedItens.indexOf(linha),3); ok(linha.qtd===8,'pedir menos foi corrigido para o piso');
+setPedQtd(pedItens.indexOf(linha),20); ok(linha.qtd===20,'pode pedir acima do piso');
+pedidos=[{id:'p1',status:'Aberto',solicitante:'x',data:today(),condoId:'c1',itens:[{itemId:item.id,nome:item.nome,qtd:8}],historico:[]}];
+ok(!itensSemPedido().some(i=>i.id===item.id),'item já pedido não reaparece');
+session=USERS[0]; ok(podeDelegar(),'gestor pode delegar');
+session=USERS[2]; ok(!podeDelegar(),'Cleiton não pode delegar');
+session=USERS[0];
+const t=mkTask({titulo:'Teste delegação',condoId:'c1',responsavel:''}); tasks.push(t);
+t.delegadoPara='u3'; t.delegadoPor='Maciel'; t.delegadoEm=nowStamp(); t.delegMsg='msg'; t.delegVista=false;
+ok(delegacoesNovas('u3').length>=1,'delegação nova para o delegado');
+ok(delegacoesNovas('u1').length===0,'não aparece para os demais');
+session=USERS[2]; cienteDelegacoes();
+ok(t.delegVista===true&&delegacoesNovas('u3').length===0,'ciência encerra o aviso');
+session=USERS[0];
+const serie=consumoDiario('agua','c1',10);
+ok(serie.length===10,'série de 10 dias');
+const g=graficoConsumo10('agua','c1');
+ok(g.includes('<svg')&&!g.includes('undefined'),'gráfico dos relatórios íntegro');

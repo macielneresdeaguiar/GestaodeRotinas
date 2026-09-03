@@ -1,0 +1,31 @@
+function ok(c,m){console.log((c?'OK  ':'FAIL')+' '+m); if(!c)process.exitCode=1}
+session=USERS[0];
+const eb=prestadores.filter(p=>p.condoId==='c1');
+console.log('\n--- E-BUSINESS: '+eb.length+' linhas ---');
+const comp=compAtual();
+let nfs=notas.filter(n=>n.condoId==='c1'&&n.competencia===comp);
+nfs.sort((a,b)=>a.dia-b.dia||a.empresa.localeCompare(b.empresa,'pt-BR')||a.servico.localeCompare(b.servico,'pt-BR'));
+console.log('Dia | Empresa         | Serviço                            | Insumo                                     | Book | NF');
+nfs.forEach(n=>{const p=prestOf(n);
+  console.log(String(n.dia).padStart(3)+' | '+n.empresa.padEnd(15).slice(0,15)+' | '+n.servico.padEnd(34).slice(0,34)+' | '+
+    n.insumo.padEnd(42).slice(0,42)+' | '+(p.exigeBook?'SIM ':'n/a ')+' | '+(p.concessionaria?'CONC':(p.exigeNf?'SIM':'n/a')));});
+console.log('');
+ok(eb.length===19,'19 linhas individuais no E-Business (obtido '+eb.length+')');
+ok(nfs.length===19,'19 notas fiscais separadas na competência (obtido '+nfs.length+')');
+const tq=nfs.filter(n=>n.empresa==='Total Quality');
+ok(tq.length===2 && tq.every(n=>prestOf(n).exigeBook),'Total Quality: 2 registros, ambos com Book');
+const mep=nfs.filter(n=>n.empresa==='MEP');
+ok(mep.length===5,'MEP: 5 registros independentes (obtido '+mep.length+')');
+const mepBook=mep.filter(n=>prestOf(n).exigeBook);
+ok(mepBook.length===1 && mepBook[0].servico==='Manutenção predial','MEP: só "Manutenção predial" exige Book');
+const concs=nfs.filter(n=>prestOf(n).concessionaria).map(n=>n.empresa).sort();
+ok(JSON.stringify(concs)===JSON.stringify(['Caesb','Claro','Neoenergia','Tronica']),'4 concessionárias sem validação de NF: '+concs.join(', '));
+ok(nfs.filter(n=>prestOf(n).concessionaria).every(n=>!prestOf(n).exigeNf),'concessionárias com exigeNf=false');
+const dias=nfs.map(n=>n.dia);
+ok(JSON.stringify(dias)===JSON.stringify(dias.slice().sort((a,b)=>a-b)),'ordenado por dia de vencimento');
+ok(dias[0]===5 && dias[dias.length-1]===27,'começa no dia 5 e termina no dia 27');
+const books=nfs.filter(n=>prestOf(n).exigeBook).map(n=>n.empresa+' / '+n.servico);
+console.log('\nExigem Book ('+books.length+'):'); books.forEach(b=>console.log('  - '+b));
+ok(books.length===5,"5 linhas exigem Book (ABL, Criativa, MEP predial, TQ x2)");
+const neo=nfs.filter(n=>n.empresa==='Neoenergia'||n.empresa==='Tronica');
+ok(neo.length===2 && neo.every(n=>n.dia===27),'Neoenergia e Tronica separados, ambos dia 27');
