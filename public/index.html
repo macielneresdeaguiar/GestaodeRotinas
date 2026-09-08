@@ -753,7 +753,9 @@ let CFG={retroativas:false,coordPodeExcluirPrestador:false,
                 {ate:40,preco:17.34},{ate:null,preco:20.46}],
   tarifas:{c1:{agua:12.50,esgoto:1.00,energia:0.92,fixaAgua:29.83,fixaEnergia:25,porFaixa:true},
            c2:{agua:12.50,esgoto:1.00,energia:0.92,fixaAgua:29.83,fixaEnergia:25,porFaixa:true}},
-  notif:{ativo:true,hora:'08:00',resumoDiario:true,desktop:false}};
+  notif:{ativo:true,hora:'08:00',resumoDiario:true,desktop:false},
+  /* Publicidade nos elevadores — dados usados no contrato em PDF */
+  pub:{repNome:'',repDoc:'',repCargo:'Síndico',condoDoc:'',elevadores:{},t1Nome:'',t1Doc:'',t2Nome:'',t2Doc:''}};
 // avança uma data para o futuro quando retroativas estão desligadas
 function ajustaRetro(d,per){
   if(CFG.retroativas||!d||per==='Sob Demanda') return d;
@@ -779,6 +781,7 @@ const SEED_TASKS=[
 ];
 
 let tasks=[], maints=[], notas=[], cessoes=[], apontamentos=[], estoque=[], movEstoque=[], pedidos=[];
+let anuncios=[]; // publicidade nos elevadores (locação de espaços p/ divulgação)
 
 /* ---- Notas Fiscais: prestadores padrão ---- */
 /* Matriz individualizada: 1 linha = 1 nota fiscal separada.
@@ -1141,7 +1144,7 @@ let _saveTimer=null, _booting=true;
 function store(){ try{ return window.localStorage }catch(e){ return null } }
 function dbSnapshot(){
   return {v:DB_VER, savedAt:new Date().toISOString(),
-    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,
+    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,
     auditLog, CFG, creds, notifs, notifState};
 }
 function salvarLocal(){
@@ -1167,7 +1170,7 @@ function load(){
     tasks=d.tasks||[]; notas=d.notas||[]; cessoes=d.cessoes||[];
     apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
     pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
-    prestadores=d.prestadores||[];
+    prestadores=d.prestadores||[]; anuncios=d.anuncios||[];
     if(!prestadores.length) seedPrestadores();
     migrarPrestadoresEB();
     if(d.CFG) CFG=Object.assign(CFG,d.CFG);
@@ -1258,6 +1261,7 @@ let page='dashboard', pageFilter=null;
 
 /* ============ SISTEMA DE ÍCONES (SVG stroke, 24x24) ============ */
 const ICONS={
+  megaphone:'<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 0 1-5.8-1.6"/>',
   cloud:'<path d="M7 18a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.5 1.5A3.5 3.5 0 0 1 17 18Z"/>',
  dashboard:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
  today:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor" stroke="none"/>',
@@ -1349,7 +1353,8 @@ function buildNav(){
     if(P().tipos.includes('Gestor')) items.push(['tarefas-gestor','briefcase','Tarefas do Gestor']);
     items.push(['calendario','calendar','Calendário']);
     items.push(['#','','Financeiro']);
-    items.push(['notas','invoice','Notas Fiscais'],['cessoes','contract','Cessão de Direitos']);
+    items.push(['notas','invoice','Notas Fiscais'],['cessoes','contract','Cessão de Direitos'],
+      ['publicidade','megaphone','Publicidade nos Elevadores']);
     items.push(['#','','Predial']);
     items.push(['leituras','water','Leituras — Água e Energia']);
   }
@@ -1374,14 +1379,14 @@ function render(){
     'tarefas-adm':'Tarefas Administrativas','tarefas-gestor':'Tarefas do Gestor',calendario:'Calendário',rotina:'Minha Rotina',
     hoje:'Tarefas de Hoje — Planejamento Diário',leituras:'Leituras / Água e Energia',notas:'Controle de Notas Fiscais',
     estoque:'Controle de Estoque',pedidos:'Pedidos de Material',relmensal:'Relatório Mensal de Gestão',
-    apontamentos:'Apontamentos de Manutenção',cessoes:'Cessão de Direitos — Ocupação de Unidades',    relatorios:'Relatórios',config:'Configurações'};
+    apontamentos:'Apontamentos de Manutenção',cessoes:'Cessão de Direitos — Ocupação de Unidades',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',relatorios:'Relatórios',config:'Configurações'};
   $('#pageTitle').textContent=titles[page];
   if(page==='tarefas-adm'){tipoLock='Administrativo';return viewTasks()}
   if(page==='tarefas-gestor'){tipoLock='Gestor';return viewTasks()}
   if(page==='calendario'){tipoLock=null;taskView='calendario';return viewTasks()}
   tipoLock=null;
   const R={dashboard:viewDashboard,hoje:viewHoje,leituras:viewLeituras,tarefas:viewTasks,rotina:viewRotina,
-    notas:viewNotas,cessoes:viewCessoes,estoque:viewEstoque,pedidos:viewPedidos,
+    notas:viewNotas,cessoes:viewCessoes,publicidade:viewPublicidade,estoque:viewEstoque,pedidos:viewPedidos,
     apontamentos:viewApontamentos,relatorios:viewReports,relmensal:viewRelatorioMensal,config:viewConfig};
   (R[page]||viewDashboard)();
 }
@@ -1437,8 +1442,10 @@ function viewDashboard(){
     avisos.push(['blue',ic('cart'),`Pedido de material aguardando aprovação`,`${p.itens.length} item(ns) · solicitado por ${p.solicitante} em ${fmt(p.data)}`,null]));
   leituras.filter(l=>leitStatusAuto(l)==='Atrasada'&&P().condos.includes(l.condoId)).slice(0,3).forEach(l=>
     avisos.push(['red',ic('water'),`Leitura atrasada: ${l.tipo==='agua'?'Água':'Energia'}`,`${condoName(l.condoId)} · programada para ${fmt(l.data)}`,null]));
-  visibleCess().filter(c=>cessStatusAuto(c)==='Atrasada').slice(0,4).forEach(c=>
-    avisos.push(['red',ic('contract'),`Cessão atrasada: ${c.unidade}`,`${condoName(c.condoId)} · ${c.nome} · previsto ${fmt(c.vencimento)}`,null]));
+    visibleCess().filter(c=>cessStatusAuto(c)==='Atrasada').slice(0,4).forEach(c=>
+      avisos.push(['red',ic('contract'),`Cessão atrasada: ${c.unidade}`,`${condoName(c.condoId)} · ${c.nome} · previsto ${fmt(c.vencimento)}`,null]));
+    anuncios.filter(a=>a.status==='Ativo'&&a.fim&&diffDays(a.fim,today())>=0&&diffDays(a.fim,today())<=7).slice(0,3).forEach(a=>
+      avisos.push(['amber',ic('megaphone'),`Contrato de publicidade a vencer: ${a.empresa}`,`${condoName(a.condoId)} · ${a.elevador} · termina em ${fmt(a.fim)}`,null]));
   m.hoje.filter(t=>t.prioridade==='Alta').slice(0,4).forEach(t=>
     avisos.push(['blue',ic('clock'),`Prioridade alta hoje: ${t.titulo}`,`${condoName(t.condoId)} · ${t.responsavel||'sem responsável'}`,t.id]));
 
@@ -3188,6 +3195,268 @@ function delCess(id){
   cessoes=cessoes.filter(x=>x.id!==id); closeModal(); render(); toast('Cessão excluída.');
 }
 
+/* ============ PUBLICIDADE NOS ELEVADORES (locação de espaços p/ divulgação) ============ */
+function pubCfg(){ CFG.pub=CFG.pub||{}; CFG.pub.elevadores=CFG.pub.elevadores||{}; return CFG.pub; }
+function pubElevs(cid){ const p=pubCfg(); if(!Array.isArray(p.elevadores[cid])||!p.elevadores[cid].length) p.elevadores[cid]=['Elevador 1','Elevador 2']; return p.elevadores[cid]; }
+const PUB_STATUS=['Interessado','Ativo','Encerrado'];
+let pubBusca='', pubFStatus='';
+function visPub(){ return anuncios.filter(a=>P().condos.includes(a.condoId)); }
+function pubDataExtenso(iso){
+  const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const d=iso?parse(iso):new Date();
+  return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+function viewPublicidade(){
+  let list=visPub();
+  if(pubFStatus) list=list.filter(a=>a.status===pubFStatus);
+  if(pubBusca) list=list.filter(a=>((a.empresa||'')+(a.doc||'')+(a.contato||'')+(a.elevador||'')).toLowerCase().includes(pubBusca.toLowerCase()));
+  list.sort((a,b)=>(b.criadoEm||'').localeCompare(a.criadoEm||''));
+  const all=visPub(), cnt=s=>all.filter(a=>a.status===s).length;
+  const recMes=all.filter(a=>a.status==='Ativo').reduce((s,a)=>s+(Number(a.valorMensal)||0),0);
+  $('#content').innerHTML=`
+    <div class="grid metrics" style="margin-bottom:14px">
+      <div class="card metric" onclick="pubFStatus='';render()"><div class="lbl">Cadastros</div><div class="val">${all.length}</div><div class="sub">empresas / interessados</div></div>
+      <div class="card metric amber" onclick="pubFStatus='Interessado';render()"><div class="lbl">Interessados</div><div class="val">${cnt('Interessado')}</div><div class="sub">aguardando contrato</div></div>
+      <div class="card metric green" onclick="pubFStatus='Ativo';render()"><div class="lbl">Contratos Ativos</div><div class="val">${cnt('Ativo')}</div><div class="sub">${brl(recMes)}/mês</div></div>
+      <div class="card metric" onclick="pubFStatus='Encerrado';render()"><div class="lbl">Encerrados</div><div class="val">${cnt('Encerrado')}</div></div>
+    </div>
+    <div class="toolbar no-print">
+      <input placeholder="Empresa, CNPJ/CPF, contato..." value="${esc(pubBusca)}" oninput="pubBusca=this.value;render()" style="min-width:210px">
+      <select onchange="pubFStatus=this.value;render()">${opt(['',...PUB_STATUS],pubFStatus,'Status')}</select>
+      <div class="spacer"></div>
+      <button class="btn ghost" onclick="pubConfig()">${ic('settings')} Dados do Contrato</button>
+      ${P().create?`<button class="btn" onclick="editPub()">+ Novo Interessado</button>`:''}
+    </div>
+    ${list.length?`<div class="tablewrap"><table><thead><tr>
+      <th>Empresa / Interessado</th><th>CNPJ/CPF</th><th>Contato</th><th>Condomínio</th><th>Elevador</th>
+      <th>Período</th><th>Valor/mês</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+      ${list.map(a=>`<tr>
+        <td class="t-title">${esc(a.empresa)}<div class="t-sub">${esc(a.email||'')}</div></td>
+        <td>${esc(a.doc||'—')}</td>
+        <td>${esc(a.contato||'—')}<div class="t-sub">${esc(a.telefone||'')}</div></td>
+        <td>${badgeCondo(a.condoId)}</td>
+        <td><span class="badge b-tag">${esc(a.elevador)}</span></td>
+        <td>${a.inicio?fmt(a.inicio):'—'} → ${a.fim?fmt(a.fim):'—'}</td>
+        <td>${a.valorMensal!=null&&a.valorMensal!==''?brl(Number(a.valorMensal)):'—'}</td>
+        <td><span class="badge ${a.status==='Ativo'?'b-conc':a.status==='Encerrado'?'b-pend':'b-and'}">${a.status}</span></td>
+        <td><div class="rowact no-print">
+          <button class="btn sm" onclick="gerarContratoPub('${a.id}')">${ic('contract')} Contrato PDF</button>
+          ${P().edit?`<button class="btn ghost sm" onclick="editPub('${a.id}')">Editar</button>`:''}
+          ${canDelete(a)?`<button class="btn danger sm" onclick="delPub('${a.id}')">Excluir</button>`:''}
+        </div></td></tr>`).join('')}</tbody></table></div>`
+    :'<div class="card empty">'+ic('megaphone','ico-lg')+'<div>Nenhum espaço de publicidade cadastrado ainda.</div><div class="t-sub">Use "+ Novo Interessado" para registrar empresas que querem divulgar nas portas dos elevadores.</div></div>'}
+    <div class="legend"><span><b>Como funciona:</b> cadastre o interessado e o elevador; em "Contrato PDF" o sistema gera o instrumento de cessão pronto para assinatura do CEDENTE, do CESSIONÁRIO e de duas testemunhas.</span></div>`;
+}
+function editPub(id){
+  if(!(id?P().edit:P().create)) return toast('Sem permissão.');
+  const a=id?anuncios.find(x=>x.id===id):null;
+  const cid0=a?a.condoId:(P().condos[0]||'c1');
+  $('#modalTitle').textContent=a?'Editar Cadastro de Publicidade':'Novo Interessado em Publicidade';
+  $('#modalBody').innerHTML=`
+    <div class="f2">
+      <div class="field"><label>Condomínio</label><select id="pbCondo" onchange="pubReloadElev()">${CONDOS.filter(x=>P().condos.includes(x.id)).map(x=>`<option value="${x.id}" ${cid0===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
+      <div class="field"><label>Elevador (espaço)</label><select id="pbElev">${pubElevs(cid0).map(e=>`<option ${a?.elevador===e?'selected':''}>${e}</option>`).join('')}</select></div>
+      <div class="field"><label>Empresa / Razão Social *</label><input id="pbEmp" value="${esc(a?.empresa||'')}" placeholder="ex.: Agência XYZ Ltda"></div>
+      <div class="field"><label>CNPJ / CPF</label><input id="pbDoc" value="${esc(a?.doc||'')}" placeholder="00.000.000/0000-00"></div>
+      <div class="field"><label>Pessoa de contato</label><input id="pbCont" value="${esc(a?.contato||'')}"></div>
+      <div class="field"><label>Telefone / WhatsApp</label><input id="pbTel" value="${esc(a?.telefone||'')}" placeholder="(61) 90000-0000"></div>
+      <div class="field"><label>E-mail</label><input id="pbMail" value="${esc(a?.email||'')}"></div>
+      <div class="field"><label>Status</label><select id="pbStatus">${PUB_STATUS.map(s=>`<option ${a?.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="field"><label>Início do contrato</label><input type="date" id="pbIni" value="${a?.inicio||''}"></div>
+      <div class="field"><label>Fim do contrato</label><input type="date" id="pbFim" value="${a?.fim||''}"></div>
+      <div class="field"><label>Valor mensal (R$)</label><input type="number" step="0.01" min="0" id="pbVal" value="${a?.valorMensal??''}"></div>
+    </div>
+    <div class="field"><label>Observações</label><textarea id="pbObs" rows="2" style="width:100%">${esc(a?.obs||'')}</textarea></div>`;
+  $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="savePub('${id||''}')">Salvar</button>`;
+  $('#modal').classList.add('open');
+}
+function pubReloadElev(){
+  const c=$('#pbCondo').value, cur=$('#pbElev').value;
+  $('#pbElev').innerHTML=pubElevs(c).map(e=>`<option ${e===cur?'selected':''}>${e}</option>`).join('');
+}
+function savePub(id){
+  const o={condoId:$('#pbCondo').value,elevador:$('#pbElev').value,empresa:$('#pbEmp').value.trim(),
+    doc:$('#pbDoc').value.trim(),contato:$('#pbCont').value.trim(),telefone:$('#pbTel').value.trim(),
+    email:$('#pbMail').value.trim(),status:$('#pbStatus').value,inicio:$('#pbIni').value||null,
+    fim:$('#pbFim').value||null,valorMensal:$('#pbVal').value===''?null:Number($('#pbVal').value),
+    obs:$('#pbObs').value.trim()};
+  if(!o.empresa) return toast('Informe a empresa / nome do interessado.');
+  if(!o.elevador) return toast('Informe o elevador.');
+  if(id){
+    const a=anuncios.find(x=>x.id===id); Object.assign(a,o); a.atualizadoEm=nowStamp();
+    audit('Cadastro de publicidade editado',o.empresa,'Elevador '+o.elevador,o.condoId,'');
+    toast('Cadastro atualizado.');
+  }else{
+    anuncios.push(Object.assign({id:uid('pb'),criadoEm:nowStamp(),criadoPor:session.nome,contratos:[]},o));
+    audit('Interessado em publicidade cadastrado',o.empresa,'Elevador '+o.elevador,o.condoId,'');
+    toast('Interessado cadastrado. Gere o contrato em "Contrato PDF".');
+  }
+  closeModal(); render();
+}
+function delPub(id){
+  const a=anuncios.find(x=>x.id===id); if(!a)return;
+  if(!canDelete(a)) return toast('Sem permissão: você só pode excluir registros criados por você.');
+  const motivo=prompt('Motivo da exclusão (registrado na auditoria):','')||'—';
+  if(!confirm(`Excluir o cadastro de ${a.empresa}?`))return;
+  audit('Exclusão de cadastro de publicidade',a.empresa,'Elevador '+a.elevador,a.condoId,motivo);
+  anuncios=anuncios.filter(x=>x.id!==id); render(); toast('Cadastro excluído.');
+}
+function pubConfig(){
+  const p=pubCfg();
+  $('#modalTitle').textContent='Dados do Contrato de Publicidade';
+  $('#modalBody').innerHTML=`
+    <div class="t-sub" style="margin-bottom:10px">Esses dados aparecem no PDF como representante do condomínio (CEDENTE). Os elevadores viram opções no cadastro.</div>
+    <div class="f2">
+      <div class="field"><label>Representante (CEDENTE)</label><input id="pcRep" value="${esc(p.repNome||'')}" placeholder="nome do síndico / administrador"></div>
+      <div class="field"><label>Cargo</label><input id="pcCargo" value="${esc(p.repCargo||'Síndico')}"></div>
+      <div class="field"><label>CPF do representante</label><input id="pcRepDoc" value="${esc(p.repDoc||'')}"></div>
+      <div class="field"><label>CNPJ do condomínio</label><input id="pcCondoDoc" value="${esc(p.condoDoc||'')}"></div>
+    </div>
+    ${CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>`<div class="field"><label>Elevadores — ${c.nome} (um por linha)</label>
+      <textarea id="pcElev_${c.id}" rows="3" style="width:100%">${esc((p.elevadores[c.id]||[]).join('\n'))}</textarea></div>`).join('')}
+    <div class="t-sub" style="margin-top:6px">Testemunhas padrão do contrato (opcional — se ficar em branco, sai só a linha para assinar):</div>
+    <div class="f2">
+      <div class="field"><label>Testemunha 1</label><input id="pcT1" value="${esc(p.t1Nome||'')}"></div>
+      <div class="field"><label>CPF</label><input id="pcT1d" value="${esc(p.t1Doc||'')}"></div>
+      <div class="field"><label>Testemunha 2</label><input id="pcT2" value="${esc(p.t2Nome||'')}"></div>
+      <div class="field"><label>CPF</label><input id="pcT2d" value="${esc(p.t2Doc||'')}"></div>
+    </div>`;
+  $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="savePubConfig()">Salvar</button>`;
+  $('#modal').classList.add('open');
+}
+function savePubConfig(){
+  const p=pubCfg();
+  p.repNome=$('#pcRep').value.trim(); p.repCargo=$('#pcCargo').value.trim()||'Síndico';
+  p.repDoc=$('#pcRepDoc').value.trim(); p.condoDoc=$('#pcCondoDoc').value.trim();
+  p.t1Nome=$('#pcT1').value.trim(); p.t1Doc=$('#pcT1d').value.trim();
+  p.t2Nome=$('#pcT2').value.trim(); p.t2Doc=$('#pcT2d').value.trim();
+  CONDOS.filter(c=>P().condos.includes(c.id)).forEach(c=>{
+    const ls=($('#pcElev_'+c.id).value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    p.elevadores[c.id]=ls.length?ls:['Elevador 1','Elevador 2'];
+  });
+  save(); closeModal(); render(); toast('Dados do contrato salvos.');
+}
+/* ---- texto do contrato (puro, testável) ---- */
+function pubContratoLinhas(a){
+  const p=pubCfg(), condo=condoName(a.condoId);
+  const rep=p.repNome||'____________________________';
+  const L=[], T=(t,o)=>L.push(Object.assign({t:t},o||{}));
+  T('INSTRUMENTO PARTICULAR DE CONTRATO DE CESSÃO DE ESPAÇO PARA DIVULGAÇÃO PUBLICITÁRIA EM PORTAS DE ELEVADOR',{b:1,c:1});
+  T('');
+  T(`Pelo presente instrumento particular, de um lado, como CEDENTE: ${condo}, inscrito no CNPJ sob nº ${p.condoDoc||'____________________________'}, neste ato representado por seu ${p.repCargo||'Síndico'}, ${rep}, portador do CPF nº ${p.repDoc||'____________________________'}, doravante denominado simplesmente CEDENTE; e, de outro lado, como CESSIONÁRIO: ${a.empresa}, inscrito no CNPJ/CPF sob nº ${a.doc||'____________________________'}, representado por ${a.contato||'____________________________'}, telefone ${a.telefone||'____________'}, e-mail ${a.email||'____________'}, doravante denominado simplesmente CESSIONÁRIO; têm entre si, justo e contratado, o seguinte:`);
+  T('');
+  T('CLÁUSULA 1ª — DO OBJETO',{b:1});
+  T(`O presente contrato tem por objeto a cessão, pelo CEDENTE ao CESSIONÁRIO, do espaço destinado à divulgação publicitária nas portas do ${a.elevador} do condomínio CEDENTE, para exposição de material publicitário de responsabilidade do CESSIONÁRIO.`);
+  T('CLÁUSULA 2ª — DO PRAZO',{b:1});
+  T(`O prazo de vigência deste contrato é de ${a.inicio?fmt(a.inicio):'____/____/______'} a ${a.fim?fmt(a.fim):'____/____/______'}, podendo ser renovado por escrito, mediante acordo entre as partes.`);
+  T('CLÁUSULA 3ª — DO VALOR E DO PAGAMENTO',{b:1});
+  T(a.valorMensal!=null&&a.valorMensal!==''?
+    `Pela cessão ora ajustada, o CESSIONÁRIO pagará ao CEDENTE o valor mensal de ${brl(a.valorMensal)}, a ser pago até o dia 5 (cinco) de cada mês, mediante transferência ou PIX em conta indicada pelo CEDENTE.`:
+    'Pela cessão ora ajustada, o CESSIONÁRIO pagará ao CEDENTE o valor mensal de R$ ____________ (____________________________), a ser pago até o dia 5 (cinco) de cada mês, mediante transferência ou PIX em conta indicada pelo CEDENTE.');
+  T('CLÁUSULA 4ª — DO MATERIAL PUBLICITÁRIO',{b:1});
+  T('O material publicitário será produzido e instalado às expensas do CESSIONÁRIO, devendo obedecer à legislação vigente, não ofender a moral e os bons costumes, não causar danos às portas do elevador e não prejudicar o seu funcionamento ou a segurança dos usuários.');
+  T('CLÁUSULA 5ª — DA VEDAÇÃO',{b:1});
+  T('É vedado ao CESSIONÁRIO ceder ou sublocar o espaço ora contratado, no todo ou em parte, a terceiros, sem autorização prévia e por escrito do CEDENTE.');
+  T('CLÁUSULA 6ª — DA RESCISÃO',{b:1});
+  T('O descumprimento de qualquer cláusula deste contrato facultará à parte prejudicada considerá-lo rescindido, independentemente de notificação, sem prejuízo de perdas e danos; qualquer das partes poderá ainda denunciá-lo mediante aviso por escrito, com 30 (trinta) dias de antecedência.');
+  T('CLÁUSULA 7ª — DO FORO',{b:1});
+  T('As partes elegem o foro de Brasília — DF para dirimir quaisquer controvérsias oriundas deste contrato, com renúncia a qualquer outro, por mais privilegiado que seja.');
+  T('');
+  T('E, por estarem assim justos e contratados, firmam o presente instrumento em 02 (duas) vias de igual teor e forma, na presença de 02 (duas) testemunhas.');
+  T('');
+  T(`Brasília/DF, ${pubDataExtenso()}.`);
+  T(''); T('');
+  T('_________________________________________________',{c:1});
+  T(`CEDENTE: ${condo}`,{c:1,b:1});
+  T(`${p.repCargo||'Síndico'}: ${rep} — CPF ${p.repDoc||'____________'}`,{c:1});
+  T(''); T('');
+  T('_________________________________________________',{c:1});
+  T(`CESSIONÁRIO: ${a.empresa}`,{c:1,b:1});
+  T(`${a.contato||'Representante'} — CNPJ/CPF ${a.doc||'____________'}`,{c:1});
+  T(''); T('');
+  T('TESTEMUNHAS:',{b:1});
+  T('');
+  T('_________________________________________________');
+  T(`Nome: ${p.t1Nome||'____________________________'} — CPF: ${p.t1Doc||'____________'}`);
+  T('');
+  T('_________________________________________________');
+  T(`Nome: ${p.t2Nome||'____________________________'} — CPF: ${p.t2Doc||'____________'}`);
+  return L;
+}
+/* ---- gerador de PDF puro (sem bibliotecas, offline) ---- */
+function pdfWinByte(ch){
+  const c=ch.codePointAt(0);
+  if(c>=0x20&&c<0x7F) return c;
+  if(c>=0xA0&&c<=0xFF) return c;
+  const m={'\u2014':0x97,'\u2013':0x96,'\u2018':0x91,'\u2019':0x92,'\u201C':0x93,'\u201D':0x94,'\u2022':0x95};
+  return m[ch]||0x2D;
+}
+function pdfMapWin(s){ let o=''; for(const ch of String(s)) o+=String.fromCharCode(pdfWinByte(ch)); return o; }
+function pdfEsc(s){ return s.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
+function pdfWrap(text,max){
+  const words=String(text).split(/\s+/).filter(Boolean); const out=[]; let cur='';
+  for(const w of words){
+    if((cur?cur+' '+w:w).length>max){ if(cur) out.push(cur); cur=w; }
+    else cur=cur?cur+' '+w:w;
+  }
+  if(cur) out.push(cur);
+  return out.length?out:[''];
+}
+function pdfGerar(linhas, filename){
+  const W=595,H=842,ML=64,MT=64,LH=13.5,FS=10.5,maxCh=88;
+  const perPage=Math.floor((H-MT-56)/LH);
+  const rows=[];
+  linhas.forEach(ln=>{ pdfWrap(ln.t||'',maxCh).forEach(w=>rows.push({t:w,b:ln.b,c:ln.c})); });
+  const nPages=Math.max(1,Math.ceil(rows.length/perPage));
+  const pageObjs=[],contentObjs=[];
+  for(let p=0;p<nPages;p++){ pageObjs.push(5+p*2); contentObjs.push(6+p*2); }
+  const objs=[];
+  objs[0]='1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n';
+  objs[1]='2 0 obj\n<< /Type /Pages /Kids ['+pageObjs.map(n=>n+' 0 R').join(' ')+'] /Count '+nPages+' >>\nendobj\n';
+  objs[2]='3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n';
+  objs[3]='4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj\n';
+  for(let p=0;p<nPages;p++){
+    const slice=rows.slice(p*perPage,(p+1)*perPage);
+    let y=H-MT, s='BT\n';
+    slice.forEach(r=>{
+      s+=(r.b?'/F2 ':'/F1 ')+FS+' Tf 1 0 0 1 ';
+      let x=ML;
+      if(r.c) x=Math.max(ML,(W-r.t.length*FS*0.52)/2);
+      s+=x.toFixed(1)+' '+y.toFixed(1)+' Tm ('+pdfEsc(pdfMapWin(r.t))+') Tj\n';
+      y-=LH;
+    });
+    s+='/F1 8.5 Tf 1 0 0 1 '+ML+' 40 Tm ('+pdfMapWin('Página '+(p+1)+' de '+nPages)+') Tj\nET\n';
+    objs[4+p*2]=pageObjs[p]+' 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents '+contentObjs[p]+' 0 R >>\nendobj\n';
+    objs[5+p*2]=contentObjs[p]+' 0 obj\n<< /Length '+s.length+' >>\nstream\n'+s+'endstream\nendobj\n';
+  }
+  let pdf='%PDF-1.4\n';
+  const offs=[];
+  objs.forEach(o=>{ offs.push(pdf.length); pdf+=o; });
+  const xref=pdf.length;
+  pdf+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n'+offs.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('');
+  pdf+='trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF';
+  const bytes=new Uint8Array(pdf.length);
+  for(let i=0;i<pdf.length;i++) bytes[i]=pdf.charCodeAt(i)&0xFF;
+  if(filename&&typeof document!=='undefined'&&document.createElement){
+    const blob=new Blob([bytes],{type:'application/pdf'});
+    const el=document.createElement('a');
+    el.href=URL.createObjectURL(blob); el.download=filename; el.click();
+  }
+  return bytes;
+}
+function gerarContratoPub(id){
+  const a=anuncios.find(x=>x.id===id); if(!a)return;
+  const linhas=pubContratoLinhas(a);
+  const nome='contrato-publicidade-'+String(a.empresa||'interessado').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')+'.pdf';
+  const bytes=pdfGerar(linhas,nome);
+  a.contratos=a.contratos||[]; a.contratos.push({quando:nowStamp(),por:session?session.nome:'Sistema'});
+  audit('Contrato de publicidade gerado (PDF)',a.empresa,'Elevador '+a.elevador,a.condoId,'');
+  save(); render(); toast('Contrato em PDF gerado: '+nome);
+  return bytes;
+}
+
 /* ============ MODAL DE CONCLUSÃO RÁPIDA (universal) ============ */
 function histHtml(h){
   return `<div style="margin-top:14px"><div class="t-sub">Histórico / auditoria</div><div class="hist">
@@ -4491,13 +4760,14 @@ function buildTabbar(){
 function abrirMaisMenu(){
   const itens=[['tarefas-adm','clipboardCheck','Tarefas Administrativas'],
     ['calendario','calendar','Calendário'],['notas','invoice','Notas Fiscais'],
-    ['cessoes','contract','Cessão de Direitos'],['leituras','water','Leituras — Água e Energia'],
+    ['cessoes','contract','Cessão de Direitos'],['publicidade','megaphone','Publicidade nos Elevadores'],
+    ['leituras','water','Leituras — Água e Energia'],
     ['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material'],
     ['relatorios','chart','Relatórios'],['relmensal','doc','Relatório Mensal'],
     ['config','settings','Configurações']]
     .filter(([k])=>{
       if(k==='tarefas-gestor') return P().tipos.includes('Gestor');
-      if(['notas','cessoes','leituras','calendario','tarefas-adm','relatorios','relmensal'].includes(k)) return P().tipos.length;
+      if(['notas','cessoes','publicidade','leituras','calendario','tarefas-adm','relatorios','relmensal'].includes(k)) return P().tipos.length;
       if(['estoque','pedidos'].includes(k)) return P().estoque;
       return true;
     });
@@ -5419,7 +5689,7 @@ function aplicarSnapshot(d){
   tasks=d.tasks||[]; notas=d.notas||[]; cessoes=d.cessoes||[];
   apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
   pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
-  prestadores=d.prestadores||[];
+  prestadores=d.prestadores||[]; anuncios=d.anuncios||[];
   if(d.CFG) CFG=Object.assign(CFG,d.CFG);
   creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
   if(!prestadores.length) seedPrestadores();
@@ -5509,5 +5779,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a380461138f851b4',t:'MTc4ODg5NDg0MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
