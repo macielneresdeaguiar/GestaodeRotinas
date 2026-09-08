@@ -3220,6 +3220,19 @@ function viewPublicidade(){
       <div class="card metric green" onclick="pubFStatus='Ativo';render()"><div class="lbl">Contratos Ativos</div><div class="val">${cnt('Ativo')}</div><div class="sub">${brl(recMes)}/mês</div></div>
       <div class="card metric" onclick="pubFStatus='Encerrado';render()"><div class="lbl">Encerrados</div><div class="val">${cnt('Encerrado')}</div></div>
     </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="section-title" style="margin-top:0"><h3>${ic('building')} Elevadores cadastrados</h3>
+        <span class="t-sub">o cadastro de interessado usa estas opções</span></div>
+      ${CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>`
+        <div style="margin:10px 0">
+          <b style="color:var(--navy)">${c.nome}</b>
+          <div class="chip-list" style="margin:6px 0">
+            ${pubElevs(c.id).map((e,i)=>`<span class="badge b-tag">${esc(e)}${P().edit?`<span title="Remover elevador" style="margin-left:6px;cursor:pointer;font-weight:800" onclick="delPubElev('${c.id}',${i})">×</span>`:''}</span>`).join('')}
+          </div>
+          ${P().edit?`<div class="rowact"><input id="peNovo_${c.id}" placeholder="ex.: Elevador Social / Elevador de Carga" style="min-width:220px">
+            <button class="btn sm" onclick="addPubElev('${c.id}')">${ic('plus')} Adicionar</button></div>`:''}
+        </div>`).join('')}
+    </div>
     <div class="toolbar no-print">
       <input placeholder="Empresa, CNPJ/CPF, contato..." value="${esc(pubBusca)}" oninput="pubBusca=this.value;render()" style="min-width:210px">
       <select onchange="pubFStatus=this.value;render()">${opt(['',...PUB_STATUS],pubFStatus,'Status')}</select>
@@ -3337,6 +3350,22 @@ function savePubConfig(){
     p.elevadores[c.id]=ls.length?ls:['Elevador 1','Elevador 2'];
   });
   save(); closeModal(); render(); toast('Dados do contrato salvos.');
+}
+/* ---- cadastro rápido de elevadores (visível na tela) ---- */
+function addPubElev(cid){
+  const el=$('#peNovo_'+cid); const nome=(el?el.value:'').trim();
+  if(!nome) return toast('Digite o nome do elevador.');
+  const list=pubElevs(cid);
+  if(list.some(e=>e.toLowerCase()===nome.toLowerCase())) return toast('Este elevador já está cadastrado.');
+  list.push(nome); save(); render(); toast('Elevador "'+nome+'" cadastrado.');
+}
+function delPubElev(cid,idx){
+  const list=pubElevs(cid); const nome=list[idx]; if(nome==null) return;
+  if(list.length<=1) return toast('Mantenha ao menos 1 elevador por condomínio.');
+  const uso=anuncios.filter(a=>a.condoId===cid&&a.elevador===nome).length;
+  if(uso) return toast('Este elevador está em uso por '+uso+' cadastro(s). Edite ou exclua esses cadastros antes.');
+  if(!confirm('Remover o elevador "'+nome+'"?'))return;
+  list.splice(idx,1); save(); render(); toast('Elevador removido.');
 }
 /* ---- texto do contrato (puro, testável) ---- */
 function pubContratoLinhas(a){
@@ -5779,5 +5808,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a380461138f851b4',t:'MTc4ODg5NDg0MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3805e389dfa4c8a',t:'MTc4ODg5NTgyOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
