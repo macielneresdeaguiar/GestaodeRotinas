@@ -1,7 +1,8 @@
 # Gestão de Rotinas Condominiais
 
 App de gestão para os condomínios **E-Business** e **Taguá Life**: tarefas, rotina semanal,
-notas fiscais, leituras de água e energia, estoque, pedidos de material, apontamentos e relatórios.
+notas fiscais, leituras de água e energia, estoque, pedidos de material, apontamentos,
+publicidade nos elevadores (locação de espaços com contrato em PDF) e relatórios.
 
 - Front-end: um único arquivo `public/index.html` (HTML + CSS + JS puro, sem framework).
 - Back-end: Express + **Turso** (SQLite na nuvem) apenas para sincronizar os dados entre aparelhos.
@@ -109,7 +110,8 @@ cat tests/hdr2.js tests/hdr3.js /tmp/a.js tests/tarifa.js > /tmp/run.js && node 
 ```
 
 Suítes em `tests/`: regressão geral, notas fiscais, migrações, leituras de água,
-tarifa da CAESB, projeção de conta, decimais, sincronização e vazamento de ícones.
+tarifa da CAESB, projeção de conta, decimais, sincronização, publicidade/contrato em PDF
+e vazamento de ícones.
 Os testes de navegador (Playwright) são executados sob demanda durante o desenvolvimento.
 
 ## Início da operação

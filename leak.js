@@ -4,7 +4,7 @@ const LEAK=/\+ic\('|\$\{ic\(|\$\{[a-z]/i;
   pickUser(u); session=USERS[i];
   const views=!USERS[i].perms.tipos.length
     ? ['dashboard','apontamentos','estoque','pedidos','config']
-    : ['dashboard','hoje','rotina','tarefas','notas','cessoes','leituras','estoque','pedidos','relatorios','relmensal','config'];
+    : ['dashboard','hoje','rotina','tarefas','notas','cessoes','publicidade','leituras','estoque','pedidos','relatorios','relmensal','config'];
   views.forEach(p=>{
     page=p;
     try{ render(); const h=document.querySelector('#content').innerHTML;
