@@ -717,6 +717,12 @@ const condo=id=>(id==='geral'?CONDO_GERAL:CONDOS.find(c=>c.id===id))||{};
 const soFinanceiro=id=>condo(id).operacao==='Somente Financeiro';
 function condoNoModulo(cid,mod){const m=condo(cid).modulos;return m==='todos'||!m||m.includes(mod)}
 function condosDo(mod){return CONDOS.filter(c=>P().condos.includes(c.id)&&condoNoModulo(c.id,mod))}
+/* Elevadores reais do E-Business (grupo — nome), cadastro de 09/09/2026 */
+const PUB_ELEV_C1=['Térreo — E1','Térreo — E2','Térreo — E3','Térreo — E4','Térreo — Baldeação',
+  'Mezanino — E1','Mezanino — E2','Mezanino — E3','Mezanino — E4','Mezanino — Baldeação',
+  '1º Subsolo — E4','1º Subsolo — Baldeação',
+  'Interno — E1','Interno — E2','Interno — E3','Interno — E4','Interno — Baldeação'];
+function pubSplit(e){ const i=String(e).indexOf(' — '); return i<0?['',String(e)]:[String(e).slice(0,i),String(e).slice(i+3)]; }
 /* Escopo financeiro: o que o regime "Somente Financeiro" permite */
 const FIN_KEYS=['nota fiscal','notas fiscais','nf','cobran','inadimpl','prestador','financeir','faturamento',
   'prestação de contas','fluxo de caixa','pagamento','conferência','conferencia','contabilidade','custas','cessõ','cessao','cessões'];
@@ -1247,7 +1253,7 @@ function toggleSidebar(){
   else document.body.classList.toggle('collapsed');
 }
 function buildCondoFilter(){
-  const meus=CONDOS.filter(c=>P().condos.includes(c.id));
+  const meus=condosDo('tarefas');
   const box=$('#condoFilter');
   if(meus.length<2||!P().tipos.length){condoFilter=meus.length?meus[0].id:'all';
     box.innerHTML=''; if(box.classList)box.classList.add('hidden'); return}
@@ -1466,7 +1472,7 @@ function viewDashboard(){
 
   // resumo por condomínio
   html+=`<div class="section-title"><h3>${ic('building')} Resumo por Condomínio</h3></div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">`;
-  CONDOS.filter(c=>P().condos.includes(c.id)).forEach(c=>{
+  condosDo('tarefas').forEach(c=>{
     const l=ts.filter(t=>t.condoId===c.id);
     const cc=l.filter(t=>t.status==='Concluída').length, at=l.filter(t=>t.status==='Atrasada').length;
     const pc=l.length?Math.round(cc/l.length*100):0;
@@ -1514,7 +1520,7 @@ function renderDrill(){
     <div class="toolbar">
       <select onchange="drillCondo=this.value;renderDrill()">
         <option value="all">Todos os condomínios</option>
-        ${CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>`<option value="${c.id}" ${drillCondo===c.id?'selected':''}>${c.nome}</option>`).join('')}
+        ${condosDo('tarefas').map(c=>`<option value="${c.id}" ${drillCondo===c.id?'selected':''}>${c.nome}</option>`).join('')}
       </select>
       <select onchange="drillResp=this.value;renderDrill()">
         <option value="">Todos os responsáveis</option>
@@ -1590,7 +1596,7 @@ function viewConfig(){
       <div class="card">
         <div class="section-title" style="margin-top:0"><h3>${ic('water')}Tarifas de Água e Energia</h3></div>
         <div class="t-sub" style="margin-bottom:10px">Usadas para projetar o valor da conta na tela de Leituras.</div>
-        ${CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>{
+        ${condosDo('leituras').map(c=>{
           const t=(CFG.tarifas&&CFG.tarifas[c.id])||{};
           return `<div style="border:1px solid var(--line-2);border-radius:8px;padding:11px;margin-bottom:9px">
             <div class="t-title" style="margin-bottom:8px">${c.nome}</div>
@@ -1923,7 +1929,7 @@ function editTask(id){
   $('#modalBody').innerHTML=`
     <div class="field"><label>Título</label><input id="fTitulo" value="${esc(t?.titulo||'')}"></div>
     <div class="f2">
-      <div class="field"><label>Condomínio</label><select id="fCondo">${CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>`<option value="${c.id}" ${t?.condoId===c.id?'selected':''}>${c.nome}</option>`).join('')}</select></div>
+      <div class="field"><label>Condomínio</label><select id="fCondo">${condosDo('tarefas').map(c=>`<option value="${c.id}" ${t?.condoId===c.id?'selected':''}>${c.nome}</option>`).join('')}</select></div>
       <div class="field"><label>Tipo</label><select id="fTipo">${tiposDisp.map(x=>`<option ${t?.tipo===x?'selected':''}>${x}</option>`).join('')}</select></div>
       <div class="field"><label>Responsável</label><input id="fResp" list="respList" value="${esc(t?.responsavel||'')}" placeholder="Deixe vazio se não atribuído">
         <datalist id="respList">${USERS.map(u=>`<option>${u.nome}</option>`).join('')}</datalist></div>
@@ -2121,7 +2127,7 @@ function formHoje(id){
     <div class="field"><label>Descrição</label><textarea id="hjDesc" rows="3">${esc(t?.procedimento||'')}</textarea></div>
     <div class="f2">
       <div class="field"><label>Condomínio</label><select id="hjCondo">
-        ${CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>`<option value="${c.id}" ${t?.condoId===c.id?'selected':''}>${c.nome}</option>`).join('')}
+        ${condosDo('tarefas').map(c=>`<option value="${c.id}" ${t?.condoId===c.id?'selected':''}>${c.nome}</option>`).join('')}
         <option value="geral" ${t?.condoId==='geral'?'selected':''}>Geral</option></select></div>
       <div class="field"><label>Responsável</label><input id="hjResp" list="respList" value="${esc(t?.responsavel||session.nome)}">
         <datalist id="respList">${USERS.map(u=>`<option>${u.nome}</option>`).join('')}</datalist></div>
@@ -2261,7 +2267,7 @@ function ensureRotinaSemanal(){
 }
 function viewRotinaSemanal(){
   const wk=weekRange();
-  const condos=CONDOS.filter(c=>P().condos.includes(c.id)&&(condoFilter==='all'||c.id===condoFilter));
+  const condos=condosDo('tarefas').filter(c=>condoFilter==='all'||c.id===condoFilter);
   let cols='';
   for(let dow=0;dow<5;dow++){
     const itens=ROTINA_SEMANAL.filter(r=>r.dow===dow);
@@ -3099,7 +3105,7 @@ function editCess(id){
   $('#modalTitle').textContent=c?'Editar Cessão de Direitos':'Nova Cessão de Direitos';
   $('#modalBody').innerHTML=`
     <div class="f2">
-      <div class="field"><label>Condomínio</label><select id="csCondo">${CONDOS.filter(x=>P().condos.includes(x.id)).map(x=>`<option value="${x.id}" ${c?.condoId===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
+      <div class="field"><label>Condomínio</label><select id="csCondo">${condosDo('cessoes').map(x=>`<option value="${x.id}" ${c?.condoId===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
       <div class="field"><label>Sala / Unidade</label><input id="csUni" value="${esc(c?.unidade||'')}" placeholder="ex.: Sala 208"></div>
       <div class="field"><label>Tipo</label><select id="csTipo">${CESS_TIPOS.map(t=>`<option ${c?.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="field"><label>Status</label><select id="csStatus">${CESS_STATUS.map(t=>`<option ${c?.status===t?'selected':''}>${t}</option>`).join('')}</select></div>
@@ -3196,8 +3202,19 @@ function delCess(id){
 }
 
 /* ============ PUBLICIDADE NOS ELEVADORES (locação de espaços p/ divulgação) ============ */
-function pubCfg(){ CFG.pub=CFG.pub||{}; CFG.pub.elevadores=CFG.pub.elevadores||{}; return CFG.pub; }
-function pubElevs(cid){ const p=pubCfg(); if(!Array.isArray(p.elevadores[cid])||!p.elevadores[cid].length) p.elevadores[cid]=['Elevador 1','Elevador 2']; return p.elevadores[cid]; }
+function pubCfg(){
+  CFG.pub=CFG.pub||{}; CFG.pub.elevadores=CFG.pub.elevadores||{};
+  if(!CFG.pub.migElevReais){
+    // primeira abertura após a atualização: instala os elevadores reais do E-Business
+    if(!Array.isArray(CFG.pub.elevadores.c1)||CFG.pub.elevadores.c1.length<=2) CFG.pub.elevadores.c1=PUB_ELEV_C1.slice();
+    delete CFG.pub.elevadores.c2; // Taguá Life não tem publicidade
+    CFG.pub.migElevReais=true;
+  }
+  return CFG.pub;
+}
+function pubElevs(cid){ const p=pubCfg(); if(!Array.isArray(p.elevadores[cid])||!p.elevadores[cid].length) p.elevadores[cid]=cid==='c1'?PUB_ELEV_C1.slice():['Elevador 1']; return p.elevadores[cid]; }
+function pubGrupos(cid){ const gs=[]; pubElevs(cid).forEach((e,i)=>{ const g=pubSplit(e)[0]; let gr=gs.find(x=>x[0]===g); if(!gr){gr=[g,[]];gs.push(gr);} gr[1].push([e,i]); }); return gs; }
+function pubElevOpts(cid,cur){ return pubGrupos(cid).map(([g,es])=>`<optgroup label="${esc(g||'Elevadores')}">${es.map(([e])=>`<option value="${esc(e)}" ${e===cur?'selected':''}>${esc(pubSplit(e)[1])}</option>`).join('')}</optgroup>`).join(''); }
 const PUB_STATUS=['Interessado','Ativo','Encerrado'];
 let pubBusca='', pubFStatus='';
 function visPub(){ return anuncios.filter(a=>P().condos.includes(a.condoId)); }
@@ -3223,13 +3240,17 @@ function viewPublicidade(){
     <div class="card" style="margin-bottom:14px">
       <div class="section-title" style="margin-top:0"><h3>${ic('building')} Elevadores cadastrados</h3>
         <span class="t-sub">o cadastro de interessado usa estas opções</span></div>
-      ${CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>`
+      ${condosDo('publicidade').map(c=>`
         <div style="margin:10px 0">
           <b style="color:var(--navy)">${c.nome}</b>
-          <div class="chip-list" style="margin:6px 0">
-            ${pubElevs(c.id).map((e,i)=>`<span class="badge b-tag">${esc(e)}${P().edit?`<span title="Remover elevador" style="margin-left:6px;cursor:pointer;font-weight:800" onclick="delPubElev('${c.id}',${i})">×</span>`:''}</span>`).join('')}
-          </div>
-          ${P().edit?`<div class="rowact"><input id="peNovo_${c.id}" placeholder="ex.: Elevador Social / Elevador de Carga" style="min-width:220px">
+          ${pubGrupos(c.id).map(([g,es])=>`
+            <div style="margin:6px 0">
+              <div class="t-sub" style="font-weight:700">${esc(g||'Elevadores')}</div>
+              <div class="chip-list" style="margin:4px 0">
+                ${es.map(([e,i])=>`<span class="badge b-tag">${esc(pubSplit(e)[1])}${P().edit?`<span title="Remover elevador" style="margin-left:6px;cursor:pointer;font-weight:800" onclick="delPubElev('${c.id}',${i})">×</span>`:''}</span>`).join('')}
+              </div>
+            </div>`).join('')}
+          ${P().edit?`<div class="rowact"><input id="peNovo_${c.id}" placeholder="ex.: Térreo — E5 (andar — nome)" style="min-width:240px">
             <button class="btn sm" onclick="addPubElev('${c.id}')">${ic('plus')} Adicionar</button></div>`:''}
         </div>`).join('')}
     </div>
@@ -3267,13 +3288,15 @@ function editPub(id){
   $('#modalTitle').textContent=a?'Editar Cadastro de Publicidade':'Novo Interessado em Publicidade';
   $('#modalBody').innerHTML=`
     <div class="f2">
-      <div class="field"><label>Condomínio</label><select id="pbCondo" onchange="pubReloadElev()">${CONDOS.filter(x=>P().condos.includes(x.id)).map(x=>`<option value="${x.id}" ${cid0===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
-      <div class="field"><label>Elevador (espaço)</label><select id="pbElev">${pubElevs(cid0).map(e=>`<option ${a?.elevador===e?'selected':''}>${e}</option>`).join('')}</select></div>
+      <div class="field"><label>Condomínio</label><select id="pbCondo" onchange="pubReloadElev()">${condosDo('publicidade').map(x=>`<option value="${x.id}" ${cid0===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
+      <div class="field"><label>Elevador (espaço)</label><select id="pbElev">${pubElevOpts(cid0,a?.elevador||'')}</select></div>
       <div class="field"><label>Empresa / Razão Social *</label><input id="pbEmp" value="${esc(a?.empresa||'')}" placeholder="ex.: Agência XYZ Ltda"></div>
       <div class="field"><label>CNPJ / CPF</label><input id="pbDoc" value="${esc(a?.doc||'')}" placeholder="00.000.000/0000-00"></div>
       <div class="field"><label>Pessoa de contato</label><input id="pbCont" value="${esc(a?.contato||'')}"></div>
       <div class="field"><label>Telefone / WhatsApp</label><input id="pbTel" value="${esc(a?.telefone||'')}" placeholder="(61) 90000-0000"></div>
       <div class="field"><label>E-mail</label><input id="pbMail" value="${esc(a?.email||'')}"></div>
+      <div class="field"><label>Endereço da empresa (p/ contrato)</label><input id="pbEnd" value="${esc(a?.endereco||'')}" placeholder="opcional"></div>
+      <div class="field"><label>CPF do representante (p/ contrato)</label><input id="pbCpfRep" value="${esc(a?.cpfRep||'')}" placeholder="opcional"></div>
       <div class="field"><label>Status</label><select id="pbStatus">${PUB_STATUS.map(s=>`<option ${a?.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
       <div class="field"><label>Início do contrato</label><input type="date" id="pbIni" value="${a?.inicio||''}"></div>
       <div class="field"><label>Fim do contrato</label><input type="date" id="pbFim" value="${a?.fim||''}"></div>
@@ -3286,12 +3309,13 @@ function editPub(id){
 }
 function pubReloadElev(){
   const c=$('#pbCondo').value, cur=$('#pbElev').value;
-  $('#pbElev').innerHTML=pubElevs(c).map(e=>`<option ${e===cur?'selected':''}>${e}</option>`).join('');
+  $('#pbElev').innerHTML=pubElevOpts(c,cur);
 }
 function savePub(id){
   const o={condoId:$('#pbCondo').value,elevador:$('#pbElev').value,empresa:$('#pbEmp').value.trim(),
     doc:$('#pbDoc').value.trim(),contato:$('#pbCont').value.trim(),telefone:$('#pbTel').value.trim(),
-    email:$('#pbMail').value.trim(),status:$('#pbStatus').value,inicio:$('#pbIni').value||null,
+    email:$('#pbMail').value.trim(),endereco:$('#pbEnd').value.trim(),cpfRep:$('#pbCpfRep').value.trim(),
+    status:$('#pbStatus').value,inicio:$('#pbIni').value||null,
     fim:$('#pbFim').value||null,valorMensal:$('#pbVal').value===''?null:Number($('#pbVal').value),
     obs:$('#pbObs').value.trim()};
   if(!o.empresa) return toast('Informe a empresa / nome do interessado.');
@@ -3321,13 +3345,15 @@ function pubConfig(){
   $('#modalBody').innerHTML=`
     <div class="t-sub" style="margin-bottom:10px">Esses dados aparecem no PDF como representante do condomínio (CEDENTE). Os elevadores viram opções no cadastro.</div>
     <div class="f2">
+      <div class="field"><label>Nome oficial (CEDENTE)</label><input id="pcNome" value="${esc(p.condoNome||'')}" placeholder="ex.: CONDOMÍNIO COMERCIAL E-BUSINESS ÁGUAS CLARAS"></div>
+      <div class="field"><label>Endereço do condomínio</label><input id="pcEnd" value="${esc(p.condEnd||'')}" placeholder="endereco p/ contrato"></div>
       <div class="field"><label>Representante (CEDENTE)</label><input id="pcRep" value="${esc(p.repNome||'')}" placeholder="nome do síndico / administrador"></div>
       <div class="field"><label>Cargo</label><input id="pcCargo" value="${esc(p.repCargo||'Síndico')}"></div>
       <div class="field"><label>CPF do representante</label><input id="pcRepDoc" value="${esc(p.repDoc||'')}"></div>
       <div class="field"><label>CNPJ do condomínio</label><input id="pcCondoDoc" value="${esc(p.condoDoc||'')}"></div>
     </div>
-    ${CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>`<div class="field"><label>Elevadores — ${c.nome} (um por linha)</label>
-      <textarea id="pcElev_${c.id}" rows="3" style="width:100%">${esc((p.elevadores[c.id]||[]).join('\n'))}</textarea></div>`).join('')}
+    ${condosDo('publicidade').map(c=>`<div class="field"><label>Elevadores — ${c.nome} (um por linha, "andar — nome")</label>
+      <textarea id="pcElev_${c.id}" rows="4" style="width:100%">${esc((p.elevadores[c.id]||[]).join('\n'))}</textarea></div>`).join('')}
     <div class="t-sub" style="margin-top:6px">Testemunhas padrão do contrato (opcional — se ficar em branco, sai só a linha para assinar):</div>
     <div class="f2">
       <div class="field"><label>Testemunha 1</label><input id="pcT1" value="${esc(p.t1Nome||'')}"></div>
@@ -3341,13 +3367,14 @@ function pubConfig(){
 }
 function savePubConfig(){
   const p=pubCfg();
+  p.condoNome=$('#pcNome').value.trim(); p.condEnd=$('#pcEnd').value.trim();
   p.repNome=$('#pcRep').value.trim(); p.repCargo=$('#pcCargo').value.trim()||'Síndico';
   p.repDoc=$('#pcRepDoc').value.trim(); p.condoDoc=$('#pcCondoDoc').value.trim();
   p.t1Nome=$('#pcT1').value.trim(); p.t1Doc=$('#pcT1d').value.trim();
   p.t2Nome=$('#pcT2').value.trim(); p.t2Doc=$('#pcT2d').value.trim();
-  CONDOS.filter(c=>P().condos.includes(c.id)).forEach(c=>{
+  condosDo('publicidade').forEach(c=>{
     const ls=($('#pcElev_'+c.id).value||'').split('\n').map(s=>s.trim()).filter(Boolean);
-    p.elevadores[c.id]=ls.length?ls:['Elevador 1','Elevador 2'];
+    p.elevadores[c.id]=ls.length?ls:PUB_ELEV_C1.slice();
   });
   save(); closeModal(); render(); toast('Dados do contrato salvos.');
 }
@@ -3369,49 +3396,74 @@ function delPubElev(cid,idx){
 }
 /* ---- texto do contrato (puro, testável) ---- */
 function pubContratoLinhas(a){
+  /* Texto espelhado no modelo "Termo de Cessão de Uso de Espaço" (E-Business). */
   const p=pubCfg(), condo=condoName(a.condoId);
+  const nomeCed=p.condoNome||('CONDOMÍNIO COMERCIAL '+String(condo).toUpperCase());
+  const ces=String(a.empresa||'').toUpperCase();
+  const [gElev,nElev]=pubSplit(a.elevador);
   const rep=p.repNome||'____________________________';
   const L=[], T=(t,o)=>L.push(Object.assign({t:t},o||{}));
-  T('INSTRUMENTO PARTICULAR DE CONTRATO DE CESSÃO DE ESPAÇO PARA DIVULGAÇÃO PUBLICITÁRIA EM PORTAS DE ELEVADOR',{b:1,c:1});
+  T('TERMO DE CESSÃO DE USO DE ESPAÇO QUE ENTRE SI CELEBRAM O '+nomeCed+' E '+ces,{b:1,c:1});
   T('');
-  T(`Pelo presente instrumento particular, de um lado, como CEDENTE: ${condo}, inscrito no CNPJ sob nº ${p.condoDoc||'____________________________'}, neste ato representado por seu ${p.repCargo||'Síndico'}, ${rep}, portador do CPF nº ${p.repDoc||'____________________________'}, doravante denominado simplesmente CEDENTE; e, de outro lado, como CESSIONÁRIO: ${a.empresa}, inscrito no CNPJ/CPF sob nº ${a.doc||'____________________________'}, representado por ${a.contato||'____________________________'}, telefone ${a.telefone||'____________'}, e-mail ${a.email||'____________'}, doravante denominado simplesmente CESSIONÁRIO; têm entre si, justo e contratado, o seguinte:`);
+  T(`${nomeCed}, pessoa jurídica de direito privado, inscrito no CNPJ de nº ${p.condoDoc||'____________________________'}, com endereço em ${p.condEnd||'____________________________'}, neste ato representado por seu representante legal, ${rep}, portador do CPF/MF sob o nº ${p.repDoc||'____________________________'}, doravante denominado CEDENTE; e ${ces}, pessoa jurídica de direito privado, inscrita no CNPJ/CPF sob o nº ${a.doc||'____________________________'}, com sede em ${a.endereco||'____________________________'}, neste ato representada por ${a.contato||'____________________________'}, inscrito no CPF/MF sob o nº ${a.cpfRep||'____________________________'}, doravante denominado CESSIONÁRIO, celebram o presente termo de cessão de uso, mediante o disposto nas cláusulas e condições a seguir expostas:`);
   T('');
-  T('CLÁUSULA 1ª — DO OBJETO',{b:1});
-  T(`O presente contrato tem por objeto a cessão, pelo CEDENTE ao CESSIONÁRIO, do espaço destinado à divulgação publicitária nas portas do ${a.elevador} do condomínio CEDENTE, para exposição de material publicitário de responsabilidade do CESSIONÁRIO.`);
-  T('CLÁUSULA 2ª — DO PRAZO',{b:1});
-  T(`O prazo de vigência deste contrato é de ${a.inicio?fmt(a.inicio):'____/____/______'} a ${a.fim?fmt(a.fim):'____/____/______'}, podendo ser renovado por escrito, mediante acordo entre as partes.`);
-  T('CLÁUSULA 3ª — DO VALOR E DO PAGAMENTO',{b:1});
-  T(a.valorMensal!=null&&a.valorMensal!==''?
-    `Pela cessão ora ajustada, o CESSIONÁRIO pagará ao CEDENTE o valor mensal de ${brl(a.valorMensal)}, a ser pago até o dia 5 (cinco) de cada mês, mediante transferência ou PIX em conta indicada pelo CEDENTE.`:
-    'Pela cessão ora ajustada, o CESSIONÁRIO pagará ao CEDENTE o valor mensal de R$ ____________ (____________________________), a ser pago até o dia 5 (cinco) de cada mês, mediante transferência ou PIX em conta indicada pelo CEDENTE.');
-  T('CLÁUSULA 4ª — DO MATERIAL PUBLICITÁRIO',{b:1});
-  T('O material publicitário será produzido e instalado às expensas do CESSIONÁRIO, devendo obedecer à legislação vigente, não ofender a moral e os bons costumes, não causar danos às portas do elevador e não prejudicar o seu funcionamento ou a segurança dos usuários.');
-  T('CLÁUSULA 5ª — DA VEDAÇÃO',{b:1});
-  T('É vedado ao CESSIONÁRIO ceder ou sublocar o espaço ora contratado, no todo ou em parte, a terceiros, sem autorização prévia e por escrito do CEDENTE.');
-  T('CLÁUSULA 6ª — DA RESCISÃO',{b:1});
-  T('O descumprimento de qualquer cláusula deste contrato facultará à parte prejudicada considerá-lo rescindido, independentemente de notificação, sem prejuízo de perdas e danos; qualquer das partes poderá ainda denunciá-lo mediante aviso por escrito, com 30 (trinta) dias de antecedência.');
-  T('CLÁUSULA 7ª — DO FORO',{b:1});
-  T('As partes elegem o foro de Brasília — DF para dirimir quaisquer controvérsias oriundas deste contrato, com renúncia a qualquer outro, por mais privilegiado que seja.');
+  T('CLÁUSULA PRIMEIRA',{b:1});
+  T(`O objeto do presente termo de uso é a cessão de uso pelo CEDENTE ao CESSIONÁRIO de espaço nas portas do elevador identificado por ${nElev}${gElev?`, localizado no ${gElev}`:''}, doravante denominado “espaço cedido”, com a finalidade de instalação de propaganda em adesivo.`);
+  T('PARÁGRAFO ÚNICO: O uso do “espaço cedido” pelo CESSIONÁRIO não terá ônus, ou seja, será a título gratuito, sem prejuízo do reembolso mensal previsto no item 8 da CLÁUSULA QUARTA.');
+  T('CLÁUSULA SEGUNDA',{b:1});
+  T(`O prazo da cessão acordada no presente termo será de ${a.inicio?fmt(a.inicio):'____/____/______'} a ${a.fim?fmt(a.fim):'____/____/______'}, renovável por igual período, por meio de manifestação escrita das partes com dois dias de antecedência, desde que ambas estejam de acordo com a renovação.`);
+  T('PARÁGRAFO ÚNICO: Em caso de inexistência de manifestação por escrito da parte interessada na renovação, ou, ainda, na ausência de interesse de uma das partes, este contrato será dado por rescindido de pleno direito.');
+  T('CLÁUSULA TERCEIRA',{b:1});
+  T('O CESSIONÁRIO não poderá efetuar qualquer tipo de obra ou alteração no espaço cedido, a não ser a instalação do adesivo com a publicidade, sob pena de rescisão do presente contrato e aplicação da multa prevista na CLÁUSULA NONA.');
+  T('CLÁUSULA QUARTA — CABERÁ AO CESSIONÁRIO',{b:1});
+  T('1. Providenciar às suas custas a instalação da publicidade no espaço cedido.');
+  T('2. Responsabilizar-se pelo teor da publicidade, que não poderá conter informações ofensivas ou ilegais.');
+  T('3. Responsabilizar-se pela manutenção da publicidade instalada no espaço cedido, não permitindo a permanência de imagem deteriorada.');
+  T('4. Responsabilizar-se por todos os prejuízos ocasionados ao CEDENTE ou a terceiros em razão da utilização do espaço.');
+  T('5. Caso haja qualquer pedido de dano por terceiros em face do CEDENTE em virtude da presente cessão, o CESSIONÁRIO autoriza sua denunciação à lide, bem como sua responsabilização pelo pagamento da indenização.');
+  T('6. Entregar o espaço cedido, quando da rescisão deste termo, nas mesmas condições em que foi recebido.');
+  T('7. Abster-se de usar qualquer colaborador do CEDENTE com vistas à implementação da presente cessão.');
+  T(`8. Reembolsar, mensalmente, ao CEDENTE o valor de ${a.valorMensal!=null&&a.valorMensal!==''?brl(a.valorMensal):'R$ 200,00 (duzentos reais)'}, referente aos custos de limpeza das portas dos elevadores onde está o espaço cedido.`);
+  T('9. Abster-se de usar o espaço cedido em desconformidade com a atividade contida no objeto deste termo.');
+  T('10. Abster-se de vincular a imagem do CEDENTE à sua, principalmente na divulgação de seus produtos/serviços aos condôminos.');
+  T('11. Em caso de divulgação por meio de propaganda impressa, deixar claro na mesma que os serviços propostos não são vinculados ao CEDENTE.');
+  T('CLÁUSULA QUINTA — CABERÁ AO CEDENTE',{b:1});
+  T('1. Ceder o espaço físico e proporcionar o acesso dos colaboradores do CESSIONÁRIO às dependências do condomínio.');
+  T('2. Proporcionar ao CESSIONÁRIO o uso de água e energia quando necessário à implementação das atividades a serem exercidas no espaço cedido.');
+  T('CLÁUSULA SEXTA',{b:1});
+  T('Este termo poderá ser rescindido a qualquer tempo, por qualquer das partes, mediante aviso prévio de 30 (trinta) dias.');
+  T('CLÁUSULA SÉTIMA — NECESSIDADE DE ALTERAÇÃO ESCRITA',{b:1});
+  T('Qualquer alteração no presente termo poderá ser efetuada desde que acordada, por escrito, entre as partes através de termo aditivo.');
+  T('CLÁUSULA OITAVA — NOTIFICAÇÕES',{b:1});
+  T('Salvo disposição específica constante neste termo, todas as notificações de qualquer forma relacionadas aos termos da presente cessão deverão ser enviadas por escrito, através de correspondência em papel ou eletrônica, desde que seja possível a aferição de seu recebimento pelo destinatário, ou ainda por via notarial, para os representantes e endereços indicados no preâmbulo do presente termo.');
+  T('CLÁUSULA NONA — DAS PENALIDADES',{b:1});
+  T('Em caso de descumprimento de qualquer cláusula deste termo, este contrato será dado por rescindido, bem como a parte que deu causa ao descumprimento pagará à parte inocente o valor de R$ 2.400,00 (dois mil e quatrocentos reais) a título de multa.');
+  T('CLÁUSULA DÉCIMA — DO FORO',{b:1});
+  T('Para dirimir as dúvidas e controvérsias decorrentes deste Termo que não puderem ser resolvidas amigavelmente entre as partes, fica eleito o foro da Circunscrição Judiciária de Brasília - DF, com renúncia de qualquer outro, por mais privilegiado que seja.');
   T('');
-  T('E, por estarem assim justos e contratados, firmam o presente instrumento em 02 (duas) vias de igual teor e forma, na presença de 02 (duas) testemunhas.');
+  T('E, por estarem assim justas e acordadas, as partes firmam o presente Termo de Cessão de Uso em 2 (duas) vias de igual teor e forma, que depois de lido e achado conforme, vai assinado pelas partes convenentes e pelas testemunhas abaixo qualificadas, para que se produzam os efeitos legais.');
   T('');
-  T(`Brasília/DF, ${pubDataExtenso()}.`);
+  T(`Brasília - DF, ${pubDataExtenso()}.`);
   T(''); T('');
   T('_________________________________________________',{c:1});
-  T(`CEDENTE: ${condo}`,{c:1,b:1});
-  T(`${p.repCargo||'Síndico'}: ${rep} — CPF ${p.repDoc||'____________'}`,{c:1});
-  T(''); T('');
-  T('_________________________________________________',{c:1});
-  T(`CESSIONÁRIO: ${a.empresa}`,{c:1,b:1});
+  T('CESSIONÁRIO',{c:1,b:1});
+  T(a.empresa||'',{c:1});
   T(`${a.contato||'Representante'} — CNPJ/CPF ${a.doc||'____________'}`,{c:1});
+  T(''); T('');
+  T('_________________________________________________',{c:1});
+  T('CEDENTE',{c:1,b:1});
+  T(nomeCed,{c:1});
+  T(`${p.repCargo||'Representante legal'}: ${rep} — CPF ${p.repDoc||'____________'}`,{c:1});
   T(''); T('');
   T('TESTEMUNHAS:',{b:1});
   T('');
-  T('_________________________________________________');
-  T(`Nome: ${p.t1Nome||'____________________________'} — CPF: ${p.t1Doc||'____________'}`);
+  T('_________________________');
+  T(`NOME: ${p.t1Nome||''}`);
+  T(`RG/CPF: ${p.t1Doc||''}`);
   T('');
-  T('_________________________________________________');
-  T(`Nome: ${p.t2Nome||'____________________________'} — CPF: ${p.t2Doc||'____________'}`);
+  T('_________________________');
+  T(`NOME: ${p.t2Nome||''}`);
+  T(`RG/CPF: ${p.t2Doc||''}`);
   return L;
 }
 /* ---- gerador de PDF puro (sem bibliotecas, offline) ---- */
@@ -3829,7 +3881,7 @@ function viewLeituras(){
       <span>${leitTab==='energia'?'Leitura (kWh) = Medidor × Fator multiplicador':'Consumo = Leitura atual − Leitura anterior'}</span></div>`;
 }
 function graficoLeituras(){
-  const cids=CONDOS.filter(c=>P().condos.includes(c.id)&&(condoFilter==='all'||c.id===condoFilter));
+  const cids=condosDo('leituras').filter(c=>condoFilter==='all'||c.id===condoFilter);
   return `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(460px,1fr));margin-bottom:6px">
   ${cids.map(c=>{
     const todas=leituras.filter(x=>x.tipo===leitTab&&x.condoId===c.id&&x.status==='Registrada'&&x.consumo!=null)
@@ -3897,7 +3949,7 @@ function formLeitura(id){
   $('#modalBody').innerHTML=`
     <div class="chip-list" style="margin-bottom:12px"><span class="badge b-tag">${tipo==='agua'?'Água (m³)':'Energia (kWh)'}</span></div>
     <div class="f2">
-      <div class="field"><label>Condomínio</label><select id="ltCondo">${CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>`<option value="${c.id}" ${cid===c.id?'selected':''}>${c.nome}</option>`).join('')}</select></div>
+      <div class="field"><label>Condomínio</label><select id="ltCondo">${condosDo('leituras').map(c=>`<option value="${c.id}" ${cid===c.id?'selected':''}>${c.nome}</option>`).join('')}</select></div>
       <div class="field"><label>Data da leitura</label><input type="date" id="ltData" value="${l?l.data:today()}"></div>
       <div class="field"><label>Leitura do medidor${tipo==='agua'?' (5 dígitos + 2 casas, como no relógio)':''}</label>
         <input type="number" step="0.01" id="ltMedidor" value="${l&&l.medidor!=null?l.medidor:''}" oninput="calcLeit()"
@@ -4857,7 +4909,7 @@ function abrirDelegar(taskId){
        </div></div>
      ${t?'':`<div class="f2">
        <div class="field"><label>Condomínio</label>
-         <select id="dgCondo">${CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')}</select></div>
+         <select id="dgCondo">${condosDo('tarefas').map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')}</select></div>
        <div class="field"><label>Prazo</label><input type="date" id="dgVenc" value="${today()}"></div>
        <div class="field"><label>Prioridade</label>
          <select id="dgPrio">${['Alta','Média','Baixa'].map(p=>`<option ${p==='Média'?'selected':''}>${p}</option>`).join('')}</select></div>
@@ -5225,8 +5277,7 @@ function relatorioMensal(){
   const [y,m]=relMes.split('-').map(Number);
   const ini=`${relMes}-01`, fim=`${relMes}-${pad(new Date(y,m,0).getDate())}`;
   const K=metricasGestao(ini,fim);
-  const condos=CONDOS.filter(c=>P().condos.includes(c.id)
-    &&(condoFilter==='all'||c.id===condoFilter));
+  const condos=condosDo('relmensal').filter(c=>condoFilter==='all'||c.id===condoFilter);
   const aps=K.aps.filter(a=>a.data>=ini&&a.data<=fim);
   const abertosFim=K.aps.filter(a=>a.status!=='Resolvido');
   const nfsMes=notas.filter(n=>n.vencimento>=ini&&n.vencimento<=fim&&P().condos.includes(n.condoId));
@@ -5473,7 +5524,7 @@ function viewReports(){
   const mCounts=[['Em dia',ms.filter(m=>maintStatus(m)==='Em dia').length,'#2f9e44'],
                  ['A vencer',ms.filter(m=>maintStatus(m)==='A vencer').length,'#f08c00'],
                  ['Vencida',ms.filter(m=>maintStatus(m)==='Vencida').length,'#e03131']];
-  const perCondo=CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>{
+  const perCondo=condosDo('relatorios').map(c=>{
     const l=ts.filter(t=>t.condoId===c.id); const cc=l.filter(t=>t.status==='Concluída').length;
     return [c.nome,l.length,cc,l.length?Math.round(cc/l.length*100):0];
   });
@@ -5808,5 +5859,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3805e389dfa4c8a',t:'MTc4ODg5NTgyOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a38820fac90097cc',t:'MTc4ODk3NzIwNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
