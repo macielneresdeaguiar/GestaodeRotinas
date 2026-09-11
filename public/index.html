@@ -1232,7 +1232,10 @@ function entrar(u){
   gerarNotificacoes();
   buildNav(); buildCondoFilter(); go(paginaInicial()); buildTabbar();
   setTimeout(()=>{
+    _filaAlerta=[];
+    if(nfCriticas().length) _filaAlerta.push(alertaNF);   // NF entra na fila
     if(alertaCritico()) return;               // manutenção que não pode vencer vem primeiro
+    if(_filaAlerta.length){ _filaAlerta.shift()(); return; }
     if(avisarDelegacoes()) return;            // depois, delegação nova
     if(CFG.notif&&CFG.notif.resumoDiario) abrirResumoDiario();
   },400);
@@ -5684,6 +5687,97 @@ function marcarTodas(){
    Manutenções que não podem vencer (reservatório, extintores, seguro, AVCB...).
    Aparece SEMPRE que o app é aberto enquanto houver pendência — não é dispensável
    por sessão, só pelo botão. É o último aviso antes da multa. */
+const NF_AVISO_LANC = 10;   // dias antes do vencimento para cobrar o lançamento
+const NF_AVISO_VALID = 12;  // a NF precisa estar validada 12 dias antes do vencimento
+function nfValidada(n){
+  const p=prestOf(n);
+  return (!p.exigeBook||n.book) && (!p.exigeNf||n.nf);
+}
+// Notas que exigem alerta de abertura: atrasadas, ou dentro da janela sem lançamento/validação.
+function nfCriticas(){
+  if(!session||!P().tipos.length) return [];
+  const hoje=today(), comp=compAtual(), out=[];
+  notas.forEach(n=>{
+    if(!P().condos.includes(n.condoId)) return;
+    if(nfStatus(n)==='Concluído') return;
+    // competência corrente ou anteriores ainda em aberto
+    if(compKey(n.competencia)>compKey(comp)) return;
+    const venc=compVenc(n.competencia,n.dia);
+    const dias=diffDays(venc,hoje);
+    let motivo=null;
+    if(dias<0) motivo='atraso';
+    else if(!nfValidada(n)&&dias<=NF_AVISO_VALID) motivo='valid';
+    else if(!n.lanc&&dias<=NF_AVISO_LANC) motivo='lanc';
+    if(!motivo) return;
+    out.push(Object.assign({},n,{_venc:venc,_dias:dias,_motivo:motivo,_st:nfStatus(n)}));
+  });
+  out.sort((a,b)=>a._dias-b._dias||a.empresa.localeCompare(b.empresa,'pt-BR'));
+  return out;
+}
+function alertaNF(alvo){
+  const cr=nfCriticas();
+  if(!cr.length) return false;
+  const el=alvo||$('#critico'); if(!el) return false;
+  const atrasadas=cr.filter(n=>n._motivo==='atraso');
+  const valid=cr.filter(n=>n._motivo==='valid');
+  const lanc=cr.filter(n=>n._motivo==='lanc');
+  const cartao=n=>{
+    const atras=n._dias<0, hoje=n._dias===0;
+    const forte=atras?Math.abs(n._dias):n._dias;
+    const legenda=n._motivo==='atraso'?'LANÇAMENTO ATRASADO'
+      :n._motivo==='valid'?'NF não validada no prazo':'Falta lançar';
+    return `<div class="crit-item ${atras?'venc':'prox'}">
+      <div class="crit-dias">
+        <span class="n">${hoje?'HOJE':forte}</span>
+        ${hoje?'':`<span class="u">${forte===1?'dia':'dias'}</span>`}
+        <span class="q">${atras?'em atraso':'p/ vencer'}</span>
+      </div>
+      <div class="crit-txt">
+        <div class="crit-serv">${esc(n.empresa)}</div>
+        <div class="crit-sub">${esc(n.servico)} · ${condoName(n.condoId)} · comp. ${n.competencia} · vence em <b>${fmt(n._venc)}</b></div>
+        <div class="crit-norma">${legenda} · situação atual: ${n._st}</div>
+      </div>
+      <button class="btn ${atras?'danger':''} sm" onclick="fecharCritico();nfIrPara('${n.id}')">Abrir</button>
+    </div>`;};
+  const tit = atrasadas.length
+    ? (atrasadas.length===1?'1 LANÇAMENTO DE NOTA FISCAL ATRASADO':atrasadas.length+' LANÇAMENTOS DE NOTA FISCAL ATRASADOS')
+    : (cr.length===1?'1 nota fiscal no prazo final':cr.length+' notas fiscais no prazo final');
+  const sub = atrasadas.length
+    ? 'O prazo de pagamento já passou. Regularize hoje para evitar multa, juros e corte de serviço.'
+    : 'Valide a nota e faça o lançamento antes do vencimento.';
+  el.innerHTML=`
+    <div class="crit-box" role="alertdialog" aria-labelledby="nfTit">
+      <div class="crit-top venc">
+        <div class="crit-ic">${ic('alert')}</div>
+        <div style="flex:1">
+          <div id="nfTit" class="crit-h1">${tit}</div>
+          <div class="crit-h2">${sub}</div>
+        </div>
+      </div>
+      <div class="crit-lista">
+        ${atrasadas.map(cartao).join('')}
+        ${atrasadas.length&&(valid.length||lanc.length)?`<div class="crit-sep">Ainda no prazo, mas exigem ação imediata</div>`:''}
+        ${valid.map(cartao).join('')}
+        ${lanc.map(cartao).join('')}
+      </div>
+      <div class="crit-rod">
+        <span class="t-sub">A NF deve estar validada ${NF_AVISO_VALID} dias antes do vencimento e lançada ${NF_AVISO_LANC} dias antes.</span>
+        <div class="rowact">
+          <button class="btn ghost" onclick="fecharCritico()">Agora não</button>
+          <button class="btn danger" onclick="fecharCritico();go('notas')">${ic('invoice')}Abrir Notas Fiscais</button>
+        </div>
+      </div>
+    </div>`;
+  el.classList.add('open');
+  document.body.classList.add('crit-open');
+  return true;
+}
+// leva o usuário à competência/condomínio da nota
+function nfIrPara(id){
+  const n=notas.find(x=>x.id===id);
+  if(n){ nfTab=n.condoId; nfComp=n.competencia; nfFStatus=''; nfBusca=''; }
+  go('notas');
+}
 function alertaCritico(forcar){
   const cr=moCriticas();
   if(!cr.length) return false;
@@ -5735,9 +5829,11 @@ function alertaCritico(forcar){
   document.body.classList.add('crit-open');
   return true;
 }
+let _filaAlerta=[];
 function fecharCritico(){
   const el=$('#critico'); if(el) el.classList.remove('open');
   document.body.classList.remove('crit-open');
+  if(_filaAlerta.length){ const f=_filaAlerta.shift(); setTimeout(f,260); }
 }
 function abrirResumoDiario(forcar){
   const hoje=today();
@@ -6614,6 +6710,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a399a17c59a45144',t:'MTc4OTE2MDcyOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a399e66add7764d3',t:'MTc4OTE2MzU1Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
