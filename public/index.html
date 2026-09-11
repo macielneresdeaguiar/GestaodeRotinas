@@ -588,6 +588,106 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
   .card,.tablewrap{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
   .metric::before{display:none}
 }
+
+/* ===== Manutenções obrigatórias: linhas em cartão (substitui a tabela apertada) ===== */
+.molinha{display:flex;align-items:center;gap:14px;padding:11px 12px;border:1px solid var(--line);
+  border-left:3px solid var(--line);border-radius:8px;margin-bottom:8px;background:var(--panel);
+  transition:border-color .12s,box-shadow .12s}
+.molinha:hover{border-color:#cfd8e4;box-shadow:var(--shadow-xs)}
+.molinha.red{border-left-color:var(--red);background:var(--red-soft)}
+.molinha.amber{border-left-color:var(--amber);background:var(--amber-soft)}
+.molinha.green{border-left-color:var(--green)}
+.molinha .mo-main{flex:1;min-width:0}
+.molinha .mo-tit{font-weight:650;color:var(--text);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.molinha .mo-sub{font-size:12px;color:var(--text-3);margin-top:2px}
+.molinha .mo-datas{display:flex;gap:20px;flex:0 0 auto}
+.molinha .mo-datas>div{display:flex;flex-direction:column;line-height:1.35;min-width:74px}
+.molinha .mo-datas b{font-size:13px;color:var(--text)}
+.molinha .mo-datas .t-sub{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px}
+.molinha .mo-fim{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.badge.sm{font-size:10px;padding:1px 6px}
+/* faixa de alerta no topo de uma tela */
+.alertbar{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:9px;
+  border:1px solid var(--line);border-left:3px solid var(--line);background:var(--card)}
+.alertbar.red{border-left-color:var(--red);background:var(--red-soft);border-color:#f0d5da}
+.alertbar.amber{border-left-color:var(--amber);background:var(--amber-soft)}
+.alertbar .fi-ic{color:var(--red);display:grid;place-items:center}
+/* cartão-métrica clicável: destaque do filtro ativo */
+.card.metric{cursor:default}
+.card.metric[onclick]{cursor:pointer}
+.card.metric[onclick]:hover{border-color:#cfd8e4;box-shadow:var(--shadow-xs)}
+.card.metric.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+@media(max-width:820px){
+  .molinha{flex-wrap:wrap;gap:8px}
+  .molinha .mo-datas{gap:16px;width:100%;order:3}
+  .molinha .mo-fim{width:100%;order:4;justify-content:space-between}
+}
+
+/* ===== Tabelas: mais respiro e leitura ===== */
+thead th{position:sticky;top:0;z-index:1;background:var(--panel);backdrop-filter:saturate(1.2)}
+tbody tr:nth-child(even){background:#fbfcfe}
+tbody tr:nth-child(even):hover,tbody tr:hover{background:var(--accent-soft)}
+tbody td{padding-top:11px;padding-bottom:11px}
+.tablewrap{border:1px solid var(--line);border-radius:10px;overflow:auto;background:var(--card)}
+.tablewrap table{min-width:940px}
+/* estado vazio com mais presença */
+.card.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:38px 20px;text-align:center;color:var(--text-2)}
+.card.empty .ico-lg{color:var(--text-3);margin-bottom:10px}
+/* legenda de rodapé das telas */
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;padding:11px 13px;
+  border:1px dashed var(--line);border-radius:9px;background:var(--panel);
+  font-size:12px;color:var(--text-3)}
+.legend b{color:var(--text-2)}
+
+/* ===== Alerta crítico de abertura (manutenções que não podem vencer) ===== */
+.critico{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;
+  padding:20px;background:rgba(9,15,26,.72);backdrop-filter:blur(3px)}
+.critico.open{display:flex;animation:critIn .18s ease-out}
+@keyframes critIn{from{opacity:0}to{opacity:1}}
+.crit-box{width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;
+  background:var(--card);border-radius:14px;overflow:hidden;
+  box-shadow:0 24px 70px rgba(0,0,0,.45);animation:critUp .22s cubic-bezier(.2,.8,.3,1)}
+@keyframes critUp{from{transform:translateY(14px) scale(.98)}to{transform:none}}
+.crit-top{display:flex;gap:16px;align-items:center;padding:22px 24px;
+  background:linear-gradient(135deg,#a8690b,#8a5409);color:#fff}
+.crit-top.venc{background:linear-gradient(135deg,#c2384a,#93202f)}
+.crit-top .crit-ic{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;
+  background:rgba(255,255,255,.18);flex:0 0 auto}
+.crit-top .crit-ic .ico{width:26px;height:26px}
+.crit-h1{font-size:19px;font-weight:750;letter-spacing:-.2px;line-height:1.25}
+.crit-h2{font-size:13px;opacity:.92;margin-top:3px;line-height:1.4}
+.crit-lista{padding:16px 20px;overflow:auto;flex:1}
+.crit-item{display:flex;gap:14px;align-items:center;padding:12px 14px;border-radius:10px;
+  border:1px solid var(--line);border-left:4px solid var(--amber);background:var(--amber-soft);margin-bottom:9px}
+.crit-item.venc{border-left-color:var(--red);background:var(--red-soft)}
+.crit-dias{flex:0 0 84px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:6px 4px;border-radius:9px;background:rgba(255,255,255,.7);line-height:1}
+.crit-dias .n{font-size:26px;font-weight:800;color:var(--amber);letter-spacing:-1px}
+.crit-item.venc .crit-dias .n{color:var(--red)}
+.crit-dias .u{font-size:10px;font-weight:650;color:var(--text-3);text-transform:uppercase;margin-top:2px}
+.crit-dias .q{font-size:9.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.3px;margin-top:4px;text-align:center}
+.crit-txt{flex:1;min-width:0}
+.crit-serv{font-weight:680;color:var(--text);font-size:14.5px;line-height:1.3}
+.crit-sub{font-size:12px;color:var(--text-2);margin-top:3px}
+.crit-norma{font-size:11px;color:var(--text-3);margin-top:2px}
+.crit-sep{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);
+  margin:14px 0 8px;padding-top:12px;border-top:1px solid var(--line)}
+.crit-rod{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;
+  padding:14px 20px;border-top:1px solid var(--line);background:var(--panel)}
+body.crit-open{overflow:hidden}
+@media(max-width:820px){
+  .critico{padding:0}
+  .crit-box{max-width:none;max-height:100vh;height:100vh;border-radius:0}
+  .crit-top{padding:18px}
+  .crit-h1{font-size:17px}
+  .crit-item{flex-wrap:wrap}
+  .crit-dias{flex:0 0 66px}
+  .crit-item>.btn{width:100%}
+  .crit-rod{flex-direction:column-reverse;align-items:stretch}
+  .crit-rod .rowact{display:flex;gap:8px}
+  .crit-rod .rowact .btn{flex:1}
+}
 </style>
 </head>
 <body>
@@ -660,6 +760,7 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 </div>
 
 <!-- MODAL -->
+<div class="critico" id="critico"></div>
 <div class="modal" id="modal"><div class="modal-box">
   <div class="modal-h"><h3 id="modalTitle">Título</h3><button class="iconbtn" onclick="closeModal()" title="Fechar"><svg class="ico" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
   <div class="modal-b" id="modalBody"></div>
@@ -1131,7 +1232,8 @@ function entrar(u){
   gerarNotificacoes();
   buildNav(); buildCondoFilter(); go(paginaInicial()); buildTabbar();
   setTimeout(()=>{
-    if(avisarDelegacoes()) return;            // delegação nova tem prioridade
+    if(alertaCritico()) return;               // manutenção que não pode vencer vem primeiro
+    if(avisarDelegacoes()) return;            // depois, delegação nova
     if(CFG.notif&&CFG.notif.resumoDiario) abrirResumoDiario();
   },400);
 }
@@ -1150,7 +1252,7 @@ let _saveTimer=null, _booting=true;
 function store(){ try{ return window.localStorage }catch(e){ return null } }
 function dbSnapshot(){
   return {v:DB_VER, savedAt:new Date().toISOString(),
-    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,
+    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,
     auditLog, CFG, creds, notifs, notifState};
 }
 function salvarLocal(){
@@ -1176,7 +1278,7 @@ function load(){
     tasks=d.tasks||[]; notas=d.notas||[]; cessoes=d.cessoes||[];
     apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
     pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
-    prestadores=d.prestadores||[]; anuncios=d.anuncios||[];
+    prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
     if(!prestadores.length) seedPrestadores();
     migrarPrestadoresEB();
     if(d.CFG) CFG=Object.assign(CFG,d.CFG);
@@ -1267,7 +1369,7 @@ function toggleSidebar(){
 /* Módulo que cada página usa para decidir quais condomínios oferecer.
    Sem isso, páginas financeiras herdavam a lista de 'tarefas' e o Taguá Life
    (regime Somente Financeiro) sumia do seletor do topo. */
-const MODULO_DA_PAGINA={notas:'notas',cessoes:'cessoes',publicidade:'publicidade',
+const MODULO_DA_PAGINA={notas:'notas',cessoes:'cessoes',publicidade:'publicidade',manutobrig:'manutobrig',
   leituras:'leituras',estoque:'estoque',pedidos:'pedidos',apontamentos:'apontamentos'};
 function moduloDaPagina(){ return MODULO_DA_PAGINA[page]||'tarefas' }
 function buildCondoFilter(){
@@ -1285,6 +1387,8 @@ let page='dashboard', pageFilter=null;
 
 /* ============ SISTEMA DE ÍCONES (SVG stroke, 24x24) ============ */
 const ICONS={
+  shieldCheck:'<path d="M12 3l7.5 3v5.5c0 4.3-3 8.1-7.5 9.5-4.5-1.4-7.5-5.2-7.5-9.5V6z"/><path d="m9 12 2.2 2.2L15.5 10"/>',
+  image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="m4 17 5-4.5 3.5 3L16 12l4 4"/>',
   megaphone:'<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 0 1-5.8-1.6"/>',
   cloud:'<path d="M7 18a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.5 1.5A3.5 3.5 0 0 1 17 18Z"/>',
  dashboard:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
@@ -1383,7 +1487,7 @@ function buildNav(){
     items.push(['leituras','water','Leituras — Água e Energia']);
   }
   if(P().manutencao){ if(!P().tipos.length) items.push(['#','','Predial']);
-    items.push(['apontamentos','wrench','Apontamentos']); }
+    items.push(['apontamentos','wrench','Apontamentos'],['manutobrig','shieldCheck','Manutenções Obrigatórias']); }
   if(P().estoque) items.push(['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material']);
   if(P().tipos.length) items.push(['#','','Gestão'],['relatorios','chart','Relatórios'],['relmensal','doc','Relatório Mensal']);
   items.push(['config','settings','Configurações']);
@@ -1408,14 +1512,14 @@ function render(){
     'tarefas-adm':'Tarefas Administrativas','tarefas-gestor':'Tarefas do Gestor',calendario:'Calendário',rotina:'Minha Rotina',
     hoje:'Tarefas de Hoje — Planejamento Diário',leituras:'Leituras / Água e Energia',notas:'Controle de Notas Fiscais',
     estoque:'Controle de Estoque',pedidos:'Pedidos de Material',relmensal:'Relatório Mensal de Gestão',
-    apontamentos:'Apontamentos de Manutenção',cessoes:'Cessão de Direitos — Ocupação de Unidades',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',relatorios:'Relatórios',config:'Configurações'};
+    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',relatorios:'Relatórios',config:'Configurações'};
   $('#pageTitle').textContent=titles[page];
   if(page==='tarefas-adm'){tipoLock='Administrativo';return viewTasks()}
   if(page==='tarefas-gestor'){tipoLock='Gestor';return viewTasks()}
   if(page==='calendario'){tipoLock=null;taskView='calendario';return viewTasks()}
   tipoLock=null;
   const R={dashboard:viewDashboard,hoje:viewHoje,leituras:viewLeituras,tarefas:viewTasks,rotina:viewRotina,
-    notas:viewNotas,cessoes:viewCessoes,publicidade:viewPublicidade,estoque:viewEstoque,pedidos:viewPedidos,
+    notas:viewNotas,cessoes:viewCessoes,publicidade:viewPublicidade,manutobrig:viewManutObrig,estoque:viewEstoque,pedidos:viewPedidos,
     apontamentos:viewApontamentos,relatorios:viewReports,relmensal:viewRelatorioMensal,config:viewConfig};
   (R[page]||viewDashboard)();
 }
@@ -1473,6 +1577,11 @@ function viewDashboard(){
     avisos.push(['red',ic('water'),`Leitura atrasada: ${l.tipo==='agua'?'Água':'Energia'}`,`${condoName(l.condoId)} · programada para ${fmt(l.data)}`,null]));
     visibleCess().filter(c=>cessStatusAuto(c)==='Atrasada').slice(0,4).forEach(c=>
       avisos.push(['red',ic('contract'),`Cessão atrasada: ${c.unidade}`,`${condoName(c.condoId)} · ${c.nome} · previsto ${fmt(c.vencimento)}`,null]));
+    moVencendo(30).slice(0,5).forEach(m=>
+      avisos.push([m._dias<0?'red':'amber',ic('shieldCheck'),
+        (m._dias<0?`Manutenção vencida: ${m.servico}`:`Manutenção a vencer: ${m.servico}`),
+        `${condoName(m.condoId)} · ${m.periodicidade}${m.obrigLegal?' · obrigação legal':''} · ${m._dias<0?('venceu há '+Math.abs(m._dias)+' dia'+(Math.abs(m._dias)===1?'':'s')):m._dias===0?'vence hoje':('faltam '+m._dias+' dias')} · ${fmt(m._pr)}`,
+        ()=>go('manutobrig')]));
     pubVencendo(30).slice(0,4).forEach(a=>
       avisos.push([a._dias<0?'red':'amber',ic('megaphone'),
         (a._dias<0?`Contrato de publicidade vencido: ${a.empresa}`:`Contrato de publicidade a vencer: ${a.empresa}`),
@@ -2584,7 +2693,7 @@ function gerarSemana(){
 let mFilter='';
 
 /* ============ CONTROLE DE NOTAS FISCAIS ============ */
-let nfTab='c1', nfComp=null, nfBusca='', prestPanel=false;
+let nfTab='c1', nfComp=null, nfBusca='', prestPanel=false, nfFStatus='';
 function nfBadge(st){
   const m={'Concluído':'b-conc','Atrasado':'b-atr','Pendente':'b-pend','Recebida':'b-avencer','Aguardando NF':'b-avencer','Aguardando Lançamento':'b-and'};
   return `<span class="badge ${m[st]||'b-pend'}">${st}</span>`;
@@ -2618,6 +2727,8 @@ function viewNotas(){
   const cid=nfTab;
   let list=notas.filter(n=>n.condoId===cid&&n.competencia===comp);
   if(nfBusca) list=list.filter(n=>(n.empresa+n.servico+n.insumo).toLowerCase().includes(nfBusca.toLowerCase()));
+  if(nfFStatus==='Atrasado') list=list.filter(n=>nfStatus(n)==='Atrasado');
+  else if(nfFStatus==='pend') list=list.filter(n=>['Aguardando NF','Aguardando Lançamento','Pendente'].includes(nfStatus(n)));
   list.sort((a,b)=>a.dia-b.dia||a.empresa.localeCompare(b.empresa,'pt-BR')||a.servico.localeCompare(b.servico,'pt-BR'));
   const all=notas.filter(n=>n.condoId===cid&&n.competencia===comp);
   const cnt=st=>all.filter(n=>nfStatus(n)===st).length;
@@ -2632,6 +2743,7 @@ function viewNotas(){
       </div>
       <select onchange="nfComp=this.value;render()">${comps.map(c=>`<option ${c===comp?'selected':''}>${c}</option>`).join('')}</select>
       <input placeholder="Empresa, serviço ou insumo" value="${esc(nfBusca)}" oninput="nfBusca=this.value;render()">
+      ${nfFStatus||nfBusca?`<button class="btn ghost sm" onclick="nfFStatus='';nfBusca='';render()">${ic('close')}Limpar filtro</button>`:''}
       <div class="spacer"></div>
       <button class="btn ghost" onclick="prestPanel=!prestPanel;render()">Prestadores de Serviço ${prestPanel?'':''}</button>
       <button class="btn ghost" onclick="csvNotas()">${ic('download')}Exportar Excel</button>
@@ -2639,12 +2751,21 @@ function viewNotas(){
       <button class="btn ghost danger" onclick="modalExcluirComp()">Excluir Competência</button>
       <button class="btn green" onclick="nfConcluirMes()">Concluir Mês</button>
     </div>
+    ${cnt('Atrasado')?`<div class="alertbar red" style="margin-bottom:14px">
+      <div class="fi-ic">${ic('alert')}</div>
+      <div style="flex:1"><b>${cnt('Atrasado')} ${cnt('Atrasado')===1?'documento passou':'documentos passaram'} do vencimento</b>
+        <div class="t-sub">Sem o lançamento, o pagamento não entra na prestação de contas do mês.</div></div></div>`:''}
+
     <div class="grid metrics" style="margin-bottom:14px">
       <div class="card metric"><div class="lbl">Competência</div><div class="val" style="font-size:22px">${comp}</div><div class="sub">${condoName(cid)}</div></div>
       <div class="card metric green"><div class="lbl">Concluídos</div><div class="val">${conc}/${all.length}</div>
-        <div class="progress"><div style="width:${pct}%"></div></div></div>
-      <div class="card metric amber"><div class="lbl">Em andamento</div><div class="val">${cnt('Aguardando NF')+cnt('Aguardando Lançamento')+cnt('Pendente')}</div><div class="sub">Book / NF / Lançamento</div></div>
-      <div class="card metric red"><div class="lbl">Atrasados</div><div class="val">${cnt('Atrasado')}</div><div class="sub">Passaram do vencimento fixo</div></div>
+        <div class="progress"><div style="width:${pct}%"></div></div>
+        <div class="sub">${pct}% da competência</div></div>
+      <div class="card metric amber ${nfFStatus==='pend'?'sel':''}" onclick="nfFStatus=nfFStatus==='pend'?'':'pend';render()">
+        <div class="lbl">Em andamento</div><div class="val">${cnt('Aguardando NF')+cnt('Aguardando Lançamento')+cnt('Pendente')}</div>
+        <div class="sub">Book / NF / Lançamento</div></div>
+      <div class="card metric red ${nfFStatus==='Atrasado'?'sel':''}" onclick="nfFStatus=nfFStatus==='Atrasado'?'':'Atrasado';render()">
+        <div class="lbl">Atrasados</div><div class="val">${cnt('Atrasado')}</div><div class="sub">Passaram do vencimento fixo</div></div>
     </div>
     ${prestPanel?painelPrestadores(cid):''}
     ${list.length?`<div class="tablewrap"><table><thead><tr>
@@ -3281,6 +3402,269 @@ function pubElevOpts(cid,cur){ return pubGrupos(cid).map(([g,es])=>`<optgroup la
 const PUB_STATUS=['Interessado','Ativo','Encerrado'];
 let pubBusca='', pubFStatus='';
 function visPub(){ return anuncios.filter(a=>P().condos.includes(a.condoId)); }
+/* ============ MANUTENÇÕES OBRIGATÓRIAS ============
+   Serviços periódicos exigidos por lei/norma (vigilância sanitária, corpo de bombeiros,
+   ABNT). Cada execução guarda o laudo/certificado do prestador. */
+let manutObrig=[];   // {id,condoId,servico,base,periodicidade,obrigLegal,norma,prestador,
+                     //  ultima,proxima,responsavel,obs,execucoes:[{data,prestador,validade,obs,laudos:[],quem,quando}]}
+const MO_PERIODOS={'Mensal':1,'Bimestral':2,'Trimestral':3,'Semestral':6,'Anual':12,'Bienal':24,'Trienal':36,'Quinquenal':60};
+/* Catálogo típico de condomínio comercial. `base` agrupa no relatório. */
+const MO_CATALOGO=[
+  {servico:'Limpeza e desinfecção dos reservatórios',base:'Água',periodicidade:'Semestral',obrigLegal:true,critico:true,aviso:45,norma:'Portaria GM/MS 888/2021 · vigilância sanitária'},
+  {servico:'Análise de potabilidade da água',base:'Água',periodicidade:'Semestral',obrigLegal:true,critico:true,aviso:30,norma:'Portaria GM/MS 888/2021'},
+  {servico:'Dedetização e desratização',base:'Sanitário',periodicidade:'Semestral',obrigLegal:true,critico:true,aviso:30,norma:'Controle integrado de pragas · vigilância sanitária'},
+  {servico:'Recarga e inspeção de extintores',base:'Incêndio',periodicidade:'Anual',obrigLegal:true,critico:true,aviso:20,norma:'ABNT NBR 12962 · Corpo de Bombeiros'},
+  {servico:'Teste hidrostático de mangueiras',base:'Incêndio',periodicidade:'Anual',obrigLegal:true,critico:true,aviso:30,norma:'ABNT NBR 12779'},
+  {servico:'Manutenção do sistema de alarme e detecção',base:'Incêndio',periodicidade:'Semestral',obrigLegal:true,critico:false,aviso:30,norma:'ABNT NBR 17240'},
+  {servico:'Renovação do AVCB / Auto de Vistoria do Corpo de Bombeiros',base:'Incêndio',periodicidade:'Trienal',obrigLegal:true,critico:true,aviso:90,norma:'CBMDF · sem AVCB o condomínio opera irregular'},
+  {servico:'Seguro obrigatório do condomínio',base:'Seguro',periodicidade:'Anual',obrigLegal:true,critico:true,aviso:45,norma:'Lei 10.406/2002 art. 1.346 · Código Civil'},
+  {servico:'Inspeção do SPDA (para-raios)',base:'Elétrica',periodicidade:'Anual',obrigLegal:true,critico:true,aviso:30,norma:'ABNT NBR 5419'},
+  {servico:'Manutenção preventiva dos elevadores',base:'Elevadores',periodicidade:'Mensal',obrigLegal:true,critico:true,aviso:10,norma:'ABNT NBR 16083 · contrato com empresa habilitada'},
+  {servico:'Inspeção anual dos elevadores (RIA)',base:'Elevadores',periodicidade:'Anual',obrigLegal:true,critico:true,aviso:30,norma:'Relatório de Inspeção Anual'},
+  {servico:'Manutenção do grupo gerador',base:'Elétrica',periodicidade:'Mensal',obrigLegal:false,critico:false,aviso:10,norma:'Recomendação do fabricante'},
+  {servico:'Manutenção das bombas de recalque',base:'Água',periodicidade:'Trimestral',obrigLegal:false,critico:false,aviso:15,norma:'Recomendação do fabricante'},
+  {servico:'Limpeza dos dutos e filtros de ar-condicionado (PMOC)',base:'Climatização',periodicidade:'Trimestral',obrigLegal:true,critico:false,aviso:20,norma:'Lei 13.589/2018 · PMOC'},
+  {servico:'Limpeza de fachada e vidros externos',base:'Fachada',periodicidade:'Semestral',obrigLegal:false,critico:false,aviso:30,norma:'Conservação predial'},
+  {servico:'Inspeção predial completa',base:'Estrutura',periodicidade:'Anual',obrigLegal:true,critico:true,aviso:60,norma:'ABNT NBR 16747'},
+  {servico:'Laudo de estanqueidade de gás',base:'Gás',periodicidade:'Quinquenal',obrigLegal:true,critico:true,aviso:90,norma:'ABNT NBR 15526 · exigido pela distribuidora'}
+];
+const MO_AVISO_PADRAO=30;
+function moAviso(m){ const v=Number(m.aviso); return Number.isFinite(v)&&v>0?v:MO_AVISO_PADRAO }
+function moPeriodoMeses(p){ return MO_PERIODOS[p]||12 }
+/* soma meses preservando o fim de mês (31/01 + 1 mês = 28/02) */
+function addMeses(dataIso,meses){
+  if(!dataIso) return null;
+  const [y,m,d]=dataIso.split('-').map(Number);
+  const alvo=new Date(y,(m-1)+meses,1);
+  const ultimo=new Date(alvo.getFullYear(),alvo.getMonth()+1,0).getDate();
+  return iso(new Date(alvo.getFullYear(),alvo.getMonth(),Math.min(d,ultimo)));
+}
+function moProxima(m){
+  if(m.proxima) return m.proxima;
+  if(m.ultima)  return addMeses(m.ultima,moPeriodoMeses(m.periodicidade));
+  return null;
+}
+/* Em dia / Próxima / Vencida — 'Próxima' entra no mês anterior ao vencimento */
+function moStatus(m){
+  const pr=moProxima(m);
+  if(!pr) return 'Sem histórico';
+  const dias=diasAte(pr);
+  if(dias<0)  return 'Vencida';
+  if(dias<=moAviso(m)) return 'Próxima';   // cada item tem o seu prazo de aviso
+  return 'Em dia';
+}
+/* Itens que não podem vencer: dentro da própria janela de aviso, ou já vencidos. */
+function moCriticas(){
+  return visMO().filter(m=>m.critico!==false)
+    .map(m=>({...m,_pr:moProxima(m),_dias:moProxima(m)?diasAte(moProxima(m)):null}))
+    .filter(m=>m.critico&&m._dias!==null&&m._dias<=moAviso(m))
+    .sort((a,b)=>a._dias-b._dias);
+}
+function moBadge(st){
+  const c={'Vencida':'b-atr','Próxima':'b-pend','Em dia':'b-conc','Sem histórico':'b-baixa'}[st]||'b-tag';
+  return `<span class="badge ${c}">${st}</span>`;
+}
+function visMO(){ return manutObrig.filter(m=>P().condos.includes(m.condoId)) }
+function moVencendo(dias){
+  const lim=(dias==null?30:dias);
+  return visMO().map(m=>({...m,_pr:moProxima(m),_dias:moProxima(m)?diasAte(moProxima(m)):null}))
+    .filter(m=>m._dias!==null&&m._dias<=lim)
+    .sort((a,b)=>a._dias-b._dias);
+}
+/* Cria o plano padrão para um condomínio, sem datas — a 1ª execução define o ciclo. */
+/* Bases criadas antes dos campos `critico`/`aviso`: preenche pelo catálogo e
+   acrescenta os itens novos (seguro, AVCB, gás). Idempotente. */
+function migrarManutObrig(){
+  let mudou=false;
+  manutObrig.forEach(m=>{
+    const c=MO_CATALOGO.find(x=>x.servico===m.servico);
+    if(m.critico===undefined){ m.critico=c?!!c.critico:!!m.obrigLegal; mudou=true }
+    if(!Number.isFinite(Number(m.aviso))){ m.aviso=c?c.aviso:MO_AVISO_PADRAO; mudou=true }
+  });
+  /* só acrescenta os itens novos onde o plano padrão já foi aplicado */
+  CONDOS.filter(c=>condoNoModulo(c.id,'manutobrig')).forEach(c=>{
+    const tem=manutObrig.filter(m=>m.condoId===c.id);
+    if(tem.length>=8){
+      MO_CATALOGO.forEach(cat=>{
+        if(!tem.some(m=>m.servico===cat.servico)){
+          manutObrig.push({id:uid('mo'),condoId:c.id,servico:cat.servico,base:cat.base,
+            periodicidade:cat.periodicidade,obrigLegal:cat.obrigLegal,critico:!!cat.critico,
+            aviso:cat.aviso,norma:cat.norma,prestador:'',ultima:null,proxima:null,
+            responsavel:'',obs:'',execucoes:[]});
+          mudou=true;
+        }});
+    }});
+  if(mudou) save();
+  return mudou;
+}
+function seedManutObrig(cid){
+  MO_CATALOGO.forEach(c=>{
+    if(manutObrig.some(m=>m.condoId===cid&&m.servico===c.servico)) return;
+    manutObrig.push({id:uid('mo'),condoId:cid,servico:c.servico,base:c.base,
+      periodicidade:c.periodicidade,obrigLegal:c.obrigLegal,critico:!!c.critico,aviso:c.aviso,norma:c.norma,
+      prestador:'',ultima:null,proxima:null,responsavel:'',obs:'',execucoes:[]});
+  });
+}
+
+let moFiltro='', moBusca='', _laudosTmp=[];
+const LAUDO_MAX_MB=4;
+/* Laudo: aceita PDF (guardado como veio) e imagem (comprimida como as fotos). */
+async function addLaudo(input){
+  const fs=[...(input.files||[])]; if(!fs.length) return;
+  if(_laudosTmp.length+fs.length>5){ toast('Máximo de 5 arquivos por execução.'); return }
+  for(const f of fs){
+    if(f.size>LAUDO_MAX_MB*1024*1024){ toast(`"${f.name}" tem mais de ${LAUDO_MAX_MB} MB.`); continue }
+    try{
+      if(f.type==='application/pdf'){
+        const b64=await new Promise((ok,er)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=er;r.readAsDataURL(f)});
+        _laudosTmp.push({nome:f.name,tipo:'pdf',dados:b64});
+      }else if(/^image\//.test(f.type)){
+        _laudosTmp.push({nome:f.name,tipo:'img',dados:await comprimirImagem(f)});
+      }else toast('Formato não suportado: use PDF ou imagem.');
+    }catch(e){ toast('Não foi possível ler "'+f.name+'".') }
+  }
+  input.value=''; pintaLaudos();
+}
+function pintaLaudos(){
+  const el=$('#moLaudos'); if(!el) return;
+  el.innerHTML=_laudosTmp.length?_laudosTmp.map((l,i)=>`
+    <span class="badge b-tag" style="margin:2px 4px 2px 0">${ic(l.tipo==='pdf'?'doc':'image')}${esc(l.nome)}
+      <a href="#" onclick="event.preventDefault();_laudosTmp.splice(${i},1);pintaLaudos()" title="remover">${ic('close')}</a></span>`).join('')
+    :'<span class="t-sub">nenhum arquivo anexado</span>';
+}
+function abrirLaudo(mid,ei,li){
+  const m=manutObrig.find(x=>x.id===mid); if(!m) return;
+  const l=((m.execucoes[ei]||{}).laudos||[])[li]; if(!l) return;
+  const w=window.open('','_blank');
+  if(!w) return toast('Permita pop-ups para abrir o laudo.');
+  w.document.write(l.tipo==='pdf'
+    ? `<iframe src="${l.dados}" style="border:0;width:100%;height:100vh"></iframe>`
+    : `<img src="${l.dados}" style="max-width:100%">`);
+  w.document.title=l.nome||'Laudo';
+}
+/* ---- registrar execução ---- */
+function formExecucao(mid){
+  const m=manutObrig.find(x=>x.id===mid); if(!m) return;
+  if(!P().create&&!P().edit) return toast('Sem permissão.');
+  _laudosTmp=[];
+  const prox=addMeses(today(),moPeriodoMeses(m.periodicidade));
+  openModal(`Registrar execução — ${esc(m.servico)}`,`
+    <div class="t-sub" style="margin-bottom:12px">${condoName(m.condoId)} · ${m.periodicidade}${m.obrigLegal?' · <b>obrigação legal</b>':''}
+      ${m.norma?`<div style="margin-top:4px">${esc(m.norma)}</div>`:''}</div>
+    <div class="f2">
+      <div class="field"><label>Data da execução</label><input type="date" id="exData" value="${today()}" max="${today()}"></div>
+      <div class="field"><label>Próxima prevista</label><input type="date" id="exProx" value="${prox}"></div>
+    </div>
+    <div class="f2">
+      <div class="field"><label>Empresa executante</label><input id="exPrest" value="${esc(m.prestador||'')}" placeholder="quem realizou"></div>
+      <div class="field"><label>Validade do laudo</label><input type="date" id="exVal" value="${prox}"></div>
+    </div>
+    <div class="field"><label>Observações</label><textarea id="exObs" rows="2" placeholder="ocorrências, pendências apontadas..."></textarea></div>
+    <div class="field"><label>Laudo / certificado</label>
+      <label class="btn ghost" style="cursor:pointer">${ic('upload')}Anexar PDF ou foto
+        <input type="file" accept="application/pdf,image/*" multiple onchange="addLaudo(this)" style="display:none"></label>
+      <div id="moLaudos" style="margin-top:8px"><span class="t-sub">nenhum arquivo anexado</span></div>
+      <div class="t-sub" style="margin-top:6px">Até 5 arquivos, ${LAUDO_MAX_MB} MB cada. PDF é guardado como veio; fotos são comprimidas.</div>
+    </div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn" onclick="salvarExecucao('${mid}')">${ic('check')}Registrar</button>`);
+  setTimeout(pintaLaudos,0);
+}
+function salvarExecucao(mid){
+  const m=manutObrig.find(x=>x.id===mid); if(!m) return;
+  const data=$('#exData').value;
+  if(!data) return toast('Informe a data da execução.');
+  if(data>today()) return toast('A data não pode ser futura.');
+  const prest=$('#exPrest').value.trim();
+  m.execucoes=m.execucoes||[];
+  m.execucoes.unshift({data,prestador:prest,validade:$('#exVal').value||null,
+    obs:$('#exObs').value.trim(),laudos:_laudosTmp.slice(),quem:session.nome,quando:nowStamp()});
+  m.ultima=data;
+  m.proxima=$('#exProx').value||addMeses(data,moPeriodoMeses(m.periodicidade));
+  if(prest) m.prestador=prest;
+  _laudosTmp=[];
+  audit('Execução de manutenção',m.servico,fmt(data),m.condoId,prest||'');
+  save(); closeModal(); render();
+  toast('Execução registrada. Próxima em '+fmt(m.proxima)+'.');
+}
+/* ---- cadastro/edição do item ---- */
+function formMO(id){
+  const m=id?manutObrig.find(x=>x.id===id):null;
+  if(!(id?P().edit:P().create)) return toast('Sem permissão.');
+  openModal(m?'Editar manutenção':'Nova manutenção',`
+    <div class="field"><label>Serviço</label><input id="moServ" value="${esc(m?.servico||'')}" placeholder="ex.: Limpeza dos reservatórios"></div>
+    <div class="f2">
+      <div class="field"><label>Condomínio</label><select id="moCondo">${condosDo('manutobrig').map(c=>`<option value="${c.id}" ${m?.condoId===c.id?'selected':''}>${c.nome}</option>`).join('')}</select></div>
+      <div class="field"><label>Periodicidade</label><select id="moPer">${Object.keys(MO_PERIODOS).map(k=>`<option ${m?.periodicidade===k?'selected':''}>${k}</option>`).join('')}</select></div>
+    </div>
+    <div class="f2">
+      <div class="field"><label>Categoria</label><input id="moBase" value="${esc(m?.base||'')}" placeholder="Água, Incêndio, Elétrica..."></div>
+      <div class="field"><label>Empresa responsável</label><input id="moPrest" value="${esc(m?.prestador||'')}"></div>
+    </div>
+    <div class="f2">
+      <div class="field"><label>Última execução</label><input type="date" id="moUlt" value="${m?.ultima||''}"></div>
+      <div class="field"><label>Próxima prevista</label><input type="date" id="moProx" value="${m?.proxima||''}"></div>
+    </div>
+    <div class="f2">
+      <div class="field"><label>Norma / exigência</label><input id="moNorma" value="${esc(m?.norma||'')}" placeholder="ex.: ABNT NBR 5419"></div>
+      <div class="field"><label>Avisar quantos dias antes?</label>
+        <input type="number" id="moAvisoD" min="1" max="365" value="${m?moAviso(m):MO_AVISO_PADRAO}">
+        <div class="t-sub">Padrão ${MO_AVISO_PADRAO} dias. Reservatório costuma usar 45; extintores, 20.</div></div>
+    </div>
+    <div class="check" style="margin-top:4px">
+      <input type="checkbox" id="moLegal" ${m?(m.obrigLegal?'checked':''):'checked'}>
+      <div style="flex:1"><div class="ct">Obrigação legal</div>
+        <div class="t-sub">Marcado, o atraso é sinalizado como risco de autuação.</div></div></div>
+    <div class="check" style="margin-top:8px">
+      <input type="checkbox" id="moCritico" ${m?(m.critico?'checked':''):'checked'}>
+      <div style="flex:1"><div class="ct">Não pode vencer (alerta em tela cheia)</div>
+        <div class="t-sub">Dentro do prazo de aviso, aparece um alerta grande toda vez que alguém abrir o app.</div></div></div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     ${m&&canDelete(m)?`<button class="btn danger" onclick="delMO('${m.id}')">${ic('trash')}Excluir</button>`:''}
+     <button class="btn" onclick="salvarMO('${id||''}')">${ic('check')}Salvar</button>`);
+}
+function salvarMO(id){
+  const serv=$('#moServ').value.trim();
+  if(!serv) return toast('Informe o serviço.');
+  const av=parseInt($('#moAvisoD')?$('#moAvisoD').value:'',10);
+  const o={servico:serv,condoId:$('#moCondo').value,periodicidade:$('#moPer').value,
+    base:$('#moBase').value.trim(),prestador:$('#moPrest').value.trim(),
+    ultima:$('#moUlt').value||null,proxima:$('#moProx').value||null,
+    norma:$('#moNorma').value.trim(),obrigLegal:$('#moLegal').checked,
+    critico:$('#moCritico')?$('#moCritico').checked:false,
+    aviso:Number.isFinite(av)&&av>0?Math.min(av,365):MO_AVISO_PADRAO};
+  if(id){ const m=manutObrig.find(x=>x.id===id); Object.assign(m,o); audit('Manutenção editada',serv,'',o.condoId,''); }
+  else { manutObrig.push(Object.assign({id:uid('mo'),execucoes:[],responsavel:'',obs:'',criadoPor:session.nome},o));
+         audit('Manutenção cadastrada',serv,'',o.condoId,''); }
+  save(); closeModal(); render(); toast('Manutenção salva.');
+}
+function delMO(id){
+  const m=manutObrig.find(x=>x.id===id); if(!m) return;
+  if(!canDelete(m)) return toast('Sem permissão para excluir.');
+  if(!confirm(`Excluir "${m.servico}"?\n\nO histórico de execuções e os laudos anexados serão perdidos.`)) return;
+  manutObrig=manutObrig.filter(x=>x.id!==id);
+  audit('Manutenção excluída',m.servico,'',m.condoId,'');
+  save(); closeModal(); render(); toast('Manutenção excluída.');
+}
+function moHistorico(id){
+  const m=manutObrig.find(x=>x.id===id); if(!m) return;
+  const ex=m.execucoes||[];
+  openModal(`Histórico — ${esc(m.servico)}`,
+    ex.length?ex.map((e,i)=>`
+      <div class="feed-item" style="margin-bottom:8px">
+        <div class="fi-ic">${ic('check')}</div>
+        <div style="flex:1">
+          <div class="ft">${fmt(e.data)}${e.prestador?' · '+esc(e.prestador):''}</div>
+          <div class="fd">${e.validade?'validade '+fmt(e.validade)+' · ':''}registrado por ${esc(e.quem||'—')} em ${esc(e.quando||'')}</div>
+          ${e.obs?`<div class="fd">${esc(e.obs)}</div>`:''}
+          ${(e.laudos||[]).length?`<div style="margin-top:6px">${e.laudos.map((l,li)=>
+            `<a href="#" class="badge b-condo" style="margin-right:6px" onclick="event.preventDefault();abrirLaudo('${m.id}',${i},${li})">${ic(l.tipo==='pdf'?'doc':'image')}${esc(l.nome)}</a>`).join('')}</div>`
+            :'<div class="t-sub" style="margin-top:4px">sem laudo anexado</div>'}
+        </div></div>`).join('')
+    :'<div class="empty">Nenhuma execução registrada ainda.</div>',
+    `<button class="btn ghost" onclick="closeModal()">Fechar</button>`);
+}
+
 /* ---- vigência dos contratos de publicidade ---- */
 function diasAte(d){ if(!d) return null; return Math.round((new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000); }
 /* Contratos ativos que vencem nos próximos `dias` (padrão 30), do mais urgente ao menos. */
@@ -3305,6 +3689,112 @@ function pubDataExtenso(iso){
   const d=iso?parse(iso):new Date();
   return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
 }
+function viewManutObrig(){
+  const cids=condosDo('manutobrig').filter(c=>condoFilter==='all'||c.id===condoFilter).map(c=>c.id);
+  let list=visMO().filter(m=>cids.includes(m.condoId));
+  if(moBusca) list=list.filter(m=>((m.servico||'')+(m.prestador||'')+(m.base||'')).toLowerCase().includes(moBusca.toLowerCase()));
+  if(moFiltro) list=list.filter(m=>moStatus(m)===moFiltro);
+  const all=visMO().filter(m=>cids.includes(m.condoId));
+  const cnt=st=>all.filter(m=>moStatus(m)===st).length;
+  const risco=all.filter(m=>m.obrigLegal&&moStatus(m)==='Vencida').length;
+  const ordem={'Vencida':0,'Próxima':1,'Sem histórico':2,'Em dia':3};
+  list.sort((a,b)=>(ordem[moStatus(a)]-ordem[moStatus(b)])
+    ||((moProxima(a)||'9999').localeCompare(moProxima(b)||'9999'))
+    ||a.servico.localeCompare(b.servico,'pt-BR'));
+  const grupos=[...new Set(list.map(m=>m.base||'Outros'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+
+  $('#content').innerHTML=`
+    ${risco?`<div class="alertbar red" style="margin-bottom:14px">
+      <div class="fi-ic">${ic('alert')}</div>
+      <div style="flex:1"><b>${risco} obrigação legal em atraso</b>
+        <div class="t-sub">Manutenção obrigatória vencida expõe o condomínio a autuação e pode invalidar o seguro.</div></div>
+      <button class="btn sm danger" onclick="moFiltro='Vencida';render()">Ver pendências</button></div>`:''}
+
+    <div class="grid metrics" style="margin-bottom:14px">
+      <div class="card metric ${moFiltro===''?'sel':''}" onclick="moFiltro='';render()">
+        <div class="lbl">Cadastradas</div><div class="val">${all.length}</div><div class="sub">itens no plano</div></div>
+      <div class="card metric green ${moFiltro==='Em dia'?'sel':''}" onclick="moFiltro='Em dia';render()">
+        <div class="lbl">Em dia</div><div class="val">${cnt('Em dia')}</div><div class="sub">dentro do prazo</div></div>
+      <div class="card metric amber ${moFiltro==='Próxima'?'sel':''}" onclick="moFiltro='Próxima';render()">
+        <div class="lbl">Vencem em 30 dias</div><div class="val">${cnt('Próxima')}</div><div class="sub">programar agora</div></div>
+      <div class="card metric red ${moFiltro==='Vencida'?'sel':''}" onclick="moFiltro='Vencida';render()">
+        <div class="lbl">Vencidas</div><div class="val">${cnt('Vencida')}</div><div class="sub">${risco?risco+' com risco legal':'sem risco legal'}</div></div>
+    </div>
+
+    <div class="toolbar no-print">
+      <input placeholder="Serviço, empresa ou categoria..." value="${esc(moBusca)}" oninput="moBusca=this.value;render()" style="min-width:230px">
+      <select onchange="moFiltro=this.value;render()">${opt(['','Em dia','Próxima','Vencida','Sem histórico'],moFiltro,'Situação')}</select>
+      ${moFiltro||moBusca?`<button class="btn ghost sm" onclick="moFiltro='';moBusca='';render()">${ic('close')}Limpar</button>`:''}
+      <div class="spacer"></div>
+      <button class="btn ghost" onclick="csvManutObrig()">${ic('download')}Exportar Excel</button>
+      ${P().create&&!all.length?`<button class="btn ghost" onclick="aplicarPlanoPadrao()">${ic('list')}Usar plano padrão</button>`:''}
+      ${P().create?`<button class="btn" onclick="formMO()">+ Nova Manutenção</button>`:''}
+    </div>
+
+    ${list.length?grupos.map(g=>{
+      const itens=list.filter(m=>(m.base||'Outros')===g);
+      return `<div class="card" style="margin-bottom:14px;padding-bottom:6px">
+        <div class="section-title" style="margin-top:0"><h3>${ic('wrench')} ${esc(g)}</h3>
+          <span class="t-sub">${itens.length} ${itens.length===1?'serviço':'serviços'}</span></div>
+        ${itens.map(m=>{
+          const st=moStatus(m), pr=moProxima(m), dias=pr?diasAte(pr):null;
+          const cor=st==='Vencida'?'red':st==='Próxima'?'amber':st==='Em dia'?'green':'';
+          const nex=(m.execucoes||[]).length;
+          const laudos=(m.execucoes||[]).reduce((t,e)=>t+((e.laudos||[]).length),0);
+          return `<div class="molinha ${cor}">
+            <div class="mo-main">
+              <div class="mo-tit">${esc(m.servico)}
+                ${m.obrigLegal?`<span class="badge b-atr sm" title="${esc(m.norma||'')}">legal</span>`:''}
+                ${m.critico?`<span class="badge b-pend sm" title="Alerta em tela cheia ${moAviso(m)} dias antes">não pode vencer</span>`:''}</div>
+              <div class="mo-sub">${condoName(m.condoId)} · ${m.periodicidade} · avisa ${moAviso(m)}d antes${m.prestador?' · '+esc(m.prestador):''}${m.norma?' · '+esc(m.norma):''}</div>
+            </div>
+            <div class="mo-datas">
+              <div><span class="t-sub">última</span><b>${m.ultima?fmt(m.ultima):'—'}</b></div>
+              <div><span class="t-sub">próxima</span><b>${pr?fmt(pr):'—'}</b>
+                ${dias!==null?`<span class="t-sub">${dias<0?'há '+Math.abs(dias)+'d':dias===0?'hoje':'em '+dias+'d'}</span>`:''}</div>
+            </div>
+            <div class="mo-fim">
+              ${moBadge(st)}
+              <div class="rowact">
+                <button class="btn green sm" onclick="formExecucao('${m.id}')">${ic('check')}Executar</button>
+                <button class="btn ghost sm" onclick="moHistorico('${m.id}')">${nex?nex+' exec.':'Histórico'}${laudos?' · '+laudos+' laudo'+(laudos===1?'':'s'):''}</button>
+                ${P().edit?`<button class="btn ghost sm" onclick="formMO('${m.id}')">${ic('edit')}</button>`:''}
+              </div>
+            </div>
+          </div>`}).join('')}
+      </div>`}).join('')
+    :`<div class="card empty">${ic('wrench','ico-lg')}
+        <div>${all.length?'Nenhum item nesse filtro.':'Nenhuma manutenção cadastrada.'}</div>
+        ${!all.length&&P().create?`<div class="t-sub" style="margin:10px 0">Comece pelo plano padrão de condomínio comercial — 14 serviços com periodicidade e norma já preenchidas.</div>
+          <button class="btn" onclick="aplicarPlanoPadrao()">${ic('list')}Usar plano padrão</button>`:''}</div>`}
+
+    <div class="legend">
+      <span><b>Como funciona:</b> registre a execução e o sistema calcula sozinho a próxima data pela periodicidade.</span>
+      <span><b>Laudos:</b> anexe o PDF do prestador — fica guardado no histórico do serviço.</span>
+      <span><b>legal</b> = exigido por lei ou norma; o atraso é sinalizado como risco.</span>
+    </div>`;
+}
+function aplicarPlanoPadrao(){
+  if(!P().create) return toast('Sem permissão.');
+  const alvo=condosDo('manutobrig').filter(c=>condoFilter==='all'||c.id===condoFilter);
+  if(!alvo.length) return toast('Nenhum condomínio disponível.');
+  const antes=manutObrig.length;
+  alvo.forEach(c=>seedManutObrig(c.id));
+  const n=manutObrig.length-antes;
+  audit('Plano padrão aplicado','Manutenções obrigatórias',n+' itens','','');
+  save(); render();
+  toast(n?n+' manutenções cadastradas. Registre a última execução de cada uma.':'O plano já estava completo.');
+}
+function csvManutObrig(){
+  const rows=[['Condominio','Categoria','Servico','Periodicidade','Obrigacao_legal','Norma','Empresa',
+               'Ultima_execucao','Proxima_prevista','Situacao','Dias','Execucoes','Laudos']];
+  visMO().forEach(m=>{ const pr=moProxima(m);
+    rows.push([condoName(m.condoId),m.base||'',m.servico,m.periodicidade,m.obrigLegal?'Sim':'Não',m.norma||'',
+      m.prestador||'',m.ultima?fmt(m.ultima):'',pr?fmt(pr):'',moStatus(m),pr?diasAte(pr):'',
+      (m.execucoes||[]).length,(m.execucoes||[]).reduce((t,e)=>t+((e.laudos||[]).length),0)]);});
+  baixarCsv('manutencoes_obrigatorias',rows);
+}
+
 function viewPublicidade(){
   let list=visPub();
   if(pubFStatus) list=list.filter(a=>a.status===pubFStatus);
@@ -3314,10 +3804,10 @@ function viewPublicidade(){
   const recMes=all.filter(a=>a.status==='Ativo').reduce((s,a)=>s+(Number(a.valorMensal)||0),0);
   $('#content').innerHTML=`
     <div class="grid metrics" style="margin-bottom:14px">
-      <div class="card metric" onclick="pubFStatus='';render()"><div class="lbl">Cadastros</div><div class="val">${all.length}</div><div class="sub">empresas / interessados</div></div>
-      <div class="card metric amber" onclick="pubFStatus='Interessado';render()"><div class="lbl">Interessados</div><div class="val">${cnt('Interessado')}</div><div class="sub">aguardando contrato</div></div>
-      <div class="card metric green" onclick="pubFStatus='Ativo';render()"><div class="lbl">Contratos Ativos</div><div class="val">${cnt('Ativo')}</div><div class="sub">${brl(recMes)}/mês</div></div>
-      <div class="card metric" onclick="pubFStatus='Encerrado';render()"><div class="lbl">Encerrados</div><div class="val">${cnt('Encerrado')}</div></div>
+      <div class="card metric ${pubFStatus===''?'sel':''}" onclick="pubFStatus='';render()"><div class="lbl">Cadastros</div><div class="val">${all.length}</div><div class="sub">empresas / interessados</div></div>
+      <div class="card metric amber ${pubFStatus==='Interessado'?'sel':''}" onclick="pubFStatus='Interessado';render()"><div class="lbl">Interessados</div><div class="val">${cnt('Interessado')}</div><div class="sub">aguardando contrato</div></div>
+      <div class="card metric green ${pubFStatus==='Ativo'?'sel':''}" onclick="pubFStatus='Ativo';render()"><div class="lbl">Contratos Ativos</div><div class="val">${cnt('Ativo')}</div><div class="sub">${brl(recMes)}/mês</div></div>
+      <div class="card metric ${pubFStatus==='Encerrado'?'sel':''}" onclick="pubFStatus='Encerrado';render()"><div class="lbl">Encerrados</div><div class="val">${cnt('Encerrado')}</div></div>
     </div>
     ${condosDo('publicidade').map(c=>{
       const o=pubOcupacao(c.id); if(!o.espacos) return '';
@@ -3366,6 +3856,7 @@ function viewPublicidade(){
     <div class="toolbar no-print">
       <input placeholder="Empresa, CNPJ/CPF, contato..." value="${esc(pubBusca)}" oninput="pubBusca=this.value;render()" style="min-width:210px">
       <select onchange="pubFStatus=this.value;render()">${opt(['',...PUB_STATUS],pubFStatus,'Status')}</select>
+      ${pubFStatus||pubBusca?`<button class="btn ghost sm" onclick="pubFStatus='';pubBusca='';render()">${ic('close')}Limpar filtro</button>`:''}
       <div class="spacer"></div>
       <button class="btn ghost" onclick="csvPublicidade()">${ic('download')}Exportar Excel</button>
       <button class="btn ghost" onclick="pubConfig()">${ic('settings')} Dados do Contrato</button>
@@ -5189,6 +5680,65 @@ function marcarTodas(){
   notifs.forEach(n=>{n.lida=true;notifState[n.k]={lida:true}});
   save(); atualizaSino(); closeModal(); toast('Notificações marcadas como lidas.');
 }
+/* ============ ALERTA CRÍTICO DE ABERTURA ============
+   Manutenções que não podem vencer (reservatório, extintores, seguro, AVCB...).
+   Aparece SEMPRE que o app é aberto enquanto houver pendência — não é dispensável
+   por sessão, só pelo botão. É o último aviso antes da multa. */
+function alertaCritico(forcar){
+  const cr=moCriticas();
+  if(!cr.length) return false;
+  const venc=cr.filter(m=>m._dias<0), prox=cr.filter(m=>m._dias>=0);
+  const el=$('#critico'); if(!el) return false;
+  const cartao=m=>{
+    const atras=m._dias<0, hoje=m._dias===0;
+    const forte=atras?Math.abs(m._dias):m._dias;
+    return `<div class="crit-item ${atras?'venc':'prox'}">
+      <div class="crit-dias">
+        <span class="n">${hoje?'HOJE':forte}</span>
+        ${hoje?'':`<span class="u">${forte===1?'dia':'dias'}</span>`}
+        <span class="q">${atras?'em atraso':'restantes'}</span>
+      </div>
+      <div class="crit-txt">
+        <div class="crit-serv">${esc(m.servico)}</div>
+        <div class="crit-sub">${condoName(m.condoId)} · ${m.periodicidade} · vence em <b>${fmt(m._pr)}</b></div>
+        ${m.norma?`<div class="crit-norma">${esc(m.norma)}</div>`:''}
+      </div>
+      <button class="btn ${atras?'danger':''} sm" onclick="fecharCritico();go('manutobrig');setTimeout(()=>formExecucao('${m.id}'),350)">Registrar</button>
+    </div>`;};
+  el.innerHTML=`
+    <div class="crit-box" role="alertdialog" aria-labelledby="critTit">
+      <div class="crit-top ${venc.length?'venc':''}">
+        <div class="crit-ic">${ic(venc.length?'alert':'clock')}</div>
+        <div style="flex:1">
+          <div id="critTit" class="crit-h1">${venc.length
+            ? (venc.length===1?'1 manutenção obrigatória VENCIDA':venc.length+' manutenções obrigatórias VENCIDAS')
+            : (prox.length===1?'1 manutenção crítica a vencer':prox.length+' manutenções críticas a vencer')}</div>
+          <div class="crit-h2">${venc.length
+            ? 'O condomínio está exposto a autuação e o seguro pode ser negado em caso de sinistro.'
+            : 'Contrate o serviço agora para não perder o prazo.'}</div>
+        </div>
+      </div>
+      <div class="crit-lista">
+        ${venc.map(cartao).join('')}
+        ${venc.length&&prox.length?`<div class="crit-sep">Também se aproximando do vencimento</div>`:''}
+        ${prox.map(cartao).join('')}
+      </div>
+      <div class="crit-rod">
+        <span class="t-sub">Este aviso reaparece a cada acesso enquanto houver pendência.</span>
+        <div class="rowact">
+          <button class="btn ghost" onclick="fecharCritico()">Agora não</button>
+          <button class="btn" onclick="fecharCritico();go('manutobrig')">${ic('shieldCheck')}Abrir plano de manutenções</button>
+        </div>
+      </div>
+    </div>`;
+  el.classList.add('open');
+  document.body.classList.add('crit-open');
+  return true;
+}
+function fecharCritico(){
+  const el=$('#critico'); if(el) el.classList.remove('open');
+  document.body.classList.remove('crit-open');
+}
 function abrirResumoDiario(forcar){
   const hoje=today();
   if(!forcar&&notifState._resumoDia===hoje) return;
@@ -5974,11 +6524,11 @@ function aplicarSnapshot(d){
   tasks=d.tasks||[]; notas=d.notas||[]; cessoes=d.cessoes||[];
   apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
   pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
-  prestadores=d.prestadores||[]; anuncios=d.anuncios||[];
+  prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
   if(d.CFG) CFG=Object.assign(CFG,d.CFG);
   creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
   if(!prestadores.length) seedPrestadores();
-  migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb();
+  migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig();
   _booting=false;
 }
 function agendarSync(){
@@ -6064,5 +6614,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a397abce78346d7b',t:'MTc4OTE0MDE4MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a399a17c59a45144',t:'MTc4OTE2MDcyOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+</body>
 </html>
