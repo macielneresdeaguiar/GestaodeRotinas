@@ -618,7 +618,7 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
         onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div id="loginErr" class="err hidden"></div>
     <button class="btn accent block" id="btnEntrar" onclick="doLogin()">Entrar no sistema</button>
-    <p class="hint">No primeiro acesso você define a própria senha.<br>Os dados ficam salvos apenas neste aparelho.</p>
+    <p class="hint">No primeiro acesso você define a própria senha.<br>Seus dados sincronizam entre computador e celular.</p>
   </div>
 </div>
 
@@ -1235,6 +1235,18 @@ function definirSenha(uid,senha){
   creds[uid]={hash:hashSenha(senha,salt),salt,trocadaEm:nowStamp()};
   save();
 }
+/* O Gestor pode zerar a senha de um usuário — ele define uma nova no próximo acesso. */
+function podeResetarSenha(){ return session && session.role==='Gestor' }
+function resetarSenha(uid){
+  if(!podeResetarSenha()) return toast('Somente o Gestor pode redefinir senhas.');
+  const u=USERS.find(x=>x.id===uid); if(!u) return;
+  if(uid===session.id) return toast('Para trocar a sua própria senha use o campo acima.');
+  if(!confirm('Redefinir a senha de '+u.nome+'?\n\nA senha atual será apagada e '+u.nome+' criará uma nova no próximo acesso.')) return;
+  delete creds[uid]; save();
+  audit('Senha redefinida',u.nome,'','','Configurações');
+  toast(u.nome+' criará uma nova senha no próximo acesso.');
+  render();
+}
 function conferirSenha(uid,senha){
   const c=creds[uid]; if(!c||!c.hash) return false;
   return hashSenha(senha,c.salt)===c.hash;
@@ -1252,8 +1264,14 @@ function toggleSidebar(){
   if(window.innerWidth<=900) document.body.classList.toggle('mobile-open');
   else document.body.classList.toggle('collapsed');
 }
+/* Módulo que cada página usa para decidir quais condomínios oferecer.
+   Sem isso, páginas financeiras herdavam a lista de 'tarefas' e o Taguá Life
+   (regime Somente Financeiro) sumia do seletor do topo. */
+const MODULO_DA_PAGINA={notas:'notas',cessoes:'cessoes',publicidade:'publicidade',
+  leituras:'leituras',estoque:'estoque',pedidos:'pedidos',apontamentos:'apontamentos'};
+function moduloDaPagina(){ return MODULO_DA_PAGINA[page]||'tarefas' }
 function buildCondoFilter(){
-  const meus=condosDo('tarefas');
+  const meus=condosDo(moduloDaPagina());
   const box=$('#condoFilter');
   if(meus.length<2||!P().tipos.length){condoFilter=meus.length?meus[0].id:'all';
     box.innerHTML=''; if(box.classList)box.classList.add('hidden'); return}
@@ -1376,7 +1394,12 @@ function buildNav(){
 }
 
 function paginaInicial(){ return (P().tipos.length||P().manutencao)?'dashboard':'estoque'; }
-function go(p,filter){page=p;pageFilter=filter||null;document.body.classList.remove('mobile-open');buildNav();buildTabbar();render()}
+function go(p,filter){page=p;pageFilter=filter||null;document.body.classList.remove('mobile-open');
+  /* Se o condomínio selecionado não participa do módulo da nova página,
+     volta para "Todos" — senão a tela ficaria vazia sem explicação. */
+  const disp=condosDo(moduloDaPagina());
+  if(condoFilter!=='all'&&!disp.some(c=>c.id===condoFilter)) condoFilter='all';
+  buildNav();buildTabbar();buildCondoFilter();render()}
 function render(){
   { const _sb=document.querySelector('#syncBadge'); if(_sb) _sb.outerHTML=badgeSync(); }
   save(); if(session)gerarNotificacoes();
@@ -1450,8 +1473,11 @@ function viewDashboard(){
     avisos.push(['red',ic('water'),`Leitura atrasada: ${l.tipo==='agua'?'Água':'Energia'}`,`${condoName(l.condoId)} · programada para ${fmt(l.data)}`,null]));
     visibleCess().filter(c=>cessStatusAuto(c)==='Atrasada').slice(0,4).forEach(c=>
       avisos.push(['red',ic('contract'),`Cessão atrasada: ${c.unidade}`,`${condoName(c.condoId)} · ${c.nome} · previsto ${fmt(c.vencimento)}`,null]));
-    anuncios.filter(a=>a.status==='Ativo'&&a.fim&&diffDays(a.fim,today())>=0&&diffDays(a.fim,today())<=7).slice(0,3).forEach(a=>
-      avisos.push(['amber',ic('megaphone'),`Contrato de publicidade a vencer: ${a.empresa}`,`${condoName(a.condoId)} · ${a.elevador} · termina em ${fmt(a.fim)}`,null]));
+    pubVencendo(30).slice(0,4).forEach(a=>
+      avisos.push([a._dias<0?'red':'amber',ic('megaphone'),
+        (a._dias<0?`Contrato de publicidade vencido: ${a.empresa}`:`Contrato de publicidade a vencer: ${a.empresa}`),
+        `${condoName(a.condoId)} · ${a.elevador} · ${a._dias<0?('venceu há '+Math.abs(a._dias)+' dia'+(Math.abs(a._dias)===1?'':'s')):a._dias===0?'vence hoje':('faltam '+a._dias+' dias')} · ${fmt(a.fim)}`,
+        ()=>go('publicidade')]));
   m.hoje.filter(t=>t.prioridade==='Alta').slice(0,4).forEach(t=>
     avisos.push(['blue',ic('clock'),`Prioridade alta hoje: ${t.titulo}`,`${condoName(t.condoId)} · ${t.responsavel||'sem responsável'}`,t.id]));
 
@@ -1647,7 +1673,7 @@ function viewConfig(){
 
       <div class="card">
         <div class="section-title" style="margin-top:0"><h3>${ic('shield')}Dados e Backup</h3></div>
-        <div class="t-sub" style="margin-bottom:10px">Tudo fica salvo neste aparelho. Gere um backup antes de trocar de celular ou limpar o navegador.</div>
+        <div class="t-sub" style="margin-bottom:10px">Os dados sincronizam pela nuvem. Ainda assim, gere um backup periódico: é a sua garantia caso algo seja apagado por engano.</div>
         <div class="feed-item blue" style="margin-bottom:10px">
           <div class="fi-ic">${ic('box')}</div>
           <div style="flex:1"><div class="ft">${tasks.length} tarefas · ${apontamentos.length} apontamentos · ${estoque.length} materiais</div>
@@ -1679,6 +1705,38 @@ function viewConfig(){
         </div>
         <div class="t-sub">Afeta: conclusão de recorrentes, "Gerar Rotina da Semana" e as rotinas administrativas.</div>
       </div>
+      <div class="card">
+        <div class="section-title" style="margin-top:0"><h3>${ic('shield')}Chave de Acesso do Site</h3></div>
+        <div class="t-sub" style="margin-bottom:10px">Trava extra na porta do servidor: sem a chave, ninguém baixa nem grava os dados, mesmo sabendo o endereço. Cadastre a mesma chave em cada aparelho — precisa ser igual à variável <b>SITE_TOKEN</b> configurada no Render.</div>
+        <div class="field"><label>Chave deste aparelho</label>
+          <input id="cfgToken" type="password" placeholder="deixe vazio se o site não usa chave" value="${esc(syncCfg().token||'')}"></div>
+        <div class="rowact" style="margin-top:10px">
+          <button class="btn" onclick="salvarToken()">${ic('check')}Salvar chave</button>
+          <button class="btn ghost" onclick="testarToken()">Testar conexão</button>
+        </div>
+        <div id="cfgTokenMsg" class="t-sub" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title" style="margin-top:0"><h3>${ic('lock')}Senhas da Equipe</h3></div>
+        ${session.role!=='Gestor' ? `<div class="t-sub">Somente o Gestor redefine a senha de outros usuários.</div>` : `
+        <div class="t-sub" style="margin-bottom:10px">Se alguém esquecer a senha, zere aqui: a pessoa cria uma nova no próximo acesso. Ninguém consegue ver a senha de outro.</div>
+        ${USERS.map(u=>`
+          <div class="feed-item" style="margin-bottom:8px">
+            <div class="fi-ic">${ic('user')}</div>
+            <div style="flex:1">
+              <div class="ft">${esc(u.nome)} <span class="badge b-tag">${esc(u.role)}</span></div>
+              <div class="fd">${temSenha(u.id)?('senha definida'+(creds[u.id]&&creds[u.id].trocadaEm?' em '+String(creds[u.id].trocadaEm).slice(0,10).split('-').reverse().join('/'):'')):'aguardando primeiro acesso'}</div>
+            </div>
+            ${u.id===session.id
+              ? `<span class="badge b-pend">você</span>`
+              : (temSenha(u.id)
+                  ? `<button class="btn ghost sm" onclick="resetarSenha('${u.id}')">${ic('refresh')}Redefinir</button>`
+                  : `<span class="badge b-and">livre</span>`)}
+          </div>`).join('')}
+        `}
+      </div>
+
       <div class="card">
         <div class="section-title" style="margin-top:0"><h3>Perfil e permissões</h3></div>
         <div class="chip-list" style="margin-bottom:10px"><span class="badge b-condo">${session.nome}</span><span class="badge b-tag">${session.role}</span></div>
@@ -1751,6 +1809,8 @@ function viewTasks(){
     <div class="viewtabs">
       ${[['lista','list','Lista'],['kanban','kanban','Kanban'],['calendario','calendar','Calendário']].map(([v,i,l])=>`<button class="${taskView===v?'active':''}" onclick="taskView='${v}';render()">${ic(i)}${l}</button>`).join('')}
     </div>
+    ${(()=>{const n=all.filter(t=>t.status==='Atrasada').length;
+      return n&&P().edit?`<button class="btn ghost" onclick="modalReagendar()" title="Mover as atrasadas para uma nova data">${ic('clock')}Reagendar ${n} atrasada${n===1?'':'s'}</button>`:'';})()}
     ${podeDelegar()?`<button class="btn ghost" onclick="abrirDelegar('')">${ic('users')}Delegar tarefa</button>`:''}
     ${P().create?`<button class="btn" onclick="editTask()">+ Nova Tarefa</button>`:''}
   </div>`;
@@ -2552,7 +2612,9 @@ function nfQuick(id){
 }
 function viewNotas(){
   const comp=nfComp||compAtual();
-  if(condoFilter!=='all') nfTab=condoFilter;
+  const disp=condosDo('notas');
+  if(condoFilter!=='all'&&disp.some(c=>c.id===condoFilter)) nfTab=condoFilter;
+  if(!disp.some(c=>c.id===nfTab)) nfTab=disp.length?disp[0].id:'c1';   // aba órfã volta p/ a 1ª válida
   const cid=nfTab;
   let list=notas.filter(n=>n.condoId===cid&&n.competencia===comp);
   if(nfBusca) list=list.filter(n=>(n.empresa+n.servico+n.insumo).toLowerCase().includes(nfBusca.toLowerCase()));
@@ -2565,13 +2627,14 @@ function viewNotas(){
   $('#content').innerHTML=`
     <div class="toolbar no-print">
       <div class="viewtabs">
-        ${CONDOS.filter(c=>P().condos.includes(c.id)).map(c=>
+        ${condosDo('notas').map(c=>
           `<button class="${nfTab===c.id?'active':''}" onclick="nfTab='${c.id}';render()">${ic('building')} ${c.nome}</button>`).join('')}
       </div>
       <select onchange="nfComp=this.value;render()">${comps.map(c=>`<option ${c===comp?'selected':''}>${c}</option>`).join('')}</select>
       <input placeholder="Empresa, serviço ou insumo" value="${esc(nfBusca)}" oninput="nfBusca=this.value;render()">
       <div class="spacer"></div>
       <button class="btn ghost" onclick="prestPanel=!prestPanel;render()">Prestadores de Serviço ${prestPanel?'':''}</button>
+      <button class="btn ghost" onclick="csvNotas()">${ic('download')}Exportar Excel</button>
       <button class="btn ghost" onclick="modalGerarComp()">Gerar Competência</button>
       <button class="btn ghost danger" onclick="modalExcluirComp()">Excluir Competência</button>
       <button class="btn green" onclick="nfConcluirMes()">Concluir Mês</button>
@@ -3218,6 +3281,25 @@ function pubElevOpts(cid,cur){ return pubGrupos(cid).map(([g,es])=>`<optgroup la
 const PUB_STATUS=['Interessado','Ativo','Encerrado'];
 let pubBusca='', pubFStatus='';
 function visPub(){ return anuncios.filter(a=>P().condos.includes(a.condoId)); }
+/* ---- vigência dos contratos de publicidade ---- */
+function diasAte(d){ if(!d) return null; return Math.round((new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000); }
+/* Contratos ativos que vencem nos próximos `dias` (padrão 30), do mais urgente ao menos. */
+function pubVencendo(dias){
+  const lim=(dias==null?30:dias);
+  return visPub().filter(a=>a.status==='Ativo'&&a.fim)
+    .map(a=>({...a,_dias:diasAte(a.fim)}))
+    .filter(a=>a._dias!==null&&a._dias<=lim)
+    .sort((x,y)=>x._dias-y._dias);
+}
+/* Ocupação e receita por condomínio: quantos espaços dos disponíveis estão alugados. */
+function pubOcupacao(cid){
+  const espacos=pubElevs(cid).length;
+  const ativos=visPub().filter(a=>a.status==='Ativo'&&a.condoId===cid);
+  const ocupados=new Set(ativos.map(a=>a.elevador).filter(Boolean)).size;
+  const mensal=ativos.reduce((t,a)=>t+(Number(a.valorMensal)||0),0);
+  return {espacos,ocupados,livres:Math.max(0,espacos-ocupados),
+    taxa:espacos?Math.round(ocupados/espacos*100):0,mensal,anual:mensal*12};
+}
 function pubDataExtenso(iso){
   const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const d=iso?parse(iso):new Date();
@@ -3237,6 +3319,33 @@ function viewPublicidade(){
       <div class="card metric green" onclick="pubFStatus='Ativo';render()"><div class="lbl">Contratos Ativos</div><div class="val">${cnt('Ativo')}</div><div class="sub">${brl(recMes)}/mês</div></div>
       <div class="card metric" onclick="pubFStatus='Encerrado';render()"><div class="lbl">Encerrados</div><div class="val">${cnt('Encerrado')}</div></div>
     </div>
+    ${condosDo('publicidade').map(c=>{
+      const o=pubOcupacao(c.id); if(!o.espacos) return '';
+      return `
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-title" style="margin-top:0"><h3>${ic('chart')} Ocupação e receita — ${esc(c.nome)}</h3>
+          <span class="t-sub">${o.ocupados} de ${o.espacos} espaços alugados</span></div>
+        <div style="height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin:4px 0 12px">
+          <div style="height:100%;width:${o.taxa}%;background:${o.taxa>=70?'var(--green,#1d7a4c)':o.taxa>=40?'#a8690b':'var(--accent)'};border-radius:99px"></div>
+        </div>
+        <div class="grid metrics">
+          <div class="card metric"><div class="lbl">Taxa de ocupação</div><div class="val">${o.taxa}%</div><div class="sub">${o.livres} espaço${o.livres===1?'':'s'} livre${o.livres===1?'':'s'}</div></div>
+          <div class="card metric green"><div class="lbl">Receita mensal</div><div class="val">${brl(o.mensal)}</div><div class="sub">contratos ativos</div></div>
+          <div class="card metric"><div class="lbl">Projeção anual</div><div class="val">${brl(o.anual)}</div><div class="sub">se mantida a ocupação</div></div>
+        </div>
+      </div>`;}).join('')}
+
+    ${(()=>{ const v=pubVencendo(30); if(!v.length) return '';
+      return `<div class="card" style="margin-bottom:14px;border-left:3px solid #a8690b">
+        <div class="section-title" style="margin-top:0"><h3>${ic('alert')} Contratos a vencer</h3>
+          <span class="t-sub">próximos 30 dias</span></div>
+        ${v.map(a=>`<div class="feed-item ${a._dias<0?'red':'amber'}" style="margin-bottom:8px">
+          <div class="fi-ic">${ic('megaphone')}</div>
+          <div style="flex:1"><div class="ft">${esc(a.empresa||'—')} · ${esc(a.elevador||'')}</div>
+            <div class="fd">${a._dias<0?('venceu há '+Math.abs(a._dias)+' dia'+(Math.abs(a._dias)===1?'':'s')):a._dias===0?'vence hoje':('vence em '+a._dias+' dia'+(a._dias===1?'':'s'))} · ${fmt(a.fim)}${a.valorMensal?' · '+brl(a.valorMensal)+'/mês':''}</div></div>
+          <button class="btn ghost sm" onclick="editPub('${a.id}')">Abrir</button></div>`).join('')}
+      </div>`;})()}
+
     <div class="card" style="margin-bottom:14px">
       <div class="section-title" style="margin-top:0"><h3>${ic('building')} Elevadores cadastrados</h3>
         <span class="t-sub">o cadastro de interessado usa estas opções</span></div>
@@ -3258,6 +3367,7 @@ function viewPublicidade(){
       <input placeholder="Empresa, CNPJ/CPF, contato..." value="${esc(pubBusca)}" oninput="pubBusca=this.value;render()" style="min-width:210px">
       <select onchange="pubFStatus=this.value;render()">${opt(['',...PUB_STATUS],pubFStatus,'Status')}</select>
       <div class="spacer"></div>
+      <button class="btn ghost" onclick="csvPublicidade()">${ic('download')}Exportar Excel</button>
       <button class="btn ghost" onclick="pubConfig()">${ic('settings')} Dados do Contrato</button>
       ${P().create?`<button class="btn" onclick="editPub()">+ Novo Interessado</button>`:''}
     </div>
@@ -3851,7 +3961,8 @@ function viewLeituras(){
         ${criticas.slice(0,3).map(c=>`<br>• ${condoName(c.condoId)} — ${fmt(c.data)}: ${fmtLeit(c.consumo,c.tipo)} ${unid(c.tipo)}`).join('')}</div></div></div>`:''}
     ${graficoLeituras()}
     <div class="section-title"><h3>Histórico de leituras — ${leitTab==='agua'?'Água':'Energia'}</h3>
-      <div class="spacer no-print"><button class="btn ghost sm" onclick="window.print()">Imprimir</button>
+      <div class="spacer no-print"><button class="btn ghost sm" onclick="csvLeituras()">${ic('download')}Exportar Excel</button>
+        <button class="btn ghost sm" onclick="window.print()">Imprimir</button>
         <button class="btn ghost sm" onclick="exportLeituras()">CSV</button></div></div>
     ${l.length?`<div class="tablewrap"><table><thead><tr>
       <th>Data</th><th>Condomínio</th><th>Medidor</th>${leitTab==='energia'?'<th>Fator</th>':''}
@@ -5575,6 +5686,100 @@ function donutSvg(data){
   return `<svg width="140" height="140" viewBox="0 0 140 140"><circle r="${R}" cx="70" cy="70" fill="none" stroke="#eef1f6" stroke-width="24"></circle>
     ${segs}<text x="70" y="76" text-anchor="middle" font-size="20" font-weight="800" fill="#0f2a4a">${tot}</text></svg>`;
 }
+/* ---------- Exportação para Excel (CSV com BOM e ; — abre direto no Excel BR) ---------- */
+function baixarCsv(nome,rows){
+  const csv='\ufeff'+rows.map(r=>r.map(c=>`"${String(c==null?'':c).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=nome+'_'+today()+'.csv'; a.click();
+  audit('Exportação',nome,'','',''); toast('Planilha gerada.');
+}
+function csvNotas(){
+  const l=notas.filter(n=>P().condos.includes(n.condoId));
+  const rows=[['Competencia','Condominio','Empresa','Servico','Dia','Book','NF','Status','Observacao']];
+  l.forEach(n=>{ const pr=prestadores.find(x=>x.id===n.prestadorId)||{};
+    rows.push([n.competencia||'',condoName(n.condoId),pr.empresa||n.empresa||'',pr.servico||'',pr.dia||'',
+      n.book?'Entregue':'Pendente',n.nf?'Entregue':'Pendente',(typeof nfStatus==='function'?nfStatus(n):''),n.obs||'']);});
+  baixarCsv('notas_fiscais',rows);
+}
+function csvLeituras(){
+  const l=leituras.filter(x=>P().condos.includes(x.condoId)).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+  const rows=[['Data','Condominio','Tipo','Medidor','Leitura_anterior','Consumo','Unidade','Status','Responsavel','Observacao']];
+  l.forEach(x=>rows.push([fmt(x.data),condoName(x.condoId),x.tipo==='agua'?'Água':'Energia',
+    x.medidor==null?'':String(x.medidor).replace('.',','),x.anterior==null?'':String(x.anterior).replace('.',','),
+    x.consumo==null?'':String(x.consumo).replace('.',','),unid(x.tipo),x.status||'',x.responsavel||'',x.obs||'']));
+  baixarCsv('leituras',rows);
+}
+function csvPublicidade(){
+  const l=visPub();
+  const rows=[['Condominio','Empresa','Documento','Contato','Elevador','Status','Inicio','Fim','Valor_mensal','Dias_para_vencer']];
+  l.forEach(a=>rows.push([condoName(a.condoId),a.empresa||'',a.doc||'',a.contato||'',a.elevador||'',a.status||'',
+    a.inicio?fmt(a.inicio):'',a.fim?fmt(a.fim):'',
+    a.valorMensal==null?'':String(a.valorMensal).replace('.',','),
+    a.fim&&a.status==='Ativo'?diasAte(a.fim):'']));
+  baixarCsv('publicidade',rows);
+}
+/* ---------- Chave de acesso do site (SITE_TOKEN) ---------- */
+function salvarToken(){
+  const v=($('#cfgToken')&&$('#cfgToken').value||'').trim();
+  salvaSyncCfg({token:v});
+  audit('Chave de acesso alterada','Sincronização','','','Configurações');
+  toast(v?'Chave salva neste aparelho.':'Chave removida deste aparelho.');
+  testarToken();
+}
+async function testarToken(){
+  const el=$('#cfgTokenMsg'); if(el) el.textContent='Testando...';
+  try{
+    const r=await fetch('/api/dados',{headers:syncHeaders()});
+    if(el) el.innerHTML = r.status===401
+      ? '<span style="color:#c2384a">Chave incorreta — o servidor recusou (401).</span>'
+      : r.ok ? '<span style="color:#1d7a4c">Conexão autorizada.</span>'
+             : '<span style="color:#a8690b">Servidor respondeu '+r.status+'.</span>';
+  }catch(e){ if(el) el.innerHTML='<span style="color:#a8690b">Sem conexão com o servidor.</span>'; }
+}
+
+/* ---------- Reagendar atrasadas em massa ---------- */
+function atrasadasVisiveis(){ return visibleTasks().filter(t=>t.status==='Atrasada'); }
+function modalReagendar(){
+  const lista=atrasadasVisiveis();
+  if(!lista.length) return toast('Nenhuma tarefa atrasada.');
+  if(!P().edit) return toast('Sem permissão para reagendar.');
+  const d=new Date(); d.setDate(d.getDate()+1);
+  openModal('Reagendar tarefas atrasadas',`
+    <div class="t-sub" style="margin-bottom:12px">${lista.length} tarefa${lista.length===1?'':'s'} atrasada${lista.length===1?'':'s'} ${lista.length===1?'será movida':'serão movidas'} para a nova data. O histórico de cada uma registra o reagendamento.</div>
+    <div class="field"><label>Nova data de vencimento</label>
+      <input type="date" id="rgData" value="${iso(d)}" min="${today()}"></div>
+    <div class="check" style="margin-top:10px">
+      <input type="checkbox" id="rgSoMinhas" ${P().tipos.length?'':'checked'}>
+      <div style="flex:1"><div class="ct">Somente as minhas</div>
+        <div class="t-sub">Deixe desmarcado para reagendar as de toda a equipe.</div></div></div>
+    <div style="max-height:210px;overflow:auto;margin-top:12px">
+      ${lista.map(t=>`<div class="feed-item red" style="margin-bottom:6px">
+        <div class="fi-ic">${ic('clock')}</div>
+        <div style="flex:1"><div class="ft">${esc(t.titulo)}</div>
+          <div class="fd">${condoName(t.condoId)} · ${esc(t.responsavel||'sem responsável')} · venceu em ${fmt(t.vencimento)}</div></div></div>`).join('')}
+    </div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn" onclick="confirmarReagendar()">Reagendar</button>`);
+}
+function confirmarReagendar(novaArg,soArg){
+  const nova=novaArg!==undefined?novaArg:($('#rgData')&&$('#rgData').value);
+  if(!nova) return toast('Escolha a nova data.');
+  if(nova<today()) return toast('A nova data não pode ficar no passado.');
+  const so=soArg!==undefined?soArg:($('#rgSoMinhas')&&$('#rgSoMinhas').checked);
+  let alvo=atrasadasVisiveis();
+  if(so) alvo=alvo.filter(t=>t.responsavel===session.nome);
+  if(!alvo.length){ closeModal(); return toast('Nenhuma tarefa se encaixa no filtro.'); }
+  alvo.forEach(t=>{
+    const antes=t.vencimento;
+    t.vencimento=nova; t.status='Pendente';
+    (t.historico=t.historico||[]).push({q:session.nome,w:nowStamp(),
+      t:`Reagendada de ${fmt(antes)} para ${fmt(nova)}`});
+  });
+  audit('Reagendamento em massa','Tarefas',alvo.length+' tarefa(s)','',`Nova data ${fmt(nova)}`);
+  save(); closeModal(); render();
+  toast(alvo.length+' tarefa'+(alvo.length===1?'':'s')+' reagendada'+(alvo.length===1?'':'s')+' para '+fmt(nova)+'.');
+}
 function exportCsv(){
   const ts=visibleTasks();
   const rows=[['Titulo','Condominio','Tipo','Responsavel','Periodicidade','Vencimento','Status','Prioridade','ConcluidoEm','ConcluidoPor']];
@@ -5859,5 +6064,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a38820fac90097cc',t:'MTc4ODk3NzIwNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a397abce78346d7b',t:'MTc4OTE0MDE4MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
