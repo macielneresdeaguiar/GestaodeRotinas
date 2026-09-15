@@ -3243,7 +3243,7 @@ function viewCessoes(){
   let list=visibleCess();
   if(csFiltroStatus) list=list.filter(c=>cessStatusAuto(c)===csFiltroStatus);
   if(csFiltroTipo) list=list.filter(c=>c.tipo===csFiltroTipo);
-  if(csBusca) list=list.filter(c=>(c.unidade+c.nome+c.doc+c.contato).toLowerCase().includes(csBusca.toLowerCase()));
+  if(csBusca) list=list.filter(c=>(c.unidade+c.nome+c.doc+c.contato+(c.email||'')).toLowerCase().includes(csBusca.toLowerCase()));
   list.sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
   const all=visibleCess(), cnt=st=>all.filter(c=>cessStatusAuto(c)===st).length;
   $('#content').innerHTML=`
@@ -3262,13 +3262,14 @@ function viewCessoes(){
     </div>
     ${list.length?`<div class="tablewrap"><table><thead><tr>
       <th>Sala / Unidade</th><th>Condomínio</th><th>Tipo</th><th>Nome / Razão Social</th><th>CPF/CNPJ</th>
-      <th>Contato</th><th>Contrato</th><th>Venc. previsto</th><th>Anexo</th><th>Status</th><th>Ações</th>
+      <th>Contato</th><th>E-mail</th><th>Contrato</th><th>Venc. previsto</th><th>Anexo</th><th>Status</th><th>Ações</th>
       </tr></thead><tbody>
       ${list.map(c=>{const st=cessStatusAuto(c),d=diffDays(c.vencimento,today());return `<tr>
         <td class="t-title">${esc(c.unidade)}</td>
         <td>${badgeCondo(c.condoId)}</td>
         <td><span class="badge ${c.tipo==='Volta p/ Proprietário'?'b-avencer':'b-tag'}">${c.tipo}</span></td>
         <td>${esc(c.nome)}</td><td>${esc(c.doc)}</td><td>${esc(c.contato)}</td>
+        <td>${c.email?`<a href="mailto:${esc(c.email)}" title="Enviar e-mail">${esc(c.email)}</a>`:'<span class="t-sub">—</span>'}</td>
         <td><div class="chip-list">
           <span class="badge ${c.contratoFisico?'b-conc':'b-pend'}">${c.contratoFisico?'':''} Físico</span>
           <span class="badge ${c.contratoEmail?'b-conc':'b-pend'}">${c.contratoEmail?'':''} E-mail</span></div></td>
@@ -3299,6 +3300,7 @@ function editCess(id){
       <div class="field"><label>Nome / Razão Social</label><input id="csNome" value="${esc(c?.nome||'')}"></div>
       <div class="field"><label>CPF / CNPJ</label><input id="csDoc" value="${esc(c?.doc||'')}" placeholder="000.000.000-00"></div>
       <div class="field"><label>Contato</label><input id="csCont" value="${esc(c?.contato||'')}" placeholder="(61) 90000-0000"></div>
+      <div class="field"><label>E-mail do cedente</label><input type="email" id="csEmail" value="${esc(c?.email||'')}" placeholder="nome@empresa.com.br"></div>
       <div class="field"><label>Data de cadastro</label><input type="date" id="csCad" value="${cad}" onchange="csPreviewVenc()"></div>
     </div>
     <div class="check" style="margin-bottom:10px"><input type="checkbox" id="csFis" ${c?.contratoFisico?'checked':''}>
@@ -3332,17 +3334,20 @@ function csPreviewVenc(pre){
   </div>`;
 }
 function csSetVenc(d){csVencEscolha=d;csPreviewVenc(d)}
-function saveCess(id){
-  const o={condoId:$('#csCondo').value,unidade:$('#csUni').value.trim(),tipo:$('#csTipo').value,
+function saveCess(id,dados){
+  const o=dados||{condoId:$('#csCondo').value,unidade:$('#csUni').value.trim(),tipo:$('#csTipo').value,
     status:$('#csStatus').value,nome:$('#csNome').value.trim(),doc:$('#csDoc').value.trim(),
-    contato:$('#csCont').value.trim(),cadastro:$('#csCad').value,
+    contato:$('#csCont').value.trim(),email:($('#csEmail')?$('#csEmail').value:'').trim(),cadastro:$('#csCad').value,
     contratoFisico:$('#csFis').checked,contratoEmail:$('#csMail').checked,anexo:$('#csAnexo').value.trim(),
     vencimento:csVencEscolha||vencCessao($('#csCad').value).data};
   if(!o.unidade||!o.nome) return toast('Informe a unidade e o nome/razão social.');
+  if(o.email&&!emailValido(o.email)) return toast('E-mail inválido. Confira o endereço digitado.');
   if(id){
     const c=cessoes.find(x=>x.id===id); const antes=c.vencimento;
+    const mailAntes=c.email||'';
     Object.assign(c,o);
-    c.historico.push({q:session.nome,w:nowStamp(),t:'Registro editado'+(antes!==c.vencimento?` · vencimento ${fmt(antes)} → ${fmt(c.vencimento)}`:'')});
+    c.historico.push({q:session.nome,w:nowStamp(),t:'Registro editado'+(antes!==c.vencimento?` · vencimento ${fmt(antes)} → ${fmt(c.vencimento)}`:'')
+      +(mailAntes!==o.email?` · e-mail ${mailAntes||'—'} → ${o.email||'—'}`:'')});
     toast('Cessão atualizada.');
   }else{
     cessoes.push(Object.assign({id:uid('cs'),concluidoEm:null,concluidoPor:null,obsConclusao:'',criadoPor:session.nome,
@@ -3361,6 +3366,7 @@ function openCess(id){
       <div><div class="t-sub">Nome / Razão Social</div><b>${esc(c.nome)}</b></div>
       <div><div class="t-sub">CPF / CNPJ</div><b>${esc(c.doc||'—')}</b></div>
       <div><div class="t-sub">Contato</div><b>${esc(c.contato||'—')}</b></div>
+      <div><div class="t-sub">E-mail do cedente</div><b>${c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:'—'}</b></div>
       <div><div class="t-sub">Cadastro</div><b>${fmt(c.cadastro)}</b></div>
       <div><div class="t-sub">Vencimento previsto</div><b>${fmt(c.vencimento)}</b></div>
       <div><div class="t-sub">Anexo</div><b>${c.anexo?''+esc(c.anexo):'—'}</b></div>
@@ -3669,6 +3675,7 @@ function moHistorico(id){
 }
 
 /* ---- vigência dos contratos de publicidade ---- */
+function emailValido(e){return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(e||'').trim())}
 function diasAte(d){ if(!d) return null; return Math.round((new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000); }
 /* Contratos ativos que vencem nos próximos `dias` (padrão 30), do mais urgente ao menos. */
 function pubVencendo(dias){
@@ -6710,5 +6717,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a399e66add7764d3',t:'MTc4OTE2MzU1Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3b9efd7ce903421',t:'MTc4OTQ5OTQ4Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+</body>
 </html>
