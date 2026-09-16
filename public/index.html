@@ -1255,7 +1255,7 @@ let _saveTimer=null, _booting=true;
 function store(){ try{ return window.localStorage }catch(e){ return null } }
 function dbSnapshot(){
   return {v:DB_VER, savedAt:new Date().toISOString(),
-    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,
+    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,
     auditLog, CFG, creds, notifs, notifState};
 }
 function salvarLocal(){
@@ -1278,7 +1278,7 @@ function load(){
   try{
     const d=JSON.parse(raw);
     if(!d||d.v!==DB_VER) return false;
-    vcUnidades=d.vcUnidades||[]; vcCiclos=d.vcCiclos||[];
+    vcUnidades=d.vcUnidades||[]; vcCiclos=d.vcCiclos||[]; vcVendas=d.vcVendas||[];
   tasks=d.tasks||[]; notas=d.notas||[]; cessoes=d.cessoes||[];
     apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
     pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
@@ -3627,6 +3627,70 @@ function vcFecharCiclo(id){
 }
 const vcFmtM3=v=>v===null||v===undefined||v===''?'—':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
+/* ---- VENDAS: lançamentos de faturamento (fixos + consumo automático) ---- */
+// origem: 'fixo' (repete todo mês) · 'agua'/'energia' (puxa do rateio) · 'variavel' (digitado no mês)
+const VC_ORIGENS=[['fixo','Valor fixo (repete todo mês)'],['agua','Consumo de água (automático)'],
+                  ['energia','Consumo de energia (automático)'],['variavel','Valor variável (digito no mês)']];
+function compSub(c,n){
+  let [m,y]=String(c).split('/').map(Number);
+  m-=(n||0); while(m<1){m+=12;y--} while(m>12){m-=12;y++}
+  return `${pad(m)}/${y}`;
+}
+function vcVendasDo(cid){
+  return vcVendas.filter(v=>v.condoId===(cid||'c1')&&v.ativo!==false)
+    .sort((a,b)=>(a.ordem||0)-(b.ordem||0)||a.unidade.localeCompare(b.unidade,'pt-BR'));
+}
+// competência de referência que aparece no texto do motivo
+function vcRefDe(v,comp){ return v.refMeses===null||v.refMeses===undefined?null:compSub(comp,v.refMeses) }
+function vcMotivoDe(v,comp){
+  const r=vcRefDe(v,comp);
+  return r?`${v.motivo} ${r}`:v.motivo;
+}
+// valor: fixo repete · água/energia vem do rateio · variável vem do que foi digitado
+function vcValorVenda(v,comp){
+  if(v.origem==='fixo') return Number(v.valor)||0;
+  if(v.origem==='variavel'){ const m=v.valores||{}; return m[comp]===undefined?null:Number(m[comp]) }
+  const ref=vcRefDe(v,comp)||comp;
+  const c=vcCiclos.find(x=>x.servico===v.origem&&x.condoId===v.condoId&&x.competencia===ref);
+  if(!c) return null;
+  const l=(c.linhas||[]).find(x=>x.unidadeId===v.unidadeId);
+  if(!l) return null;
+  return vcValorLinha(c,l);
+}
+function vcLinhasVenda(comp,cid){
+  return vcVendasDo(cid).map(v=>({item:v,unidade:v.unidade,cnpj:v.cnpj||'',
+    motivo:vcMotivoDe(v,comp),venc:compVenc(comp,v.dia||1),
+    valor:vcValorVenda(v,comp),tipo:v.tipo||'VENDA',origem:v.origem}));
+}
+function vcTotalVendas(comp,cid){
+  return Math.round(vcLinhasVenda(comp,cid).reduce((s,l)=>s+(l.valor||0),0)*100)/100;
+}
+function vcSalvarVenda(id,dados){
+  const o=dados||{condoId:$('#vvCondo').value,unidade:$('#vvUni').value.trim(),cnpj:$('#vvCnpj').value.trim(),
+    motivo:$('#vvMotivo').value.trim(),origem:$('#vvOrigem').value,valor:vcNum($('#vvValor').value)||0,
+    dia:Number($('#vvDia').value)||1,ordem:Number($('#vvOrdem').value)||0,
+    refMeses:$('#vvRef').value===''?null:Number($('#vvRef').value),
+    unidadeId:$('#vvLink')?$('#vvLink').value:'',tipo:'VENDA',ativo:$('#vvAtivo').checked};
+  if(!o.unidade||!o.motivo) return toast('Informe a unidade e o motivo.');
+  if((o.origem==='agua'||o.origem==='energia')&&!o.unidadeId)
+    return toast('Escolha a unidade medida de onde vem o consumo.');
+  if(id){ const v=vcVendas.find(x=>x.id===id); if(!v) return; Object.assign(v,o); toast('Lançamento atualizado.'); }
+  else { vcVendas.push(Object.assign({id:uid('vv'),valores:{}},o)); toast('Lançamento criado.'); }
+  closeModal(); render();
+}
+function vcExcluirVenda(id){
+  const v=vcVendas.find(x=>x.id===id); if(!v) return;
+  if(!confirm(`Excluir o lançamento "${v.motivo}" de ${v.unidade}?`)) return;
+  vcVendas=vcVendas.filter(x=>x.id!==id); render(); toast('Lançamento excluído.');
+}
+function vcSetValorVariavel(id,comp,valor){
+  const v=vcVendas.find(x=>x.id===id); if(!v) return;
+  const n=vcNum(valor);
+  v.valores=v.valores||{};
+  if(n===null) delete v.valores[comp]; else v.valores[comp]=n;
+  save(); setTimeout(()=>render(),0);
+}
+
 /* ---- gerador de .xlsx nativo (ZIP store + CRC32), sem dependência externa ---- */
 const _crcTab=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
 function _crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=_crcTab[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
@@ -3669,6 +3733,19 @@ function vcXlsx(cicloId){
   // estilos: 0 normal · 1 título azul · 2 rótulo negrito+borda · 3 caixa valor · 4 cabeçalho cinza
   // 5 célula borda · 6 número 2 casas · 7 moeda · 8 total cinza escuro · 9 negrito
   L.push([]);
+  // ---- bloco VENDAS (faturamento do mês) ----
+  const vend=vcLinhasVenda(c.competencia,c.condoId);
+  if(vend.length){
+    L.push([txt(''),txt(''),txt(`VENDAS - FATURAMENTO ${vcMesExt(c.competencia)}`,1)]);
+    L.push([]);
+    L.push([txt('UNIDADE',4),txt('CNPJ',4),txt('MOTIVO',4),txt('DATA DO VENCIMENTO',4),txt('VALOR',4),txt('TIPO',4)]);
+    vend.forEach(v=>{
+      L.push([txt(v.unidade,5),txt(v.cnpj,5),txt(v.motivo,5),txt(fmt(v.venc),3),
+              num(v.valor,v.origem==='fixo'?7:10),txt(v.tipo,5)]);
+    });
+    const tv=[];tv[3]=txt('',8);tv[4]=num(vcTotalVendas(c.competencia,c.condoId),8);
+    L.push([]); L.push(tv); L.push([]); L.push([]);
+  }
   L.push([txt(''),txt(''),txt(`${serv.tit} - FATURAMENTO ${vcMesExt(c.competencia)}`,1)]);
   L.push([]);
   L.push([txt(''),txt('PERÍODO:',2),txt(`${c.inicio?fmt(c.inicio):''} A ${c.fim?fmt(c.fim):''}`,3)]);
@@ -3711,7 +3788,7 @@ function vcXlsx(cicloId){
     });
     linhasXml+=`<row r="${r}">${cs}</row>`;
   });
-  const larg=[34,34,20,18,16,10,18,12].map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
+  const larg=[34,34,46,20,18,14,18,12].map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
   const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${larg}</cols><sheetData>${linhasXml}</sheetData></worksheet>`;
   const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -3726,11 +3803,12 @@ function vcXlsx(cicloId){
 <fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/><bgColor indexed="64"/></patternFill></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFBFBFBF"/><bgColor indexed="64"/></patternFill></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FFA6A6A6"/><bgColor indexed="64"/></patternFill></fill></fills>
+<fill><patternFill patternType="solid"><fgColor rgb="FFA6A6A6"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFFFFF00"/><bgColor indexed="64"/></patternFill></fill></fills>
 <borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>
 <border><left style="thin"><color indexed="64"/></left><right style="thin"><color indexed="64"/></right><top style="thin"><color indexed="64"/></top><bottom style="thin"><color indexed="64"/></bottom><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="10">
+<cellXfs count="11">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center"/></xf>
 <xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
@@ -3741,6 +3819,7 @@ function vcXlsx(cicloId){
 <xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
 <xf numFmtId="164" fontId="2" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
 <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="164" fontId="0" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/>
 </cellXfs></styleSheet>`;
   const enc=new TextEncoder();
   const arqs=[
@@ -3831,6 +3910,82 @@ function vcReativar(id){
   const u=vcUnidades.find(x=>x.id===id); if(!u) return;
   u.ativo=true; render(); toast(`${u.unidade} voltou para os próximos ciclos.`);
 }
+function vcFormVenda(id){
+  if(!P().create) return toast('Sem permissão.');
+  const v=id?vcVendas.find(x=>x.id===id):null;
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const medidas=vcUnidades.filter(u=>u.condoId===cid);
+  $('#modalTitle').textContent=v?'Editar lançamento de venda':'Novo lançamento de venda';
+  $('#modalBody').innerHTML=`
+    <div class="f2">
+      <div class="field"><label>Condomínio</label><select id="vvCondo">${condosDo('vendascustas').map(x=>`<option value="${x.id}" ${v?.condoId===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
+      <div class="field"><label>Unidade / Empresa</label><input id="vvUni" value="${esc(v?.unidade||'')}" placeholder="VANTAGE CAR STUDIO LTDA"></div>
+      <div class="field"><label>CNPJ</label><input id="vvCnpj" value="${esc(v?.cnpj||'')}" placeholder="00.000.000/0001-00"></div>
+      <div class="field"><label>Dia do vencimento</label><input id="vvDia" type="number" min="1" max="31" value="${v?.dia||1}"></div>
+    </div>
+    <div class="field"><label>Motivo</label><input id="vvMotivo" value="${esc(v?.motivo||'')}" placeholder="ALUGUEL DO ESPAÇO"></div>
+    <div class="f2">
+      <div class="field"><label>Origem do valor</label><select id="vvOrigem" onchange="vcVendaOrigemMudou()">
+        ${VC_ORIGENS.map(([k,t])=>`<option value="${k}" ${v?.origem===k?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label>Ordem na planilha</label><input id="vvOrdem" type="number" value="${v?.ordem||0}"></div>
+    </div>
+    <div id="vvValorBox" class="field"><label>Valor fixo (R$)</label><input id="vvValor" value="${v&&v.valor?String(v.valor).replace('.',','):''}" placeholder="1.600,00"></div>
+    <div id="vvLinkBox" class="field"><label>Unidade medida (de onde vem o consumo)</label>
+      <select id="vvLink">${medidas.map(u=>`<option value="${u.id}" ${v?.unidadeId===u.id?'selected':''}>${VC_SERV[u.servico].nome} · ${esc(u.unidade)}</option>`).join('')}</select></div>
+    <div class="field"><label>Competência citada no motivo</label>
+      <select id="vvRef">
+        <option value="" ${v&&(v.refMeses===null||v.refMeses===undefined)?'selected':''}>não citar mês</option>
+        ${[0,1,2,3,4,5,6].map(n=>`<option value="${n}" ${v&&v.refMeses===n?'selected':''}>${n===0?'o próprio mês':n+' mês(es) antes'}</option>`).join('')}
+      </select>
+      <div class="t-sub">Ex.: no ciclo 08/2026, "3 meses antes" escreve "ALUGUEL DO ESPAÇO 05/2026".</div></div>
+    <div class="check"><input type="checkbox" id="vvAtivo" ${v?(v.ativo!==false?'checked':''):'checked'}>
+      <div style="flex:1"><div class="ct">Lançamento ativo</div><div class="t-sub">Entra na planilha de todo mês</div></div></div>`;
+  $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+    ${v?`<button class="btn danger" onclick="closeModal();vcExcluirVenda('${v.id}')">Excluir</button>`:''}
+    <button class="btn" onclick="vcSalvarVenda('${id||''}')">Salvar</button>`;
+  $('#modal').classList.add('open');
+  vcVendaOrigemMudou();
+}
+function vcVendaOrigemMudou(){
+  const o=$('#vvOrigem')?$('#vvOrigem').value:'fixo';
+  const vb=$('#vvValorBox'), lb=$('#vvLinkBox');
+  if(vb) vb.style.display=o==='fixo'?'':'none';
+  if(lb) lb.style.display=(o==='agua'||o==='energia')?'':'none';
+}
+function vcViewVendas(comp,cid){
+  const ls=vcLinhasVenda(comp,cid);
+  const tot=vcTotalVendas(comp,cid);
+  const pend=ls.filter(l=>l.valor===null);
+  return `<div class="card" style="margin-top:14px">
+    <div class="rowact" style="justify-content:space-between;margin-bottom:4px">
+      <b>Vendas — faturamento ${comp}</b>
+      ${P().create?`<button class="btn ghost sm" onclick="vcFormVenda()">${ic('plus')}Novo lançamento</button>`:''}
+    </div>
+    <div class="t-sub" style="margin-bottom:10px">Os valores fixos se repetem todo mês. Os de consumo mudam sozinhos conforme a medição de água e energia.</div>
+    ${pend.length?`<div class="feed-item amber" style="margin-bottom:10px"><div class="fi-ic">${ic('alert')}</div><div style="flex:1">
+      <div class="ft">${pend.length} lançamento(s) sem valor neste mês</div>
+      <div class="fd">${pend.map(l=>esc(l.motivo)+(l.origem==='variavel'?' (digite o valor)':' (falta a medição)')).join(' · ')}</div></div></div>`:''}
+    ${ls.length?`<div class="tablewrap"><table><thead><tr>
+      <th>Unidade</th><th>CNPJ</th><th>Motivo</th><th>Vencimento</th><th>Valor</th><th>Origem</th><th>Tipo</th><th>Ações</th>
+      </tr></thead><tbody>
+      ${ls.map(l=>`<tr>
+        <td class="t-title">${esc(l.unidade)}</td><td>${esc(l.cnpj||'—')}</td><td>${esc(l.motivo)}</td>
+        <td>${fmt(l.venc)}</td>
+        <td>${l.origem==='variavel'
+          ? `<input value="${l.valor===null?'':String(l.valor).replace('.',',')}" placeholder="digite"
+               style="width:110px" onchange="vcSetValorVariavel('${l.item.id}','${comp}',this.value)">`
+          : (l.valor===null?'<span class="t-sub">sem medição</span>':`<b>${brl(l.valor)}</b>`)}</td>
+        <td><span class="badge ${l.origem==='fixo'?'b-tag':l.origem==='variavel'?'b-pend':'b-conc'}">${
+          l.origem==='fixo'?'fixo':l.origem==='variavel'?'variável':'consumo '+l.origem}</span></td>
+        <td><span class="badge b-conc">${l.tipo}</span></td>
+        <td><div class="rowact no-print">${P().edit?`<button class="btn ghost sm" onclick="vcFormVenda('${l.item.id}')">Editar</button>`:''}</div></td>
+      </tr>`).join('')}
+      </tbody><tfoot><tr><td colspan="4" style="text-align:right"><b>TOTAL</b></td>
+        <td><b>${brl(tot)}</b></td><td colspan="3"></td></tr></tfoot></table></div>`
+      :`<div class="card empty">Nenhum lançamento de venda cadastrado.</div>`}
+  </div>`;
+}
+
 function vcViewUnidades(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const us=vcUnidadesDo(vcTab,cid);
@@ -3937,6 +4092,7 @@ function viewVendasCustas(){
       A pagar = (medição atual − medição anterior) × R$/${un}. A medição anterior é puxada do último ciclo com leitura.
       Toda medição exige foto do medidor como comprovação.</span></div>
     ${histHtml(c.historico)}`;
+  html+=vcViewVendas(c.competencia,cid);
   html+=vcViewUnidades();
   $('#content').innerHTML=html;
 }
@@ -3966,14 +4122,36 @@ const VC_SEED_CICLOS=[
    valorFatura:16053.57,consumoFatura:16380,
    leituras:{'CAPITAL ESPRESSO LTDA':[11571.20,12086.60]}}
 ];
+
+/* Lançamentos de faturamento do E-Business, conforme a planilha de VENDAS.
+   Os fixos repetem todo mês; os de consumo puxam o valor do rateio automaticamente. */
+const VC_SEED_VENDAS=[
+  {ordem:1,unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',motivo:'ALUGUEL DO ESPAÇO',origem:'fixo',valor:1600.00,dia:1,refMeses:3},
+  {ordem:2,unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',motivo:'LOCAÇÃO DE ESPAÇO PARA BANNER - MERCHANDISING',origem:'fixo',valor:70.00,dia:1,refMeses:3},
+  {ordem:3,unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',motivo:'CONSUMO DE AGUA',origem:'agua',valor:0,dia:1,refMeses:3,uni:'VANTAGE CAR STUDIO LTDA'},
+  {ordem:4,unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',motivo:'ALUGUEL DE SALA 1º SUBSOLO',origem:'fixo',valor:600.00,dia:1,refMeses:3},
+  {ordem:5,unidade:'GARRA 1608',cnpj:'40.659.807/0001-02',motivo:'MERCHANDISING PORTA DO ELEVADOR E4',origem:'fixo',valor:200.00,dia:1,refMeses:null},
+  {ordem:6,unidade:'EMPRESA BRASILEIRA DE ESTACIONAMENTO',cnpj:'02.212.820/0022-05',motivo:'REPASSE ESTACIONAMENTO',origem:'variavel',valor:0,dia:15,refMeses:null},
+  {ordem:7,unidade:'CAPITAL ESPRESSO LTDA',cnpj:'54.766.132/0001-58',motivo:'LOCAÇÃO DE ESPAÇO MEZANINO REF',origem:'fixo',valor:2000.00,dia:1,refMeses:4},
+  {ordem:8,unidade:'CAPITAL ESPRESSO LTDA',cnpj:'54.766.132/0001-58',motivo:'CONSUMO DE ÁGUA',origem:'agua',valor:0,dia:1,refMeses:4,uni:'CAPITAL ESPRESSO LTDA'},
+  {ordem:9,unidade:'CAPITAL ESPRESSO LTDA',cnpj:'54.766.132/0001-58',motivo:'CONSUMO DE ENERGIA',origem:'energia',valor:0,dia:1,refMeses:4,uni:'CAPITAL ESPRESSO LTDA'}
+];
 function migrarVendasCustas(){
   // Não confia só no marcador: se as unidades sumiram (base antiga, reset, outro aparelho),
   // recria. Assim a tela nunca aparece vazia esperando cadastro manual.
-  const faltam=VC_SEED_C1.some(u=>!vcUnidades.some(x=>x.servico===u.servico&&x.condoId==='c1'&&x.unidade===u.unidade));
+  const faltam=VC_SEED_C1.some(u=>!vcUnidades.some(x=>x.servico===u.servico&&x.condoId==='c1'&&x.unidade===u.unidade))
+    ||VC_SEED_VENDAS.some(v=>!vcVendas.some(x=>x.condoId==='c1'&&x.unidade===v.unidade&&x.motivo===v.motivo));
   if(CFG.vcSeed==='v2'&&!faltam) return;
   VC_SEED_C1.forEach(u=>{
     if(!vcUnidades.some(x=>x.servico===u.servico&&x.condoId==='c1'&&x.unidade===u.unidade))
       vcUnidades.push(Object.assign({id:uid('vu'),condoId:'c1',ativo:true},u));
+  });
+  VC_SEED_VENDAS.forEach(v=>{
+    if(vcVendas.some(x=>x.condoId==='c1'&&x.unidade===v.unidade&&x.motivo===v.motivo)) return;
+    const link=v.uni?(vcUnidades.find(u=>u.servico===v.origem&&u.condoId==='c1'&&u.unidade===v.uni)||{}).id:'';
+    vcVendas.push({id:uid('vv'),condoId:'c1',ativo:true,tipo:'VENDA',valores:{},
+      unidade:v.unidade,cnpj:v.cnpj,motivo:v.motivo,origem:v.origem,valor:v.valor,
+      dia:v.dia,ordem:v.ordem,refMeses:v.refMeses,unidadeId:link||''});
   });
   VC_SEED_CICLOS.forEach(sc=>{
     if(vcCiclos.some(c=>c.servico===sc.servico&&c.condoId==='c1'&&c.competencia===sc.competencia)) return;
@@ -4891,7 +5069,7 @@ const LEITURAS_AGUA_C1=[
   ['2026-09-01',67615.00,119.00],
   ['2026-09-02',67645.00,30.00]
 ];
-let vcUnidades=[], vcCiclos=[];
+let vcUnidades=[], vcCiclos=[], vcVendas=[];
 let leituras=[], leitTab='agua', leitMes='', leitStatus='', leitFiltro='', mediaJanela=3, grafJanela=30;
 function seedLeituras(){
   leituras=[];
@@ -7224,7 +7402,7 @@ function snapshotValido(d){
 function aplicarSnapshot(d){
   if(!d) return;
   _booting=true;
-  vcUnidades=d.vcUnidades||[]; vcCiclos=d.vcCiclos||[];
+  vcUnidades=d.vcUnidades||[]; vcCiclos=d.vcCiclos||[]; vcVendas=d.vcVendas||[];
   tasks=d.tasks||[]; notas=d.notas||[]; cessoes=d.cessoes||[];
   apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
   pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
@@ -7318,6 +7496,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c262d898405035',t:'MTc4OTU4ODA3OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c281fe1f40e841',t:'MTc4OTU4OTM1NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
