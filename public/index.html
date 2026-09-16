@@ -3820,6 +3820,13 @@ function vcFormUnidade(id){
     <button class="btn" onclick="vcSalvarUnidade('${id||''}')">Salvar</button>`;
   $('#modal').classList.add('open');
 }
+/* Recarrega o cadastro padrão (unidades das planilhas) a qualquer momento. */
+function vcRestaurarPadrao(){
+  CFG.vcSeed=null;
+  migrarVendasCustas();
+  save(); render();
+  toast(`${vcUnidades.length} unidade(s) disponíveis.`);
+}
 function vcReativar(id){
   const u=vcUnidades.find(x=>x.id===id); if(!u) return;
   u.ativo=true; render(); toast(`${u.unidade} voltou para os próximos ciclos.`);
@@ -3842,7 +3849,10 @@ function vcViewUnidades(){
         <td><div class="rowact no-print">
           ${P().edit?`<button class="btn ghost sm" onclick="vcFormUnidade('${u.id}')">Editar</button>`:''}
         </div></td></tr>`).join('')}</tbody></table></div>`
-      :`<div class="card empty">Nenhuma unidade cadastrada para ${VC_SERV[vcTab].nome.toLowerCase()}. Cadastre as lojas e salas que têm medidor individual.</div>`}
+      :`<div class="card empty">Nenhuma unidade cadastrada para ${VC_SERV[vcTab].nome.toLowerCase()}.
+          <div class="rowact" style="justify-content:center;margin-top:10px">
+            <button class="btn" onclick="vcRestaurarPadrao()">${ic('refresh')}Carregar as unidades do condomínio</button>
+          </div></div>`}
     ${(()=>{const inat=vcUnidades.filter(u=>u.servico===vcTab&&u.condoId===cid&&u.ativo===false);
       return inat.length?`<div class="t-sub" style="margin-top:10px">Inativas (fora dos próximos ciclos): ${inat.map(u=>
         `${esc(u.unidade)} <button class="btn ghost sm" onclick="vcReativar('${u.id}')">reativar</button>`).join(' · ')}</div>`:''})()}
@@ -3910,7 +3920,8 @@ function viewVendasCustas(){
       <td>${brl(t.unit)}</td>
       <td>${val===null?'<span class="t-sub">—</span>':`<b>${brl(val)}</b>`}</td>
       <td><span class="badge ${l.tipo==='CUSTA'?'b-avencer':'b-conc'}">${l.tipo}</span></td>
-      <td>${l.foto?`<button class="btn ghost sm" onclick="vcVerFoto('${c.id}','${l.unidadeId}')">${ic('image')}Ver</button>`:'<span class="t-sub">—</span>'}</td>
+      <td>${l.foto?`<button class="btn ghost sm" onclick="vcVerFoto('${c.id}','${l.unidadeId}')">${ic('image')}Ver</button>`
+        :(l.medidoEm==='histórico'?'<span class="t-sub">planilha</span>':'<span class="t-sub">—</span>')}</td>
       <td><div class="rowact no-print">
         ${!c.fechado&&P().edit?`<button class="btn ${falta?'':'ghost'} sm" onclick="vcFormMedicao('${c.id}','${l.unidadeId}')">${falta?'Medir':'Editar'}</button>`:''}
       </div></td></tr>`}).join('')}
@@ -3943,13 +3954,43 @@ const VC_SEED_C1=[
   {servico:'energia',ordem:1,nome:'CAPITAL ESPRESSO LTDA',unidade:'CAPITAL ESPRESSO LTDA',cnpj:'54.766.132/0001-58',tipo:'VENDA'},
   {servico:'energia',ordem:2,nome:'VANTAGE CAR STUDIO LTDA',unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',tipo:'VENDA'}
 ];
+/* Ciclos já faturados, transcritos das planilhas do condomínio. Servem de ponto de
+   partida: a leitura final de cada um vira a "medição anterior" do próximo ciclo. */
+const VC_SEED_CICLOS=[
+  {servico:'agua',competencia:'08/2026',inicio:'2026-07-17',fim:'2026-08-14',
+   valorFatura:29841.10,consumoFatura:721,
+   leituras:{'VANTAGE CAR STUDIO LTDA':[997.37,1021.51],'LOJA M01':[288.65,290.64],
+             'LOJA M02':[544.62,548.90],'LOJA M03':[167.48,167.48],'LOJA M04':[39.20,39.23],
+             'LOJA M05':[101.22,101.25],'CAPITAL ESPRESSO LTDA':[128.55,133.70]}},
+  {servico:'energia',competencia:'05/2026',inicio:'2026-05-18',fim:'2026-06-16',
+   valorFatura:16053.57,consumoFatura:16380,
+   leituras:{'CAPITAL ESPRESSO LTDA':[11571.20,12086.60]}}
+];
 function migrarVendasCustas(){
-  if(CFG.vcSeed==='v1') return;
+  // Não confia só no marcador: se as unidades sumiram (base antiga, reset, outro aparelho),
+  // recria. Assim a tela nunca aparece vazia esperando cadastro manual.
+  const faltam=VC_SEED_C1.some(u=>!vcUnidades.some(x=>x.servico===u.servico&&x.condoId==='c1'&&x.unidade===u.unidade));
+  if(CFG.vcSeed==='v2'&&!faltam) return;
   VC_SEED_C1.forEach(u=>{
     if(!vcUnidades.some(x=>x.servico===u.servico&&x.condoId==='c1'&&x.unidade===u.unidade))
       vcUnidades.push(Object.assign({id:uid('vu'),condoId:'c1',ativo:true},u));
   });
-  CFG.vcSeed='v1';
+  VC_SEED_CICLOS.forEach(sc=>{
+    if(vcCiclos.some(c=>c.servico===sc.servico&&c.condoId==='c1'&&c.competencia===sc.competencia)) return;
+    const c={id:uid('vc'),servico:sc.servico,condoId:'c1',competencia:sc.competencia,
+      inicio:sc.inicio,fim:sc.fim,valorFatura:sc.valorFatura,consumoFatura:sc.consumoFatura,
+      fechado:true,criadoPor:'Sistema',criadoEm:nowStamp(),historico:[{q:'Sistema',w:nowStamp(),
+        t:'Ciclo importado da planilha de faturamento (histórico)'}],linhas:[]};
+    vcUnidades.filter(u=>u.servico===sc.servico&&u.condoId==='c1').forEach(u=>{
+      const le=sc.leituras[u.unidade];
+      c.linhas.push({unidadeId:u.id,nome:u.nome,unidade:u.unidade,cnpj:u.cnpj||'',tipo:u.tipo,
+        anterior:le?le[0]:null,atual:le?le[1]:null,foto:null,
+        medidoPor:le?'Planilha':'',medidoEm:le?'histórico':'',
+        obs:le?'Importado da planilha de faturamento':''});
+    });
+    vcCiclos.push(c);
+  });
+  CFG.vcSeed='v2';
 }
 
 /* ============ PUBLICIDADE NOS ELEVADORES (locação de espaços p/ divulgação) ============ */
@@ -7277,5 +7318,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c218b2bc7caec2',t:'MTc4OTU4NTA0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c262d898405035',t:'MTc4OTU4ODA3OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
