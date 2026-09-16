@@ -3417,7 +3417,13 @@ function vcSalvarUnidade(id,dados){
 }
 function vcExcluirUnidade(id){
   const u=vcUnidades.find(x=>x.id===id); if(!u) return;
-  if(!confirm(`Excluir a unidade ${u.unidade}? As medições já lançadas nos ciclos anteriores são preservadas.`)) return;
+  // se a unidade já foi medida alguma vez, nunca some: vira inativa para preservar o histórico
+  const usada=vcCiclos.some(c=>(c.linhas||[]).some(l=>l.unidadeId===id&&l.atual!==null&&l.atual!==undefined));
+  if(usada){
+    if(!confirm(`${u.unidade} já tem medições lançadas. Ela será desativada (sai dos próximos ciclos) e o histórico é preservado. Continuar?`)) return;
+    u.ativo=false; render(); return toast('Unidade desativada. Não entra nos próximos ciclos.');
+  }
+  if(!confirm(`Excluir a unidade ${u.unidade}?`)) return;
   vcUnidades=vcUnidades.filter(x=>x.id!==id); render(); toast('Unidade excluída.');
 }
 
@@ -3445,10 +3451,13 @@ function vcCriarCiclo(dados){
   if(!/^\d{2}\/\d{4}$/.test(o.competencia)) return toast('Competência deve estar no formato MM/AAAA.');
   if(vcCiclos.some(c=>c.servico===o.servico&&c.condoId===o.condoId&&c.competencia===o.competencia))
     return toast('Já existe um ciclo desse serviço nessa competência.');
+  const us=vcUnidadesDo(o.servico,o.condoId);
+  if(!us.length) return toast('Nenhuma unidade cadastrada para este serviço. Cadastre as unidades antes de abrir o ciclo.');
   const c=Object.assign({id:uid('vc'),fechado:false,criadoPor:session?session.nome:'',criadoEm:nowStamp(),
     historico:[{q:session?session.nome:'',w:nowStamp(),t:'Ciclo criado'}],linhas:[]},o);
-  // monta as linhas já com a medição anterior puxada do ciclo passado
-  vcUnidadesDo(o.servico,o.condoId).forEach(u=>{
+  // Todo ciclo nasce com TODAS as unidades cadastradas do serviço — sempre as mesmas,
+  // já com a medição anterior puxada do último ciclo que teve leitura.
+  us.forEach(u=>{
     c.linhas.push({unidadeId:u.id,nome:u.nome,unidade:u.unidade,cnpj:u.cnpj||'',tipo:u.tipo,
       anterior:vcAnteriorDe(o.servico,o.condoId,o.competencia,u.id),
       atual:null,foto:null,medidoPor:'',medidoEm:'',obs:''});
@@ -3811,6 +3820,10 @@ function vcFormUnidade(id){
     <button class="btn" onclick="vcSalvarUnidade('${id||''}')">Salvar</button>`;
   $('#modal').classList.add('open');
 }
+function vcReativar(id){
+  const u=vcUnidades.find(x=>x.id===id); if(!u) return;
+  u.ativo=true; render(); toast(`${u.unidade} voltou para os próximos ciclos.`);
+}
 function vcViewUnidades(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const us=vcUnidadesDo(vcTab,cid);
@@ -3819,6 +3832,7 @@ function vcViewUnidades(){
       <b>Unidades medidas — ${VC_SERV[vcTab].nome}</b>
       ${P().create?`<button class="btn ghost sm" onclick="vcFormUnidade()">${ic('plus')}Nova unidade</button>`:''}
     </div>
+    <div class="t-sub" style="margin:-4px 0 10px">Estas ${us.length} unidade(s) entram automaticamente em todo ciclo novo de ${VC_SERV[vcTab].nome.toLowerCase()}.</div>
     ${us.length?`<div class="tablewrap"><table><thead><tr>
       <th>Ordem</th><th>Nome UAU</th><th>Unidade</th><th>CNPJ / CPF</th><th>Tipo</th><th>Ações</th></tr></thead><tbody>
       ${us.map(u=>`<tr>
@@ -3829,6 +3843,9 @@ function vcViewUnidades(){
           ${P().edit?`<button class="btn ghost sm" onclick="vcFormUnidade('${u.id}')">Editar</button>`:''}
         </div></td></tr>`).join('')}</tbody></table></div>`
       :`<div class="card empty">Nenhuma unidade cadastrada para ${VC_SERV[vcTab].nome.toLowerCase()}. Cadastre as lojas e salas que têm medidor individual.</div>`}
+    ${(()=>{const inat=vcUnidades.filter(u=>u.servico===vcTab&&u.condoId===cid&&u.ativo===false);
+      return inat.length?`<div class="t-sub" style="margin-top:10px">Inativas (fora dos próximos ciclos): ${inat.map(u=>
+        `${esc(u.unidade)} <button class="btn ghost sm" onclick="vcReativar('${u.id}')">reativar</button>`).join(' · ')}</div>`:''})()}
   </div>`;
 }
 function viewVendasCustas(){
@@ -3869,6 +3886,10 @@ function viewVendasCustas(){
       <div class="card metric ${t.pend?'amber':'green'}"><div class="lbl">Medições</div><div class="val">${t.medidos}/${t.linhas}</div>
         <div class="sub">${t.pend?t.pend+' pendente(s)':'todas lançadas'}</div></div>
     </div>`;
+  const faltando=vcUnidadesDo(vcTab,cid).filter(u=>!(c.linhas||[]).some(l=>l.unidadeId===u.id));
+  if(faltando.length) html+=`<div class="feed-item amber" style="margin-bottom:12px"><div class="fi-ic">${ic('alert')}</div><div style="flex:1">
+    <div class="ft">${faltando.length} unidade(s) do cadastro não estão neste ciclo</div>
+    <div class="fd">${faltando.map(u=>esc(u.unidade)).join(', ')} — clique em "Incluir unidades novas" para adicionar.</div></div></div>`;
   if(t.pend) html+=`<div class="feed-item amber" style="margin-bottom:12px"><div class="fi-ic">${ic('gauge')}</div><div style="flex:1">
     <div class="ft">${t.pend} unidade(s) sem medição neste ciclo</div>
     <div class="fd">Clique em "Medir" na linha para lançar a leitura com a foto do medidor.</div></div></div>`;
@@ -7256,6 +7277,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c205dffc666d40',t:'MTc4OTU4NDI3MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c218b2bc7caec2',t:'MTc4OTU4NTA0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
