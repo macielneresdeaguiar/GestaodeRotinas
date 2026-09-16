@@ -1255,7 +1255,7 @@ let _saveTimer=null, _booting=true;
 function store(){ try{ return window.localStorage }catch(e){ return null } }
 function dbSnapshot(){
   return {v:DB_VER, savedAt:new Date().toISOString(),
-    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,
+    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,
     auditLog, CFG, creds, notifs, notifState};
 }
 function salvarLocal(){
@@ -1278,7 +1278,8 @@ function load(){
   try{
     const d=JSON.parse(raw);
     if(!d||d.v!==DB_VER) return false;
-    tasks=d.tasks||[]; notas=d.notas||[]; cessoes=d.cessoes||[];
+    vcUnidades=d.vcUnidades||[]; vcCiclos=d.vcCiclos||[];
+  tasks=d.tasks||[]; notas=d.notas||[]; cessoes=d.cessoes||[];
     apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
     pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
     prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
@@ -1286,7 +1287,7 @@ function load(){
     migrarPrestadoresEB();
     if(d.CFG) CFG=Object.assign(CFG,d.CFG);
     creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
-    let mig=migrarLeiturasAgua(); if(migrarTarifaCaesb()) mig=true; if(mig) save();
+    let mig=migrarLeiturasAgua(); if(migrarTarifaCaesb()) mig=true; migrarManutObrig(); migrarVendasCustas(); if(mig) save();
     return true;
   }catch(e){ console.warn('Base corrompida:',e); return false }
 }
@@ -1372,7 +1373,7 @@ function toggleSidebar(){
 /* Módulo que cada página usa para decidir quais condomínios oferecer.
    Sem isso, páginas financeiras herdavam a lista de 'tarefas' e o Taguá Life
    (regime Somente Financeiro) sumia do seletor do topo. */
-const MODULO_DA_PAGINA={notas:'notas',cessoes:'cessoes',publicidade:'publicidade',manutobrig:'manutobrig',
+const MODULO_DA_PAGINA={notas:'notas',cessoes:'cessoes',vendascustas:'vendascustas',publicidade:'publicidade',manutobrig:'manutobrig',
   leituras:'leituras',estoque:'estoque',pedidos:'pedidos',apontamentos:'apontamentos'};
 function moduloDaPagina(){ return MODULO_DA_PAGINA[page]||'tarefas' }
 function buildCondoFilter(){
@@ -1484,7 +1485,7 @@ function buildNav(){
     if(P().tipos.includes('Gestor')) items.push(['tarefas-gestor','briefcase','Tarefas do Gestor']);
     items.push(['calendario','calendar','Calendário']);
     items.push(['#','','Financeiro']);
-    items.push(['notas','invoice','Notas Fiscais'],['cessoes','contract','Cessão de Direitos'],
+    items.push(['notas','invoice','Notas Fiscais'],['cessoes','contract','Cessão de Direitos'],['vendascustas','money','Vendas e Custas'],
       ['publicidade','megaphone','Publicidade nos Elevadores']);
     items.push(['#','','Predial']);
     items.push(['leituras','water','Leituras — Água e Energia']);
@@ -1515,14 +1516,14 @@ function render(){
     'tarefas-adm':'Tarefas Administrativas','tarefas-gestor':'Tarefas do Gestor',calendario:'Calendário',rotina:'Minha Rotina',
     hoje:'Tarefas de Hoje — Planejamento Diário',leituras:'Leituras / Água e Energia',notas:'Controle de Notas Fiscais',
     estoque:'Controle de Estoque',pedidos:'Pedidos de Material',relmensal:'Relatório Mensal de Gestão',
-    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',relatorios:'Relatórios',config:'Configurações'};
+    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',relatorios:'Relatórios',config:'Configurações'};
   $('#pageTitle').textContent=titles[page];
   if(page==='tarefas-adm'){tipoLock='Administrativo';return viewTasks()}
   if(page==='tarefas-gestor'){tipoLock='Gestor';return viewTasks()}
   if(page==='calendario'){tipoLock=null;taskView='calendario';return viewTasks()}
   tipoLock=null;
   const R={dashboard:viewDashboard,hoje:viewHoje,leituras:viewLeituras,tarefas:viewTasks,rotina:viewRotina,
-    notas:viewNotas,cessoes:viewCessoes,publicidade:viewPublicidade,manutobrig:viewManutObrig,estoque:viewEstoque,pedidos:viewPedidos,
+    notas:viewNotas,cessoes:viewCessoes,vendascustas:viewVendasCustas,publicidade:viewPublicidade,manutobrig:viewManutObrig,estoque:viewEstoque,pedidos:viewPedidos,
     apontamentos:viewApontamentos,relatorios:viewReports,relmensal:viewRelatorioMensal,config:viewConfig};
   (R[page]||viewDashboard)();
 }
@@ -3394,6 +3395,542 @@ function delCess(id){
   cessoes=cessoes.filter(x=>x.id!==id); closeModal(); render(); toast('Cessão excluída.');
 }
 
+/* ============ VENDAS E CUSTAS (rateio de água e energia por unidade) ============ */
+const VC_TIPOS=['VENDA','CUSTA'];
+const VC_SERV={agua:{nome:'ÁGUA',tit:'CONSUMO DE ÁGUA'},energia:{nome:'ENERGIA',tit:'CONSUMO DE ENERGIA'}};
+let vcTab='agua', vcCicloAtivo=null, vcFotoTmp=null, vcBusca='';
+
+// ---- unidades medidas (cadastro) ----
+function vcUnidadesDo(serv,cid){
+  return vcUnidades.filter(u=>u.servico===serv&&u.condoId===(cid||'c1')&&u.ativo!==false)
+    .sort((a,b)=>(a.ordem||0)-(b.ordem||0)||a.unidade.localeCompare(b.unidade,'pt-BR'));
+}
+function vcSalvarUnidade(id,dados){
+  const o=dados||{servico:$('#vuServ').value,condoId:$('#vuCondo').value,nome:$('#vuNome').value.trim(),
+    unidade:$('#vuUni').value.trim(),cnpj:$('#vuCnpj').value.trim(),tipo:$('#vuTipo').value,
+    ordem:Number($('#vuOrdem').value)||0,ativo:$('#vuAtivo').checked};
+  if(!o.nome||!o.unidade) return toast('Informe o nome e a unidade.');
+  if(!VC_TIPOS.includes(o.tipo)) o.tipo='VENDA';
+  if(id){ const u=vcUnidades.find(x=>x.id===id); if(!u) return; Object.assign(u,o); toast('Unidade atualizada.'); }
+  else { vcUnidades.push(Object.assign({id:uid('vu')},o)); toast('Unidade cadastrada.'); }
+  closeModal(); render();
+}
+function vcExcluirUnidade(id){
+  const u=vcUnidades.find(x=>x.id===id); if(!u) return;
+  if(!confirm(`Excluir a unidade ${u.unidade}? As medições já lançadas nos ciclos anteriores são preservadas.`)) return;
+  vcUnidades=vcUnidades.filter(x=>x.id!==id); render(); toast('Unidade excluída.');
+}
+
+// ---- ciclos de faturamento ----
+function vcCiclosDo(serv,cid){
+  return vcCiclos.filter(c=>c.servico===serv&&c.condoId===(cid||'c1'))
+    .sort((a,b)=>compKey(b.competencia).localeCompare(compKey(a.competencia)));
+}
+function vcCiclo(id){ return vcCiclos.find(c=>c.id===id)||null }
+// leitura final do ciclo anterior vira a "medição anterior" do ciclo novo
+function vcAnteriorDe(serv,cid,comp,unidadeId){
+  const ants=vcCiclos.filter(c=>c.servico===serv&&c.condoId===cid&&compKey(c.competencia)<compKey(comp))
+    .sort((a,b)=>compKey(b.competencia).localeCompare(compKey(a.competencia)));
+  for(const c of ants){
+    const l=(c.linhas||[]).find(x=>x.unidadeId===unidadeId);
+    if(l&&l.atual!==null&&l.atual!==undefined&&l.atual!=='') return Number(l.atual);
+  }
+  return null;
+}
+function vcCriarCiclo(dados){
+  const o=dados||{servico:$('#vcServ').value,condoId:$('#vcCondo').value,competencia:$('#vcComp').value.trim(),
+    inicio:$('#vcIni').value,fim:$('#vcFim').value,
+    valorFatura:vcNum($('#vcValor').value),consumoFatura:vcNum($('#vcConsumo').value)};
+  if(!o.competencia) return toast('Informe a competência (MM/AAAA).');
+  if(!/^\d{2}\/\d{4}$/.test(o.competencia)) return toast('Competência deve estar no formato MM/AAAA.');
+  if(vcCiclos.some(c=>c.servico===o.servico&&c.condoId===o.condoId&&c.competencia===o.competencia))
+    return toast('Já existe um ciclo desse serviço nessa competência.');
+  const c=Object.assign({id:uid('vc'),fechado:false,criadoPor:session?session.nome:'',criadoEm:nowStamp(),
+    historico:[{q:session?session.nome:'',w:nowStamp(),t:'Ciclo criado'}],linhas:[]},o);
+  // monta as linhas já com a medição anterior puxada do ciclo passado
+  vcUnidadesDo(o.servico,o.condoId).forEach(u=>{
+    c.linhas.push({unidadeId:u.id,nome:u.nome,unidade:u.unidade,cnpj:u.cnpj||'',tipo:u.tipo,
+      anterior:vcAnteriorDe(o.servico,o.condoId,o.competencia,u.id),
+      atual:null,foto:null,medidoPor:'',medidoEm:'',obs:''});
+  });
+  vcCiclos.push(c); vcCicloAtivo=c.id; closeModal(); render();
+  toast(`Ciclo ${o.competencia} criado com ${c.linhas.length} unidade(s).`);
+}
+function vcSincronizarLinhas(id){
+  const c=vcCiclo(id); if(!c) return;
+  let add=0;
+  vcUnidadesDo(c.servico,c.condoId).forEach(u=>{
+    if(!c.linhas.some(l=>l.unidadeId===u.id)){
+      c.linhas.push({unidadeId:u.id,nome:u.nome,unidade:u.unidade,cnpj:u.cnpj||'',tipo:u.tipo,
+        anterior:vcAnteriorDe(c.servico,c.condoId,c.competencia,u.id),
+        atual:null,foto:null,medidoPor:'',medidoEm:'',obs:''}); add++;
+    }
+  });
+  render(); toast(add?`${add} unidade(s) adicionada(s) ao ciclo.`:'Nenhuma unidade nova para incluir.');
+}
+function vcExcluirCiclo(id){
+  const c=vcCiclo(id); if(!c) return;
+  if(c.fechado) return toast('Ciclo fechado não pode ser excluído. Reabra antes.');
+  if(!confirm(`Excluir o ciclo ${c.competencia} de ${VC_SERV[c.servico].nome}? As medições lançadas serão perdidas.`)) return;
+  audit('Exclusão de ciclo de rateio',c.competencia,VC_SERV[c.servico].nome,c.condoId,'');
+  vcCiclos=vcCiclos.filter(x=>x.id!==id);
+  if(vcCicloAtivo===id) vcCicloAtivo=null;
+  render(); toast('Ciclo excluído.');
+}
+
+// ---- cálculo (mesma regra da planilha) ----
+function vcNum(v){
+  if(v===null||v===undefined||v==='') return null;
+  if(typeof v==='number') return v;
+  // aceita "1.234,56" e "1234.56"
+  let t=String(v).trim().replace(/[R$\s]/g,'');
+  if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.');
+  const n=Number(t); return isNaN(n)?null:n;
+}
+// R$/m³ = valor da fatura ÷ consumo total da fatura.
+// vcValorUnit -> exibição (2 casas). vcTaxa -> precisão cheia, usada na conta,
+// exatamente como a planilha faz (41,38848... e não o 41,39 mostrado na tela).
+function vcTaxa(c){
+  if(!c) return 0;
+  const v=Number(c.valorFatura)||0, q=Number(c.consumoFatura)||0;
+  return q?v/q:0;
+}
+function vcValorUnit(c){ return Math.round(vcTaxa(c)*100)/100 }
+function vcConsumoLinha(l){
+  if(l.atual===null||l.atual===undefined||l.atual==='') return null;
+  const a=Number(l.anterior)||0, b=Number(l.atual);
+  return Math.round((b-a)*100)/100;
+}
+function vcValorLinha(c,l){
+  const cons=vcConsumoLinha(l);
+  if(cons===null) return null;
+  return Math.round(cons*vcTaxa(c)*100)/100;
+}
+function vcTotais(c){
+  const un=vcValorUnit(c); let venda=0,custa=0,total=0,cons=0,medidos=0,pend=0,semFoto=0;
+  (c.linhas||[]).forEach(l=>{
+    const v=vcValorLinha(c,l);
+    if(v===null){pend++;return}
+    medidos++; if(!l.foto) semFoto++;
+    cons+=vcConsumoLinha(l)||0; total+=v;
+    if(l.tipo==='CUSTA') custa+=v; else venda+=v;
+  });
+  return {unit:un,venda:Math.round(venda*100)/100,custa:Math.round(custa*100)/100,
+    total:Math.round(total*100)/100,consumo:Math.round(cons*100)/100,
+    medidos,pend,semFoto,linhas:(c.linhas||[]).length};
+}
+function vcDivergencia(c){
+  const t=vcTotais(c), q=Number(c.consumoFatura)||0;
+  if(!q||t.pend) return null;
+  return Math.round((q-t.consumo)*100)/100;   // consumo da fatura ainda não rateado (áreas comuns)
+}
+
+// ---- lançamento da medição (exige foto) ----
+function vcFormMedicao(cicloId,unidadeId){
+  const c=vcCiclo(cicloId); if(!c) return;
+  if(c.fechado) return toast('Ciclo fechado. Reabra para editar as medições.');
+  const l=(c.linhas||[]).find(x=>x.unidadeId===unidadeId); if(!l) return;
+  vcFotoTmp=l.foto||null;
+  $('#modalTitle').textContent=l.unidade+' — medição de '+VC_SERV[c.servico].nome.toLowerCase();
+  $('#modalBody').innerHTML=`
+    <div class="card" style="box-shadow:none;background:#f7f9fc;padding:12px;margin-bottom:12px">
+      <div class="t-sub">${esc(l.nome)} · ${c.competencia} · ${l.tipo}</div>
+      <div class="t-sub">Medição anterior: <b>${l.anterior===null?'sem histórico':vcFmtM3(l.anterior)}</b> · R$/${c.servico==='agua'?'m³':'kWh'}: <b>${brl(vcValorUnit(c))}</b></div>
+    </div>
+    <div class="f2">
+      <div class="field"><label>Medição anterior (${c.servico==='agua'?'m³':'kWh'})</label>
+        <input id="vmAnt" value="${l.anterior===null?'':l.anterior}" placeholder="0,00" oninput="vcPreview('${cicloId}')"></div>
+      <div class="field"><label>Medição atual (${c.servico==='agua'?'m³':'kWh'})</label>
+        <input id="vmAtual" value="${l.atual===null||l.atual===undefined?'':l.atual}" placeholder="0,00" oninput="vcPreview('${cicloId}')" autofocus></div>
+    </div>
+    <div class="field"><label>Observação</label><input id="vmObs" value="${esc(l.obs||'')}" placeholder="opcional"></div>
+    <div class="field"><label>Foto do medidor (obrigatória)</label>
+      <input type="file" id="vmFoto" accept="image/*" capture="environment" onchange="vcAnexarFoto(event,'${cicloId}')">
+      <div class="t-sub">A foto comprova o número lido. Sem ela a medição não é gravada.</div></div>
+    <div id="vmFotoBox"></div>
+    <div id="vmPrev"></div>`;
+  $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="vcSalvarMedicao('${cicloId}','${unidadeId}')">Salvar medição</button>`;
+  $('#modal').classList.add('open');
+  vcPreview(cicloId);
+}
+async function vcAnexarFoto(ev,cicloId){
+  const f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  if(f.size>8*1024*1024) return toast('Imagem muito grande (máx. 8 MB).');
+  try{ vcFotoTmp=await comprimirImagem(f); }catch(e){ return toast('Não foi possível ler a imagem.') }
+  vcPreview(cicloId);
+}
+function vcPreview(cicloId){
+  const c=vcCiclo(cicloId); if(!c) return;
+  const box=$('#vmFotoBox');
+  if(box) box.innerHTML=vcFotoTmp
+    ? `<div class="card" style="box-shadow:none;padding:8px;margin-bottom:10px">
+         <img src="${vcFotoTmp}" alt="Foto do medidor" style="max-width:100%;border-radius:8px;display:block">
+         <div class="rowact" style="margin-top:8px"><button class="btn ghost sm" onclick="vcFotoTmp=null;vcPreview('${cicloId}')">Remover foto</button></div></div>`
+    : `<div class="feed-item amber" style="margin-bottom:10px"><div class="fi-ic">${ic('image')}</div>
+         <div style="flex:1"><div class="ft">Nenhuma foto anexada</div>
+         <div class="fd">Tire a foto do medidor no momento da leitura.</div></div></div>`;
+  const pv=$('#vmPrev'); if(!pv) return;
+  const ant=vcNum($('#vmAnt')?$('#vmAnt').value:null), at=vcNum($('#vmAtual')?$('#vmAtual').value:null);
+  if(at===null){ pv.innerHTML=''; return }
+  const cons=Math.round((at-(ant||0))*100)/100, val=Math.round(cons*vcTaxa(c)*100)/100;
+  pv.innerHTML=`<div class="card" style="box-shadow:none;background:${cons<0?'#fdeaec':'#f0f7ff'};padding:12px">
+    <div class="t-sub">Consumo calculado</div>
+    <div style="font-size:20px;font-weight:800;color:var(--navy)">${vcFmtM3(cons)} ${c.servico==='agua'?'m³':'kWh'}</div>
+    <div class="t-sub">A pagar: <b style="font-size:15px;color:var(--navy)">${brl(val)}</b> (${vcFmtM3(cons)} × ${brl(vcValorUnit(c))})</div>
+    ${cons<0?`<div class="t-sub" style="color:var(--red);margin-top:6px">Atenção: consumo negativo. Confira se a medição atual é maior que a anterior.</div>`:''}
+  </div>`;
+}
+function vcSalvarMedicao(cicloId,unidadeId,dados){
+  const c=vcCiclo(cicloId); if(!c) return;
+  const l=(c.linhas||[]).find(x=>x.unidadeId===unidadeId); if(!l) return;
+  const d=dados||{anterior:vcNum($('#vmAnt').value),atual:vcNum($('#vmAtual').value),
+    obs:$('#vmObs').value.trim(),foto:vcFotoTmp};
+  if(d.atual===null) return toast('Informe a medição atual.');
+  if(!d.foto) return toast('Anexe a foto do medidor: ela é a comprovação da leitura.');
+  const cons=Math.round((d.atual-(d.anterior||0))*100)/100;
+  if(cons<0&&!confirm('O consumo ficou negativo. Confirma mesmo assim?')) return;
+  const antes=l.atual;
+  l.anterior=d.anterior; l.atual=d.atual; l.obs=d.obs||''; l.foto=d.foto;
+  l.medidoPor=session?session.nome:''; l.medidoEm=nowStamp();
+  (c.historico=c.historico||[]).push({q:session?session.nome:'',w:nowStamp(),
+    t:`${l.unidade}: medição ${antes===null||antes===undefined?'lançada':'corrigida de '+vcFmtM3(antes)+' para'} ${vcFmtM3(d.atual)}`});
+  closeModal(); render(); toast(`${l.unidade}: ${brl(vcValorLinha(c,l))}`);
+}
+function vcVerFoto(cicloId,unidadeId){
+  const c=vcCiclo(cicloId); if(!c) return;
+  const l=(c.linhas||[]).find(x=>x.unidadeId===unidadeId); if(!l||!l.foto) return toast('Sem foto anexada.');
+  $('#modalTitle').textContent='Comprovação — '+l.unidade;
+  $('#modalBody').innerHTML=`
+    <div class="t-sub" style="margin-bottom:8px">${esc(l.nome)} · ${c.competencia} · leitura ${vcFmtM3(l.atual)} ${c.servico==='agua'?'m³':'kWh'}
+      ${l.medidoPor?`· por ${esc(l.medidoPor)} em ${esc(l.medidoEm)}`:''}</div>
+    <img src="${l.foto}" alt="Foto do medidor" style="max-width:100%;border-radius:10px;display:block">`;
+  $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Fechar</button>`;
+  $('#modal').classList.add('open');
+}
+function vcFecharCiclo(id){
+  const c=vcCiclo(id); if(!c) return;
+  const t=vcTotais(c);
+  if(t.pend) return toast(`Faltam ${t.pend} medição(ões) para fechar o ciclo.`);
+  c.fechado=!c.fechado;
+  (c.historico=c.historico||[]).push({q:session?session.nome:'',w:nowStamp(),t:c.fechado?'Ciclo fechado':'Ciclo reaberto'});
+  render(); toast(c.fechado?'Ciclo fechado.':'Ciclo reaberto para edição.');
+}
+const vcFmtM3=v=>v===null||v===undefined||v===''?'—':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+/* ---- gerador de .xlsx nativo (ZIP store + CRC32), sem dependência externa ---- */
+const _crcTab=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function _crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=_crcTab[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+function _zip(files){ // files: [{nome, dados:Uint8Array}]
+  const enc=new TextEncoder(); const locals=[], centrals=[]; let off=0;
+  const u16=n=>[n&255,(n>>8)&255], u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>24)&255];
+  files.forEach(f=>{
+    const nome=enc.encode(f.nome), crc=_crc32(f.dados), tam=f.dados.length;
+    const lh=[].concat([80,75,3,4],u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(tam),u32(tam),u16(nome.length),u16(0));
+    const loc=new Uint8Array(lh.length+nome.length+tam);
+    loc.set(lh,0); loc.set(nome,lh.length); loc.set(f.dados,lh.length+nome.length);
+    locals.push(loc);
+    centrals.push({nome,crc,tam,off});
+    off+=loc.length;
+  });
+  const cds=centrals.map(c=>{
+    const h=[].concat([80,75,1,2],u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(c.crc),u32(c.tam),u32(c.tam),
+      u16(c.nome.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(c.off));
+    const a=new Uint8Array(h.length+c.nome.length); a.set(h,0); a.set(c.nome,h.length); return a;
+  });
+  const cdTam=cds.reduce((s,a)=>s+a.length,0);
+  const eocd=new Uint8Array([].concat([80,75,5,6],u16(0),u16(0),u16(cds.length),u16(cds.length),u32(cdTam),u32(off),u16(0)));
+  const total=locals.reduce((s,a)=>s+a.length,0)+cdTam+eocd.length;
+  const out=new Uint8Array(total); let p=0;
+  locals.forEach(a=>{out.set(a,p);p+=a.length});
+  cds.forEach(a=>{out.set(a,p);p+=a.length});
+  out.set(eocd,p);
+  return out;
+}
+const _xe=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const _col=n=>{let s='';n++;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26}return s};
+
+/* Monta a planilha do ciclo no mesmo layout do arquivo enviado pelo condomínio. */
+function vcXlsx(cicloId){
+  const c=vcCiclo(cicloId); if(!c) return toast('Ciclo não encontrado.');
+  const t=vcTotais(c), serv=VC_SERV[c.servico], un=c.servico==='agua'?'M³':'KWH';
+  const L=[];  // cada item: {cells:[{v,t,s}], }  s = índice de estilo
+  const txt=(v,s)=>({v:v,t:'s',s:s||0});
+  const num=(v,s)=>({v:(v===null||v===undefined||v==='')?'':Number(v),t:'n',s:s||0});
+  // estilos: 0 normal · 1 título azul · 2 rótulo negrito+borda · 3 caixa valor · 4 cabeçalho cinza
+  // 5 célula borda · 6 número 2 casas · 7 moeda · 8 total cinza escuro · 9 negrito
+  L.push([]);
+  L.push([txt(''),txt(''),txt(`${serv.tit} - FATURAMENTO ${vcMesExt(c.competencia)}`,1)]);
+  L.push([]);
+  L.push([txt(''),txt('PERÍODO:',2),txt(`${c.inicio?fmt(c.inicio):''} A ${c.fim?fmt(c.fim):''}`,3)]);
+  L.push([]);
+  L.push([txt(''),txt('VALOR DA FATURA',2),num(c.valorFatura,7)]);
+  L.push([txt(''),txt('CONSUMO TOTAL DA FATURA',2),num(c.consumoFatura,6)]);
+  L.push([txt(''),txt(`VALOR ${un}`,2),num(t.unit,7)]);
+  L.push([]);
+  L.push([txt('NOME UAU',4),txt('UNIDADE',4),txt(`MEDIÇÃO ANTERIOR (${un})`,4),txt(`MEDIÇÃO ATUAL (${un})`,4),
+          txt(`CONSUMO (${un})`,4),txt(`R$/${un.toLowerCase()}`,4),txt('A PAGAR (R$)',4),txt('TIPO',4)]);
+  L.push([]);
+  const ord=(c.linhas||[]).slice().sort((a,b)=>{
+    const ua=vcUnidades.find(x=>x.id===a.unidadeId)||{},ub=vcUnidades.find(x=>x.id===b.unidadeId)||{};
+    return (ua.ordem||0)-(ub.ordem||0)||String(a.unidade).localeCompare(String(b.unidade),'pt-BR')});
+  ord.forEach(l=>{
+    L.push([txt(l.nome,5),txt(l.unidade,5),num(l.anterior,6),num(l.atual,6),
+            num(vcConsumoLinha(l),6),num(t.unit,7),num(vcValorLinha(c,l),7),txt(l.tipo,5)]);
+  });
+  L.push([]);
+  const lt=[];lt[5]=txt('',8);lt[6]=num(t.total,8);
+  L.push(lt);
+  // linhas extras de conferência
+  L.push([]);
+  L.push([txt(''),txt('TOTAL VENDA',9),txt(''),txt(''),txt(''),txt(''),num(t.venda,7)]);
+  L.push([txt(''),txt('TOTAL CUSTA',9),txt(''),txt(''),txt(''),txt(''),num(t.custa,7)]);
+  const dv=vcDivergencia(c);
+  if(dv!==null) L.push([txt(''),txt('CONSUMO DE ÁREA COMUM (NÃO RATEADO)',9),txt(''),txt(''),num(dv,6)]);
+
+  let linhasXml='';
+  L.forEach((row,i)=>{
+    const r=i+1;
+    if(!row||!row.length){linhasXml+=`<row r="${r}"/>`;return}
+    let cs='';
+    row.forEach((cel,j)=>{
+      if(!cel) return;
+      const ref=_col(j)+r;
+      if(cel.t==='n'&&cel.v==='') cs+=`<c r="${ref}" s="${cel.s}"/>`;
+      else if(cel.t==='n') cs+=`<c r="${ref}" s="${cel.s}"><v>${cel.v}</v></c>`;
+      else cs+=`<c r="${ref}" s="${cel.s}" t="inlineStr"><is><t xml:space="preserve">${_xe(cel.v)}</t></is></c>`;
+    });
+    linhasXml+=`<row r="${r}">${cs}</row>`;
+  });
+  const larg=[34,34,20,18,16,10,18,12].map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
+  const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${larg}</cols><sheetData>${linhasXml}</sheetData></worksheet>`;
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="2"><numFmt numFmtId="164" formatCode="&quot;R$&quot;\\ #,##0.00"/><numFmt numFmtId="165" formatCode="#,##0.00"/></numFmts>
+<fonts count="5">
+<font><sz val="11"/><name val="Calibri"/></font>
+<font><b/><sz val="12"/><color rgb="FF1F3864"/><name val="Calibri"/></font>
+<font><b/><sz val="11"/><name val="Calibri"/></font>
+<font><b/><sz val="11"/><color rgb="FF000000"/><name val="Calibri"/></font>
+<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>
+<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFBFBFBF"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFA6A6A6"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>
+<border><left style="thin"><color indexed="64"/></left><right style="thin"><color indexed="64"/></right><top style="thin"><color indexed="64"/></top><bottom style="thin"><color indexed="64"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="10">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="3" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
+<xf numFmtId="164" fontId="2" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+</cellXfs></styleSheet>`;
+  const enc=new TextEncoder();
+  const arqs=[
+    {nome:'[Content_Types].xml',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`)},
+    {nome:'_rels/.rels',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`)},
+    {nome:'xl/workbook.xml',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${_xe(serv.nome+' '+c.competencia.replace('/','-'))}" sheetId="1" r:id="rId1"/></sheets></workbook>`)},
+    {nome:'xl/_rels/workbook.xml.rels',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`)},
+    {nome:'xl/styles.xml',dados:enc.encode(styles)},
+    {nome:'xl/worksheets/sheet1.xml',dados:enc.encode(sheet)}
+  ];
+  const zip=_zip(arqs);
+  const nome=`${c.servico==='agua'?'consumo_agua':'consumo_energia'}_${c.competencia.replace('/','_')}`;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([zip],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  a.download=nome+'.xlsx'; a.click();
+  audit('Exportação de rateio',c.competencia,serv.nome,c.condoId,'');
+  toast('Planilha gerada.');
+  return zip;
+}
+function vcMesExt(comp){
+  const M=['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+  const [m,y]=String(comp).split('/'); return (M[Number(m)-1]||'')+'/'+y;
+}
+
+/* ---- tela Vendas e Custas ---- */
+function vcFormCiclo(){
+  if(!P().create) return toast('Sem permissão.');
+  const hoje=today(), d=new Date();
+  const comp=`${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+  $('#modalTitle').textContent='Novo ciclo de faturamento';
+  $('#modalBody').innerHTML=`
+    <div class="f2">
+      <div class="field"><label>Serviço</label><select id="vcServ">
+        <option value="agua" ${vcTab==='agua'?'selected':''}>Água</option>
+        <option value="energia" ${vcTab==='energia'?'selected':''}>Energia</option></select></div>
+      <div class="field"><label>Condomínio</label><select id="vcCondo">${condosDo('vendascustas').map(x=>`<option value="${x.id}">${x.nome}</option>`).join('')}</select></div>
+      <div class="field"><label>Competência (MM/AAAA)</label><input id="vcComp" value="${comp}" placeholder="08/2026"></div>
+      <div class="field"><label>Valor da fatura (R$)</label><input id="vcValor" placeholder="29.841,10"></div>
+      <div class="field"><label>Início do período</label><input type="date" id="vcIni" value="${hoje}"></div>
+      <div class="field"><label>Fim do período</label><input type="date" id="vcFim" value="${hoje}"></div>
+      <div class="field"><label>Consumo total da fatura</label><input id="vcConsumo" placeholder="721"></div>
+    </div>
+    <div class="feed-item blue"><div class="fi-ic">${ic('gauge')}</div><div style="flex:1">
+      <div class="ft">O valor por unidade é calculado sozinho</div>
+      <div class="fd">R$/unidade = valor da fatura ÷ consumo total. As medições anteriores vêm do ciclo passado.</div></div></div>`;
+  $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="vcCriarCiclo()">Criar ciclo</button>`;
+  $('#modal').classList.add('open');
+}
+function vcFormUnidade(id){
+  if(!P().create) return toast('Sem permissão.');
+  const u=id?vcUnidades.find(x=>x.id===id):null;
+  $('#modalTitle').textContent=u?'Editar unidade medida':'Nova unidade medida';
+  $('#modalBody').innerHTML=`
+    <div class="f2">
+      <div class="field"><label>Serviço</label><select id="vuServ">
+        <option value="agua" ${(u?u.servico:vcTab)==='agua'?'selected':''}>Água</option>
+        <option value="energia" ${(u?u.servico:vcTab)==='energia'?'selected':''}>Energia</option></select></div>
+      <div class="field"><label>Condomínio</label><select id="vuCondo">${condosDo('vendascustas').map(x=>`<option value="${x.id}" ${u?.condoId===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
+      <div class="field"><label>Nome UAU</label><input id="vuNome" value="${esc(u?.nome||'')}" placeholder="CAPITAL ESPRESSO LTDA"></div>
+      <div class="field"><label>Unidade</label><input id="vuUni" value="${esc(u?.unidade||'')}" placeholder="LOJA M01"></div>
+      <div class="field"><label>CNPJ / CPF</label><input id="vuCnpj" value="${esc(u?.cnpj||'')}" placeholder="00.000.000/0001-00"></div>
+      <div class="field"><label>Tipo</label><select id="vuTipo">${VC_TIPOS.map(t=>`<option ${u?.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label>Ordem na planilha</label><input id="vuOrdem" type="number" value="${u?.ordem||0}"></div>
+    </div>
+    <div class="check"><input type="checkbox" id="vuAtivo" ${u?(u.ativo!==false?'checked':''):'checked'}>
+      <div style="flex:1"><div class="ct">Unidade ativa</div><div class="t-sub">Entra automaticamente nos próximos ciclos</div></div></div>
+    <div class="feed-item amber" style="margin-top:10px"><div class="fi-ic">${ic('money')}</div><div style="flex:1">
+      <div class="ft">VENDA ou CUSTA</div>
+      <div class="fd">VENDA: cobrado do ocupante. CUSTA: absorvido pelo condomínio. Fica gravado no cadastro e se repete todo mês.</div></div></div>`;
+  $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+    ${u?`<button class="btn danger" onclick="closeModal();vcExcluirUnidade('${u.id}')">Excluir</button>`:''}
+    <button class="btn" onclick="vcSalvarUnidade('${id||''}')">Salvar</button>`;
+  $('#modal').classList.add('open');
+}
+function vcViewUnidades(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const us=vcUnidadesDo(vcTab,cid);
+  return `<div class="card" style="margin-top:14px">
+    <div class="rowact" style="justify-content:space-between;margin-bottom:10px">
+      <b>Unidades medidas — ${VC_SERV[vcTab].nome}</b>
+      ${P().create?`<button class="btn ghost sm" onclick="vcFormUnidade()">${ic('plus')}Nova unidade</button>`:''}
+    </div>
+    ${us.length?`<div class="tablewrap"><table><thead><tr>
+      <th>Ordem</th><th>Nome UAU</th><th>Unidade</th><th>CNPJ / CPF</th><th>Tipo</th><th>Ações</th></tr></thead><tbody>
+      ${us.map(u=>`<tr>
+        <td>${u.ordem||0}</td><td class="t-title">${esc(u.nome)}</td><td>${esc(u.unidade)}</td>
+        <td>${esc(u.cnpj||'—')}</td>
+        <td><span class="badge ${u.tipo==='CUSTA'?'b-avencer':'b-conc'}">${u.tipo}</span></td>
+        <td><div class="rowact no-print">
+          ${P().edit?`<button class="btn ghost sm" onclick="vcFormUnidade('${u.id}')">Editar</button>`:''}
+        </div></td></tr>`).join('')}</tbody></table></div>`
+      :`<div class="card empty">Nenhuma unidade cadastrada para ${VC_SERV[vcTab].nome.toLowerCase()}. Cadastre as lojas e salas que têm medidor individual.</div>`}
+  </div>`;
+}
+function viewVendasCustas(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const cics=vcCiclosDo(vcTab,cid);
+  if(vcCicloAtivo&&!cics.some(c=>c.id===vcCicloAtivo)) vcCicloAtivo=null;
+  const c=vcCiclo(vcCicloAtivo)||cics[0]||null;
+  if(c) vcCicloAtivo=c.id;
+  const t=c?vcTotais(c):null;
+  const un=vcTab==='agua'?'m³':'kWh';
+  let html=`
+    <div class="toolbar no-print">
+      <div class="viewtabs">
+        <button class="${vcTab==='agua'?'on':''}" onclick="vcTab='agua';vcCicloAtivo=null;render()">${ic('water')}Água</button>
+        <button class="${vcTab==='energia'?'on':''}" onclick="vcTab='energia';vcCicloAtivo=null;render()">${ic('bolt')}Energia</button>
+      </div>
+      ${cics.length?`<select onchange="vcCicloAtivo=this.value;render()">
+        ${cics.map(x=>`<option value="${x.id}" ${x.id===vcCicloAtivo?'selected':''}>${x.competencia}${x.fechado?' (fechado)':''}</option>`).join('')}</select>`:''}
+      <div class="spacer"></div>
+      ${P().create?`<button class="btn" onclick="vcFormCiclo()">${ic('plus')}Novo ciclo</button>`:''}
+      ${c?`<button class="btn ghost" onclick="vcXlsx('${c.id}')">${ic('download')}Gerar planilha (Excel)</button>`:''}
+    </div>`;
+  if(!c){
+    html+=`<div class="card empty">Nenhum ciclo de ${VC_SERV[vcTab].nome.toLowerCase()} cadastrado.
+      Crie o ciclo do mês informando o valor e o consumo total da fatura da concessionária.</div>`+vcViewUnidades();
+    $('#content').innerHTML=html; return;
+  }
+  const dv=vcDivergencia(c);
+  html+=`
+    <div class="grid metrics" style="margin-bottom:14px">
+      <div class="card metric"><div class="lbl">Valor da fatura</div><div class="val" style="font-size:22px">${brl(c.valorFatura)}</div>
+        <div class="sub">${c.inicio?fmt(c.inicio):'—'} a ${c.fim?fmt(c.fim):'—'}</div></div>
+      <div class="card metric"><div class="lbl">Consumo da fatura</div><div class="val" style="font-size:22px">${vcFmtM3(c.consumoFatura)}</div><div class="sub">${un}</div></div>
+      <div class="card metric blue"><div class="lbl">Valor por ${un}</div><div class="val" style="font-size:22px">${brl(t.unit)}</div>
+        <div class="sub">fatura ÷ consumo</div></div>
+      <div class="card metric green"><div class="lbl">Total a cobrar</div><div class="val" style="font-size:22px">${brl(t.total)}</div>
+        <div class="sub">venda ${brl(t.venda)} · custa ${brl(t.custa)}</div></div>
+      <div class="card metric ${t.pend?'amber':'green'}"><div class="lbl">Medições</div><div class="val">${t.medidos}/${t.linhas}</div>
+        <div class="sub">${t.pend?t.pend+' pendente(s)':'todas lançadas'}</div></div>
+    </div>`;
+  if(t.pend) html+=`<div class="feed-item amber" style="margin-bottom:12px"><div class="fi-ic">${ic('gauge')}</div><div style="flex:1">
+    <div class="ft">${t.pend} unidade(s) sem medição neste ciclo</div>
+    <div class="fd">Clique em "Medir" na linha para lançar a leitura com a foto do medidor.</div></div></div>`;
+  if(dv!==null&&Math.abs(dv)>0.009) html+=`<div class="feed-item blue" style="margin-bottom:12px"><div class="fi-ic">${ic('chart')}</div><div style="flex:1">
+    <div class="ft">${vcFmtM3(dv)} ${un} de área comum</div>
+    <div class="fd">Diferença entre o consumo da fatura (${vcFmtM3(c.consumoFatura)}) e a soma das unidades (${vcFmtM3(t.consumo)}) — equivale a ${brl(Math.round(dv*vcTaxa(c)*100)/100)}.</div></div></div>`;
+  html+=`<div class="tablewrap"><table><thead><tr>
+    <th>Nome UAU</th><th>Unidade</th><th>Medição anterior</th><th>Medição atual</th><th>Consumo (${un})</th>
+    <th>R$/${un}</th><th>A pagar</th><th>Tipo</th><th>Foto</th><th>Ações</th></tr></thead><tbody>
+    ${(c.linhas||[]).slice().sort((a,b)=>{
+        const ua=vcUnidades.find(x=>x.id===a.unidadeId)||{},ub=vcUnidades.find(x=>x.id===b.unidadeId)||{};
+        return (ua.ordem||0)-(ub.ordem||0)||String(a.unidade).localeCompare(String(b.unidade),'pt-BR')})
+      .map(l=>{const cons=vcConsumoLinha(l),val=vcValorLinha(c,l),falta=val===null;return `<tr ${falta?'style="background:#fffaf0"':''}>
+      <td class="t-title">${esc(l.nome)}</td><td>${esc(l.unidade)}</td>
+      <td>${vcFmtM3(l.anterior)}</td>
+      <td>${l.atual===null||l.atual===undefined?'<span class="t-sub">pendente</span>':`<b>${vcFmtM3(l.atual)}</b>`}</td>
+      <td>${cons===null?'—':vcFmtM3(cons)}</td>
+      <td>${brl(t.unit)}</td>
+      <td>${val===null?'<span class="t-sub">—</span>':`<b>${brl(val)}</b>`}</td>
+      <td><span class="badge ${l.tipo==='CUSTA'?'b-avencer':'b-conc'}">${l.tipo}</span></td>
+      <td>${l.foto?`<button class="btn ghost sm" onclick="vcVerFoto('${c.id}','${l.unidadeId}')">${ic('image')}Ver</button>`:'<span class="t-sub">—</span>'}</td>
+      <td><div class="rowact no-print">
+        ${!c.fechado&&P().edit?`<button class="btn ${falta?'':'ghost'} sm" onclick="vcFormMedicao('${c.id}','${l.unidadeId}')">${falta?'Medir':'Editar'}</button>`:''}
+      </div></td></tr>`}).join('')}
+    </tbody><tfoot><tr>
+      <td colspan="6" style="text-align:right"><b>TOTAL</b></td>
+      <td><b>${brl(t.total)}</b></td><td colspan="3"></td></tr></tfoot></table></div>
+    <div class="rowact no-print" style="margin-top:12px">
+      ${P().edit?`<button class="btn ghost sm" onclick="vcSincronizarLinhas('${c.id}')">${ic('refresh')}Incluir unidades novas</button>`:''}
+      ${P().complete?`<button class="btn ${c.fechado?'ghost':'green'} sm" onclick="vcFecharCiclo('${c.id}')">${c.fechado?'Reabrir ciclo':'Fechar ciclo'}</button>`:''}
+      ${canDelete({criadoPor:c.criadoPor})?`<button class="btn danger sm" onclick="vcExcluirCiclo('${c.id}')">Excluir ciclo</button>`:''}
+    </div>
+    <div class="legend"><span><b>Como o cálculo funciona:</b> R$/${un} = valor da fatura ÷ consumo total da fatura.
+      A pagar = (medição atual − medição anterior) × R$/${un}. A medição anterior é puxada do último ciclo com leitura.
+      Toda medição exige foto do medidor como comprovação.</span></div>
+    ${histHtml(c.historico)}`;
+  html+=vcViewUnidades();
+  $('#content').innerHTML=html;
+}
+
+
+/* Cadastro inicial das unidades medidas do E-Business (planilhas de rateio). */
+const VC_SEED_C1=[
+  {servico:'agua',ordem:1,nome:'VANTAGE CAR STUDIO LTDA',unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',tipo:'VENDA'},
+  {servico:'agua',ordem:2,nome:'NANCY CAVALCANTE MEDEIROS NEVES',unidade:'LOJA M01',cnpj:'',tipo:'CUSTA'},
+  {servico:'agua',ordem:3,nome:'GFS ADMINISTRADORA DE CONDOMINIO E TERCEIRIZAÇÃO EIRELI',unidade:'LOJA M02',cnpj:'',tipo:'CUSTA'},
+  {servico:'agua',ordem:4,nome:'ELMO INCORPORAÇÕES',unidade:'LOJA M03',cnpj:'',tipo:'CUSTA'},
+  {servico:'agua',ordem:5,nome:'ELMO INCORPORAÇÕES',unidade:'LOJA M04',cnpj:'',tipo:'CUSTA'},
+  {servico:'agua',ordem:6,nome:'URBANA IMÓVEIS LTDA',unidade:'LOJA M05',cnpj:'',tipo:'CUSTA'},
+  {servico:'agua',ordem:7,nome:'CAPITAL ESPRESSO LTDA',unidade:'CAPITAL ESPRESSO LTDA',cnpj:'54.766.132/0001-58',tipo:'VENDA'},
+  {servico:'energia',ordem:1,nome:'CAPITAL ESPRESSO LTDA',unidade:'CAPITAL ESPRESSO LTDA',cnpj:'54.766.132/0001-58',tipo:'VENDA'},
+  {servico:'energia',ordem:2,nome:'VANTAGE CAR STUDIO LTDA',unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',tipo:'VENDA'}
+];
+function migrarVendasCustas(){
+  if(CFG.vcSeed==='v1') return;
+  VC_SEED_C1.forEach(u=>{
+    if(!vcUnidades.some(x=>x.servico===u.servico&&x.condoId==='c1'&&x.unidade===u.unidade))
+      vcUnidades.push(Object.assign({id:uid('vu'),condoId:'c1',ativo:true},u));
+  });
+  CFG.vcSeed='v1';
+}
+
 /* ============ PUBLICIDADE NOS ELEVADORES (locação de espaços p/ divulgação) ============ */
 function pubCfg(){
   CFG.pub=CFG.pub||{}; CFG.pub.elevadores=CFG.pub.elevadores||{};
@@ -4292,6 +4829,7 @@ const LEITURAS_AGUA_C1=[
   ['2026-09-01',67615.00,119.00],
   ['2026-09-02',67645.00,30.00]
 ];
+let vcUnidades=[], vcCiclos=[];
 let leituras=[], leitTab='agua', leitMes='', leitStatus='', leitFiltro='', mediaJanela=3, grafJanela=30;
 function seedLeituras(){
   leituras=[];
@@ -5453,14 +5991,14 @@ function buildTabbar(){
 function abrirMaisMenu(){
   const itens=[['tarefas-adm','clipboardCheck','Tarefas Administrativas'],
     ['calendario','calendar','Calendário'],['notas','invoice','Notas Fiscais'],
-    ['cessoes','contract','Cessão de Direitos'],['publicidade','megaphone','Publicidade nos Elevadores'],
+    ['cessoes','contract','Cessão de Direitos'],['vendascustas','money','Vendas e Custas'],['publicidade','megaphone','Publicidade nos Elevadores'],
     ['leituras','water','Leituras — Água e Energia'],
     ['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material'],
     ['relatorios','chart','Relatórios'],['relmensal','doc','Relatório Mensal'],
     ['config','settings','Configurações']]
     .filter(([k])=>{
       if(k==='tarefas-gestor') return P().tipos.includes('Gestor');
-      if(['notas','cessoes','publicidade','leituras','calendario','tarefas-adm','relatorios','relmensal'].includes(k)) return P().tipos.length;
+      if(['notas','cessoes','vendascustas','publicidade','leituras','calendario','tarefas-adm','relatorios','relmensal'].includes(k)) return P().tipos.length;
       if(['estoque','pedidos'].includes(k)) return P().estoque;
       return true;
     });
@@ -6624,6 +7162,7 @@ function snapshotValido(d){
 function aplicarSnapshot(d){
   if(!d) return;
   _booting=true;
+  vcUnidades=d.vcUnidades||[]; vcCiclos=d.vcCiclos||[];
   tasks=d.tasks||[]; notas=d.notas||[]; cessoes=d.cessoes||[];
   apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
   pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
@@ -6631,7 +7170,7 @@ function aplicarSnapshot(d){
   if(d.CFG) CFG=Object.assign(CFG,d.CFG);
   creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
   if(!prestadores.length) seedPrestadores();
-  migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig();
+  migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig(); migrarVendasCustas();
   _booting=false;
 }
 function agendarSync(){
@@ -6717,6 +7256,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3b9efd7ce903421',t:'MTc4OTQ5OTQ4Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c205dffc666d40',t:'MTc4OTU4NDI3MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
