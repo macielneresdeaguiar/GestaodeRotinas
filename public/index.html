@@ -470,6 +470,27 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
   font-size:9.5px;color:var(--text-3);text-align:center}
 @media(max-width:760px){.rel-kpis{grid-template-columns:repeat(2,1fr)}.rel-doc{padding:18px}
   .rel-head{flex-direction:column}.rel-meta{text-align:left}.rbar{grid-template-columns:100px 1fr 30px}}
+
+/* Análise de Projetos — na tela, a mesma separação do documento:
+   faixa azul escuro = título de seção · cinza = rótulo fixo que não muda */
+.ap-faixa{background:#1f3864;color:#fff;font-weight:700;font-size:12px;letter-spacing:.3px;
+  padding:9px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ap-faixa .sub{font-weight:500;font-size:11px;opacity:.75;letter-spacing:0}
+.ap-grid{display:grid;grid-template-columns:230px 1fr;border-left:1px solid var(--line);border-top:1px solid var(--line)}
+.ap-grid>div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 12px;display:flex;align-items:center}
+.ap-grid .rot{background:#e9ecf2;font-weight:700;font-size:10.5px;color:#33415c;letter-spacing:.2px;text-transform:uppercase}
+.ap-grid .val{background:#fff}
+.ap-grid .val input,.ap-grid .val select,.ap-grid .val textarea{border:0;background:transparent;padding:4px 2px;width:100%;font-size:13.5px}
+.ap-grid .val input:focus,.ap-grid .val select:focus,.ap-grid .val textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
+.ap-grid .full{grid-column:1/-1}
+.ap-tb thead th{background:#203864;color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.2px;text-transform:uppercase}
+.ap-tb td.it{text-align:center;color:var(--text-2);width:56px}
+.ap-tb td.st{width:240px}
+.ap-tb td.st select{width:100%}
+.ap-neg{color:#c2384a;font-weight:700}
+.ap-pos{color:#1d7a4c}
+@media(max-width:820px){ .ap-grid{grid-template-columns:1fr}
+  .ap-grid .rot{background:#e9ecf2} }
 @media print{
   body.print-rel .rel-doc{border:0;box-shadow:none;padding:0;max-width:none}
   body.print-rel .content{padding:0}
@@ -3832,7 +3853,7 @@ function apAbrir(id){
 }
 function apRender(a){
   const docs=apDocs(), avals=apAvals();
-  const sel=(val,ops,on)=>`<select onchange="${on}">${['',...ops].map(o=>
+  const sel=(val,ops,on,cls)=>`<select class="${cls||''}" onchange="${on};apPintar(this)">${['',...ops].map(o=>
     `<option value="${o}" ${val===o?'selected':''}>${o||'— selecione —'}</option>`).join('')}</select>`;
   let h=`<div class="rowact" style="justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
     <button class="btn ghost" onclick="go('analises')">${ic('chevL')}Voltar para a lista</button>
@@ -3845,70 +3866,73 @@ function apRender(a){
     </div></div>`;
 
   // --- cabeçalho ---
-  h+=`<div class="card" style="margin-bottom:12px">
-    <div class="t-title" style="margin-bottom:12px">Identificação</div>
-    <div class="f2">
-      <div class="field"><label>Setor</label><select id="apSetor">${AP_SETORES.map(x=>
+  h+=`<div class="card" style="padding:0;overflow:hidden;margin-bottom:12px">
+    <div class="ap-faixa">CHECK - LIST PARA APROVAÇÃO DE PROJETOS</div>
+    <div class="ap-grid">
+      <div class="rot">Setor</div>
+      <div class="val"><select id="apSetor">${AP_SETORES.map(x=>
         `<option ${a.setor===x?'selected':''}>${x}</option>`).join('')}</select></div>
-      <div class="field"><label>Unidade / Sala</label><input id="apUnidade" value="${esc(a.unidade||'')}" placeholder="ex.: 501"></div>
-    </div>
-    <div class="f2">
-      <div class="field"><label>Proprietário / Locatário</label><input id="apProp" value="${esc(a.proprietario||'')}" placeholder="nome da empresa ou pessoa"></div>
-      <div class="field"><label>E-mail do proprietário</label><input id="apEmailProp" value="${esc(a.emailProp||'')}" placeholder="email@exemplo.com"></div>
-    </div>
-    <div class="f2">
-      <div class="field"><label>Empresa do projeto</label><input id="apEmpresa" value="${esc(a.empresa||'')}"></div>
-      <div class="field"><label>E-mail da empresa</label><input id="apEmailEmp" value="${esc(a.emailEmp||'')}" placeholder="email@exemplo.com"></div>
-    </div>
-    <div class="f2">
-      <div class="field"><label>Data de entrega dos projetos</label><input id="apEntrega" type="date" value="${a.entrega||''}"></div>
-      <div class="field"><label>Data da análise do projeto</label><input id="apAnalise" type="date" value="${a.analise||''}"></div>
-      <div class="field"><label>Número da revisão</label><input id="apRevisao" type="number" min="1" value="${a.revisao||1}"></div>
-      <div class="field"></div>
-    </div>
-    <div class="field"><label>Projetos apresentados</label>
-      <div class="rowact" style="flex-wrap:wrap;gap:14px;padding:4px 0">
+      <div class="rot">Unidade / Sala</div>
+      <div class="val"><input id="apUnidade" value="${esc(a.unidade||'')}" placeholder="ex.: 501"></div>
+      <div class="rot">Proprietário / Locatário</div>
+      <div class="val"><input id="apProp" value="${esc(a.proprietario||'')}" placeholder="nome da empresa ou pessoa"></div>
+      <div class="rot">E-mail do proprietário</div>
+      <div class="val"><input id="apEmailProp" value="${esc(a.emailProp||'')}" placeholder="email@exemplo.com"></div>
+      <div class="rot">Empresa do projeto</div>
+      <div class="val"><input id="apEmpresa" value="${esc(a.empresa||'')}"></div>
+      <div class="rot">E-mail da empresa</div>
+      <div class="val"><input id="apEmailEmp" value="${esc(a.emailEmp||'')}" placeholder="email@exemplo.com"></div>
+      <div class="rot">Data de entrega dos projetos</div>
+      <div class="val"><input id="apEntrega" type="date" value="${a.entrega||''}"></div>
+      <div class="rot">Data da análise do projeto</div>
+      <div class="val"><input id="apAnalise" type="date" value="${a.analise||''}"></div>
+      <div class="rot">Número da revisão do projeto</div>
+      <div class="val"><input id="apRevisao" type="number" min="1" value="${a.revisao||1}"></div>
+      <div class="rot">Projetos apresentados</div>
+      <div class="val"><div class="rowact" style="flex-wrap:wrap;gap:14px">
         ${AP_TIPOS.map(([k,l])=>`<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="apT_${k}" ${(a.tipos||{})[k]?'checked':''}> <span>${l}</span></label>`).join('')}
       </div></div>
+    </div>
   </div>`;
 
   // --- documentação ---
   h+=`<div class="card" style="padding:0;overflow:hidden;margin-bottom:12px">
-    <div style="padding:14px 16px;border-bottom:1px solid var(--line)"><div class="t-title">Documentação apresentada</div>
-      <div class="t-sub">${docs.length} itens</div></div>
-    <div class="tablewrap"><table><thead><tr><th style="width:52px;text-align:center">Item</th><th>Documento</th><th style="width:230px">Situação</th></tr></thead><tbody>`;
+    <div class="ap-faixa">DOCUMENTAÇÃO APRESENTADA<span class="sub">${docs.length} itens</span></div>
+    <div class="tablewrap"><table class="ap-tb"><thead><tr><th style="width:56px;text-align:center">Item</th><th>Documento</th><th style="width:240px">Situação</th></tr></thead><tbody>`;
   docs.forEach((d,i)=>{
     const v=apSitDoc(a,i);
-    h+=`<tr><td style="text-align:center">${i+1}</td><td>${esc(d)}</td>
-      <td>${sel(v,AP_SIT_DOC,`apSetDoc(${i},this.value)`)}</td></tr>`;
+    const cls=v==='NÃO FOI APRESENTADO'?'ap-neg':(v==='APRESENTADO'?'ap-pos':'');
+    h+=`<tr><td class="it">${i+1}</td><td>${esc(d)}</td>
+      <td class="st ${cls}">${sel(v,AP_SIT_DOC,`apSetDoc(${i},this.value)`,cls)}</td></tr>`;
   });
   h+=`</tbody></table></div></div>`;
 
   // --- avaliação ---
   h+=`<div class="card" style="padding:0;overflow:hidden;margin-bottom:12px">
-    <div style="padding:14px 16px;border-bottom:1px solid var(--line)"><div class="t-title">Principais itens a serem avaliados nos projetos</div>
-      <div class="t-sub">${avals.length} itens</div></div>
-    <div class="tablewrap"><table><thead><tr><th style="width:52px;text-align:center">Item</th><th>Descrição</th><th style="width:230px">Situação</th></tr></thead><tbody>`;
+    <div class="ap-faixa">PRINCIPAIS ITENS A SEREM AVALIADOS NOS PROJETOS<span class="sub">${avals.length} itens</span></div>
+    <div class="tablewrap"><table class="ap-tb"><thead><tr><th style="width:56px;text-align:center">Item</th><th>Descrição</th><th style="width:240px">Situação</th></tr></thead><tbody>`;
   avals.forEach((d,i)=>{
     const v=apSitAval(a,i);
-    h+=`<tr><td style="text-align:center">${i+1}</td><td>${esc(d)}</td>
-      <td>${sel(v,AP_SIT_AVAL,`apSetAval(${i},this.value)`)}</td></tr>`;
+    const cls=v==='NÃO CONFORME'?'ap-neg':(v==='CONFORME'?'ap-pos':'');
+    h+=`<tr><td class="it">${i+1}</td><td>${esc(d)}</td>
+      <td class="st ${cls}">${sel(v,AP_SIT_AVAL,`apSetAval(${i},this.value)`,cls)}</td></tr>`;
   });
   h+=`</tbody></table></div></div>`;
 
   // --- pendências ---
   const pend=a.pendencias||[];
-  h+=`<div class="card" style="margin-bottom:12px">
-    <div class="rowact" style="justify-content:space-between;margin-bottom:10px">
-      <div><div class="t-title">Itens pendentes</div>
-        <div class="t-sub">O que o condômino precisa providenciar. Saem numerados na planilha.</div></div>
-      <button class="btn sm ghost" onclick="apAddPend()">${ic('plus')}Acrescentar</button></div>
-    <div id="apPendBox">${apPendHtml(pend)}</div></div>`;
+  h+=`<div class="card" style="padding:0;overflow:hidden;margin-bottom:12px">
+    <div class="ap-faixa">ITENS PENDENTES<span class="sub">saem numerados no relatório</span></div>
+    <div style="padding:14px 16px">
+      <div id="apPendBox">${apPendHtml(pend)}</div>
+      <button class="btn sm ghost" onclick="apAddPend()" style="margin-top:8px">${ic('plus')}Acrescentar pendência</button>
+    </div></div>`;
 
   // --- decisão ---
   const al=apAlerta(a);
-  h+=`<div class="card">
-    <div class="t-title" style="margin-bottom:10px">Aprovação dos projetos e início de obras</div>
+  h+=`<div class="card" style="padding:0;overflow:hidden">
+    <div class="ap-faixa">APROVAÇÃO DOS PROJETOS E INICIO DE OBRAS</div>
+    <div style="padding:14px 16px">
     <div class="feed-item ${al.tipo==='bom'?'green':(al.tipo==='ruim'?'red':'amber')}" style="margin-bottom:12px">
       <div class="fi-ic">${ic(al.tipo==='bom'?'check':'alert')}</div>
       <div style="flex:1"><div class="t-sub">${esc(al.txt)} A decisão abaixo é sempre sua.</div></div></div>
@@ -3923,7 +3947,7 @@ function apRender(a){
       <div class="field"><label>Assinatura</label><input id="apAssin" value="${esc(a.assinatura||'')}"></div>
     </div>
     ${a.historico&&a.historico.length?`<div style="margin-top:12px">${histHtml(a.historico)}</div>`:''}
-  </div>`;
+    </div></div>`;
   $('#content').innerHTML=h;
   $('#pageTitle').textContent=apEditId?('Análise de Projetos — Unidade '+(a.unidade||'—')):'Análise de Projetos — Nova análise';
   apAtual=a;
@@ -3937,6 +3961,18 @@ function apPendHtml(pend){
     <button class="btn sm ghost" onclick="apDelPend(${i})" title="Remover">${ic('trash')}</button></div>`).join('');
 }
 function apSetDoc(i,v){ apAtual.docs=apAtual.docs||{}; apAtual.docs[i]=v }
+/* Repinta a situação escolhida: vermelho para pendência, verde para atendido —
+   a mesma leitura do relatório impresso. */
+function apPintar(el){
+  const v=el.value;
+  el.classList.remove('ap-neg','ap-pos');
+  if(v==='NÃO FOI APRESENTADO'||v==='NÃO CONFORME') el.classList.add('ap-neg');
+  else if(v==='APRESENTADO'||v==='CONFORME') el.classList.add('ap-pos');
+  const td=el.closest?el.closest('td'):null;
+  if(td){ td.classList.remove('ap-neg','ap-pos');
+    if(el.classList.contains('ap-neg')) td.classList.add('ap-neg');
+    else if(el.classList.contains('ap-pos')) td.classList.add('ap-pos'); }
+}
 function apSetAval(i,v){ apAtual.avals=apAtual.avals||{}; apAtual.avals[i]=v }
 function apSetPend(i,v){ apAtual.pendencias[i]=v }
 function apAddPend(){ (apAtual.pendencias=apAtual.pendencias||[]).push('');
@@ -4062,13 +4098,13 @@ function apXlsx(id){
   L.push([txt('APROVAÇÃO DOS PROJETOS E INICIO DE OBRAS:',4),txt('',4),
           txt(a.resultado||'AGUARDANDO DECISÃO',10),txt('',10),txt('',10),txt('',10)]);
   mrg(R(),0,1); mrg(R(),2,5);
-  L.push([txt('Observações/Comentários: '+(a.obs||''),5),txt('',5),txt('',5),txt('',5),txt('',5),txt('',5)]);
-  mrg(R(),0,5);
-  L.push([txt('Data da aprovação pela Administração Central: '+(a.dataAprov?fmt(a.dataAprov):''),5),
-          txt('',5),txt('',5),txt('',5),txt('',5),txt('',5)]);
-  mrg(R(),0,5);
-  L.push([txt('Assinatura: '+(a.assinatura||''),5),txt('',5),txt('',5),txt('',5),txt('',5),txt('',5)]);
-  mrg(R(),0,5);
+  const rodape=(rot,val)=>{
+    L.push([txt(rot,11),txt('',11),txt(val,5),txt('',5),txt('',5),txt('',5)]);
+    mrg(R(),0,1); mrg(R(),2,5);
+  };
+  rodape('OBSERVAÇÕES / COMENTÁRIOS',a.obs||'');
+  rodape('DATA DA APROVAÇÃO PELA ADMINISTRAÇÃO CENTRAL',a.dataAprov?fmt(a.dataAprov):'');
+  rodape('ASSINATURA',a.assinatura||'');
 
   let linhasXml='';
   L.forEach((row,i)=>{
@@ -4104,13 +4140,14 @@ ${fig(1,'ABL',0,0,4,202,36)}${fig(2,'E-Business',4,0,86,141,44)}</xdr:wsDr>`;
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>`;
   const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<fonts count="6">
+<fonts count="7">
 <font><sz val="11"/><name val="Calibri"/></font>
 <font><b/><sz val="12"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
 <font><b/><sz val="11"/><name val="Calibri"/></font>
 <font><sz val="11"/><color rgb="FF1D7A4C"/><name val="Calibri"/></font>
 <font><b/><sz val="11"/><color rgb="FFC00000"/><name val="Calibri"/></font>
-<font><b/><sz val="11"/><color rgb="FFC00000"/><name val="Calibri"/></font></fonts>
+<font><b/><sz val="11"/><color rgb="FFC00000"/><name val="Calibri"/></font>
+<font><b/><sz val="10"/><color rgb="FF1F3864"/><name val="Calibri"/></font></fonts>
 <fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FF1F3864"/><bgColor indexed="64"/></patternFill></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/><bgColor indexed="64"/></patternFill></fill>
@@ -4122,7 +4159,7 @@ ${fig(1,'ABL',0,0,4,202,36)}${fig(2,'E-Business',4,0,86,141,44)}</xdr:wsDr>`;
 <cellXfs count="12">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-<xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="6" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
 <xf numFmtId="0" fontId="1" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
@@ -4131,7 +4168,7 @@ ${fig(1,'ABL',0,0,4,202,36)}${fig(2,'E-Business',4,0,86,141,44)}</xdr:wsDr>`;
 <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
 <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="0" fontId="5" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-<xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="6" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
 </cellXfs></styleSheet>`;
   const enc=new TextEncoder();
   const arqs=[
@@ -4208,9 +4245,11 @@ function apDocHtml(a){
     <table class="res"><tbody><tr>
       <td class="rl">APROVAÇÃO DOS PROJETOS E INICIO DE OBRAS:</td>
       <td class="rv ${resCls}">${esc(a.resultado||'AGUARDANDO DECISÃO')}</td></tr></tbody></table>
-    <div class="fim"><div>Observações/Comentários: ${esc(a.obs||'')}</div>
-      <div style="margin-top:14px">Data da aprovação pela Administração Central: ${a.dataAprov?fmt(a.dataAprov):''}</div>
-      <div style="margin-top:10px">Assinatura: ${esc(a.assinatura||'')}</div></div>
+    <div class="fim">
+      <div class="lin"><div class="rt">Observações / Comentários</div><div class="vl">${esc(a.obs||'')}</div></div>
+      <div class="lin"><div class="rt">Data da aprovação pela Administração Central</div><div class="vl">${a.dataAprov?fmt(a.dataAprov):''}</div></div>
+      <div class="lin"><div class="rt">Assinatura</div><div class="vl">${esc(a.assinatura||'')}</div></div>
+    </div>
   </div>`;
 }
 const AP_CSS=`
@@ -4223,7 +4262,7 @@ const AP_CSS=`
 .faixa2{background:#203864;color:#fff;text-align:center;font-weight:700;font-size:11px;padding:4px;margin-top:10px}
 table{width:100%;border-collapse:collapse;font-size:11px}
 .id td{border:1px solid #9aa4b5;padding:3px 6px}
-.id .r{background:#d9d9d9;font-weight:600;text-align:center;font-size:10px}
+.id .r{background:#d9d9d9;font-weight:700;text-align:center;font-size:10px;color:#1f3864;text-transform:uppercase;letter-spacing:.2px}
 .id .c{text-align:center}
 .id .lk{color:#1155cc;text-decoration:underline}
 .lst{margin-top:10px}
@@ -4238,7 +4277,12 @@ table{width:100%;border-collapse:collapse;font-size:11px}
 .res .rl{background:#203864;color:#fff;font-weight:700;font-size:10px;padding:8px;width:33%;border:1px solid #9aa4b5}
 .res .rv{text-align:center;font-weight:700;font-size:12px;padding:8px;border:1px solid #9aa4b5;background:#ffff00}
 .res .rv.rep{color:#c00000} .res .rv.apr{color:#1d7a4c} .res .rv.nd{background:#f2f2f2;color:#555}
-.fim{border:1px solid #9aa4b5;border-top:0;padding:10px;font-size:11px}
+.fim{border:1px solid #9aa4b5;border-top:0;padding:0;font-size:11px}
+.fim .lin{display:grid;grid-template-columns:270px 1fr;border-bottom:1px solid #9aa4b5}
+.fim .lin:last-child{border-bottom:0}
+.fim .rt{background:#d9d9d9;font-weight:700;font-size:10px;color:#1f3864;text-transform:uppercase;
+  padding:7px 10px;border-right:1px solid #9aa4b5;letter-spacing:.2px}
+.fim .vl{padding:7px 10px;min-height:26px}
 @media print{ body{background:#fff} .folha{margin:0;max-width:none;border:0} @page{size:A4;margin:8mm} }
 `;
 function apImprimir(id){
@@ -8345,6 +8389,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3ca5ff64d876d40',t:'MTc4OTY3MTg0Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3cb0edc2a15639c',t:'MTc4OTY3OTAxMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
