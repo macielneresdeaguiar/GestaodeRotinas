@@ -531,6 +531,14 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 .rc-d{font-size:12px;color:var(--text-2);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rc-m{font-size:10.5px;color:var(--text-3);margin-top:2px}
 
+.rc-acoes{display:flex;flex-direction:column;gap:4px;flex:none}
+.rc-acoes .btn{white-space:nowrap}
+@media(max-width:600px){
+  .rc-item{flex-wrap:wrap}
+  .rc-acoes{flex-direction:row;width:100%}
+  .rc-acoes .btn{flex:1}
+}
+
 .bg-picks{display:flex;flex-direction:column;gap:7px}
 .bg-pick{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);
   border-radius:8px;cursor:pointer;background:#fff}
@@ -702,7 +710,16 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
   .tabbar button .ico{width:21px;height:21px;stroke-width:1.7}
   .tabbar button.active{color:var(--accent)}
   .tabbar button.active .ico{stroke-width:2.1}
-  .tabbar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .tabbar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.15}
+  @media(max-width:430px){
+    .tabbar button{font-size:9px;padding:6px 1px;gap:1px}
+    .tabbar button .ico{width:19px;height:19px}
+  }
+  /* cabeçalho do painel: no celular o nome e os botões empilham sem espremer */
+  @media(max-width:560px){
+    .card .rowact.no-print{width:100%}
+    .card .rowact.no-print .btn{flex:1;justify-content:center;padding:10px 8px}
+  }
   body.has-tabbar .sidebar{display:none}
   body.has-tabbar .main{margin-left:0}
   /* botão de ação flutuante */
@@ -986,18 +1003,25 @@ const USERS=[
   {id:'u3',nome:'Cleiton',login:'cleiton',role:'Oficial de Manutenção',
    perms:{condos:['c1'],tipos:[],manutencao:true,estoque:true,estoqueTotal:true,
           apontamentos:true,create:true,edit:true,complete:true,delete:false}},
+  /* Líder de Limpeza e Portaria: registra as leituras diárias de água e
+     energia e abre chamados para a manutenção pela ronda. Não vê o
+     financeiro nem o gerenciador de tarefas. */
+  {id:'u4',nome:'Fernanda',login:'fernanda',role:'Líder de Limpeza e Portaria',
+   perms:{condos:['c1'],tipos:[],manutencao:false,estoque:false,estoqueTotal:false,
+          apontamentos:false,brigada:false,leituras:true,ronda:true,ia:false,
+          create:true,edit:false,complete:false,delete:false}},
   /* Brigada de incêndio — 4 contas prontas, o nome de cada uma é editado
      em Configurações. Veem o check-list, a ronda e abrem demandas. */
-  {id:'b1',nome:'Brigadista 1',login:'brigada1',role:'Brigadista',
+  {id:'b1',nome:'Anderson',login:'brigada1',role:'Brigadista',
    perms:{condos:['c1'],tipos:[],manutencao:false,estoque:false,estoqueTotal:false,
           apontamentos:false,brigada:true,create:true,edit:false,complete:false,delete:false}},
-  {id:'b2',nome:'Brigadista 2',login:'brigada2',role:'Brigadista',
+  {id:'b2',nome:'Nilson',login:'brigada2',role:'Brigadista',
    perms:{condos:['c1'],tipos:[],manutencao:false,estoque:false,estoqueTotal:false,
           apontamentos:false,brigada:true,create:true,edit:false,complete:false,delete:false}},
-  {id:'b3',nome:'Brigadista 3',login:'brigada3',role:'Brigadista',
+  {id:'b3',nome:'Suelen',login:'brigada3',role:'Brigadista',
    perms:{condos:['c1'],tipos:[],manutencao:false,estoque:false,estoqueTotal:false,
           apontamentos:false,brigada:true,create:true,edit:false,complete:false,delete:false}},
-  {id:'b4',nome:'Brigadista 4',login:'brigada4',role:'Brigadista',
+  {id:'b4',nome:'Alana',login:'brigada4',role:'Brigadista',
    perms:{condos:['c1'],tipos:[],manutencao:false,estoque:false,estoqueTotal:false,
           apontamentos:false,brigada:true,create:true,edit:false,complete:false,delete:false}}
 ];
@@ -1329,14 +1353,14 @@ function visibleMaints(){ return []; }
 
 /* ============ LOGIN ============ */
 let pickedUser='u1';
-const PROFILE_UI={u1:{icon:'briefcase'},u2:{icon:'clipboardCheck'},u3:{icon:'helmet'},
+const PROFILE_UI={u1:{icon:'briefcase'},u2:{icon:'clipboardCheck'},u3:{icon:'helmet'},u4:{icon:'sparkles'},
   b1:{icon:'flame'},b2:{icon:'flame'},b3:{icon:'flame'},b4:{icon:'flame'}};
 function buildProfiles(){
   const box=document.querySelector('#profiles'); if(!box)return;
   box.innerHTML=USERS.map(u=>`<div class="pcard ${pickedUser===u.id?'active':''}" id="pc_${u.id}" onclick="pickUser('${u.id}')">
     <div class="pic">${ic((PROFILE_UI[u.id]||{}).icon||'user','ico-lg')}</div>
     <div class="pn">${u.nome}</div>
-    <div class="pr">${u.role.replace('Coordenador Administrativo','Coord. Administrativo').replace('Oficial de Manutenção','Manutenção')}</div>
+    <div class="pr">${u.role.replace('Coordenador Administrativo','Coord. Administrativo').replace('Oficial de Manutenção','Manutenção').replace('Líder de Limpeza e Portaria','Limpeza e Portaria')}</div>
   </div>`).join('');
 }
 function pickUser(id){
@@ -1389,6 +1413,7 @@ function entrar(u){
     _filaAlerta=[];
     if(nfCriticas().length) _filaAlerta.push(alertaNF);   // NF entra na fila
     if(alertaCritico()) return;               // manutenção que não pode vencer vem primeiro
+    if(avisarTriagem()) return;               // chamados que aguardam meu direcionamento
     if(avisarChamadosRonda()) return;         // chamados que a brigada abriu na ronda
     if(_filaAlerta.length){ _filaAlerta.shift()(); return; }
     if(avisarDelegacoes()) return;            // depois, delegação nova
@@ -1674,6 +1699,12 @@ function buildNav(){
     items.push(['leituras','water','Leituras — Água e Energia']);
     items.push(['analises','helmet','Análise de Projetos']);
   }
+  /* Perfis operacionais (sem tarefas) que registram leitura */
+  if(!P().tipos.length&&P().leituras){
+    items.push(['#','','Operação']);
+    items.push(['leituras','water','Leituras — Água e Energia']);
+  }
+  if(!P().brigada&&P().ronda) items.push(['brigada-ronda','route','Ronda e Chamados']);
   if(P().brigada){ if(!P().tipos.length) items.push(['#','','Brigada de Incêndio']);
     items.push(['brigada-inicio','play','Iniciar Check-list'],
       ['brigada','flame','Check-list por Andar'],['brigada-ronda','route','Ronda Diária']); }
@@ -1690,6 +1721,8 @@ function buildNav(){
 
 function paginaInicial(){ if(P().tipos.length||P().manutencao) return 'dashboard';
   if(P().brigada) return 'brigada-inicio';
+  if(P().leituras) return 'leituras';
+  if(P().ronda) return 'brigada-ronda';
   return 'estoque'; }
 function go(p,filter){ apEditId=null; apAtual=null; if(p!=='brigada-form') brigAtual=null;
   page=p;pageFilter=filter||null;document.body.classList.remove('mobile-open');
@@ -1706,7 +1739,7 @@ function render(){
     'tarefas-adm':'Tarefas Administrativas','tarefas-gestor':'Tarefas do Gestor',calendario:'Calendário',rotina:'Minha Rotina',
     hoje:'Tarefas de Hoje — Planejamento Diário',leituras:'Leituras / Água e Energia',notas:'Controle de Notas Fiscais',
     estoque:'Controle de Estoque',pedidos:'Pedidos de Material',relmensal:'Relatório Mensal de Gestão',
-    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',analises:'Análise de Projetos — Check-list de Aprovação','brigada-inicio':'Brigada — Iniciar Check-list',brigada:'Brigada de Incêndio — Check-list por Andar','brigada-ronda':'Brigada — Ronda Diária','brigada-form':'Brigada — Check-list',relatorios:'Relatórios',config:'Configurações'};
+    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',analises:'Análise de Projetos — Check-list de Aprovação','brigada-inicio':'Brigada — Iniciar Check-list',brigada:'Brigada de Incêndio — Check-list por Andar','brigada-ronda':(session&&!P().brigada&&P().ronda)?'Ronda Diária e Chamados':'Brigada — Ronda Diária','brigada-form':'Brigada — Check-list',relatorios:'Relatórios',config:'Configurações'};
   $('#pageTitle').textContent=titles[page];
   if(page==='analises'){ return (apAtual&&apEditId!==null)?apRender(apAtual):viewAnalises() }
   if(page==='brigada-inicio'){ return viewBrigInicio() }
@@ -1739,7 +1772,13 @@ function metrics(){
   return {hoje,atras,prox,conc,pct,mv,semanaTot,semanaConc,pend};
 }
 function viewDashboard(){
-  if(!P().tipos.length) return dashManutencao();
+  /* Cada perfil operacional tem o seu painel: o do brigadista fala de
+     check-list e ronda; o da limpeza/portaria, de leitura e chamados. */
+  if(!P().tipos.length){
+    if(P().brigada) return dashBrigada();
+    if(P().leituras||P().ronda) return dashLimpeza();
+    return dashManutencao();
+  }
 
   const m=metrics(), ts=visibleTasks();
   const cards=[
@@ -1776,6 +1815,12 @@ function viewDashboard(){
     avisos.push(['red',ic('water'),`Leitura atrasada: ${l.tipo==='agua'?'Água':'Energia'}`,`${condoName(l.condoId)} · programada para ${fmt(l.data)}`,null]));
     visibleCess().filter(c=>cessStatusAuto(c)==='Atrasada').slice(0,4).forEach(c=>
       avisos.push(['red',ic('contract'),`Cessão atrasada: ${c.unidade}`,`${condoName(c.condoId)} · ${c.nome} · previsto ${fmt(c.vencimento)}`,null]));
+    /* Chamados aguardando o direcionamento do Gestor */
+    if(podeTriar()){ const tr=chamadosTriagem();
+      if(tr.length) avisos.push(['red',ic('bell'),
+        `${tr.length} chamado(s) aguardando seu direcionamento`,
+        `Aberto(s) na ronda por ${[...new Set(tr.map(x=>x.criadoPor))].filter(Boolean).join(', ')||'—'} — clique para direcionar`,
+        null,'abrirTriagemChamados()']); }
     /* Chamados que a brigada abriu na ronda — manutenção e gestor */
     { const rc=rondaChamadosAbertos();
       if(rc.length) avisos.push(['red',ic('route'),
@@ -6631,6 +6676,164 @@ function exportLeituras(){
 
 
 /* ============ DASHBOARD DA MANUTENÇÃO (Cleiton) ============ */
+/* ============ DASHBOARD DO BRIGADISTA ============
+   Só o que é da função dele: check-list do mês, ronda do dia e o que
+   ele mesmo apontou. Sem estoque, pedidos ou apontamentos de manutenção. */
+function dashBrigada(){
+  const cid=P().condos[0]||'c1';
+  const mes=brigMesAtual();
+  const prog=brigProgresso(cid,mes);
+  const nc=brigResumoNC(cid,mes);
+  const totNC=nc.reduce((s,x)=>s+x.qtd,0);
+  const hoje=today();
+  const minhaRonda=brigRondas.filter(r=>r.condoId===cid&&r.data===hoje);
+  const meusAndares=new Set(minhaRonda.map(r=>r.andar)).size;
+  const ocor=minhaRonda.filter(r=>!r.ok).length;
+  const meusCham=tasks.filter(t=>t.origem==='ronda'&&t.criadoPor===session.nome&&
+    t.status!=='Concluída'&&!t.arquivada);
+  /* próxima parada pendente do mês */
+  let prox=null;
+  for(const s of BRIG_SISTEMAS){
+    const a=brigAndaresDo(s.id).find(a=>!brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&
+      i.sistema===s.id&&String(i.data).slice(0,7)===mes&&i.status==='Concluído'));
+    if(a){ prox={sistema:s,andar:a}; break }
+  }
+  $('#content').innerHTML=`
+    <div class="card" style="margin-bottom:14px;background:linear-gradient(115deg,#0d1b2e 0%,#1d3557 65%,#c2384a 190%);color:#fff;border:0">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div class="avatar" style="width:46px;height:46px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:11px">${ic('flame','ico-lg')}</div>
+        <div style="flex:1;min-width:150px">
+          <div style="font-size:17px;font-weight:650;letter-spacing:-.02em">Olá, ${esc(session.nome)}</div>
+          <div style="opacity:.85;font-size:13px">Brigada de Incêndio · ${esc(condoName(cid))} · ${fmt(hoje)}</div></div>
+        <div class="rowact no-print">
+          <button class="btn" style="background:#fff;color:var(--navy)" onclick="go('brigada-inicio')">Iniciar Check-list</button>
+          <button class="btn ghost" style="background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)" onclick="go('brigada-ronda')">Ronda do dia</button>
+        </div></div></div>
+
+    <div class="grid metrics" style="margin-bottom:14px">
+      <div class="card metric" onclick="go('brigada')">
+        <div class="lbl">${ic('clipboardCheck')}Check-lists do mês</div>
+        <div class="val">${prog.feitos}/${prog.total}</div><div class="sub">${prog.pct}% concluído</div></div>
+      <div class="card metric ${totNC?'red':'green'}" onclick="go('brigada')">
+        <div class="lbl">${ic('alert')}Peças não conformes</div>
+        <div class="val">${totNC}</div><div class="sub">apontadas neste mês</div></div>
+      <div class="card metric" onclick="go('brigada-ronda')">
+        <div class="lbl">${ic('route')}Ronda de hoje</div>
+        <div class="val">${meusAndares}/${BRIG_ANDARES.length}</div><div class="sub">andares percorridos</div></div>
+      <div class="card metric ${ocor?'amber':''}" onclick="go('brigada-ronda')">
+        <div class="lbl">${ic('bell')}Ocorrências hoje</div>
+        <div class="val">${ocor}</div><div class="sub">${meusCham.length} chamado(s) em aberto</div></div>
+    </div>
+
+    ${prox?`<div class="card" style="margin-bottom:14px">
+      <div class="ap-faixa">${ic('play')} PRÓXIMA PARADA</div>
+      <div style="padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px">
+          <div style="font-weight:700;font-size:15px">${esc(prox.sistema.nome)} — ${esc(brigAndarNome(prox.andar.id))}</div>
+          <div class="muted" style="font-size:12.5px;margin-top:2px">
+            ${brigPontos(prox.andar.id,prox.sistema.id).length} ponto(s) para verificar · inspeção ${prox.sistema.periodicidade.toLowerCase()}</div>
+        </div>
+        <button class="btn primary" onclick="brigAbrir('${cid}','${prox.andar.id}','${prox.sistema.id}')">Começar agora</button>
+      </div></div>`
+    :`<div class="card" style="margin-bottom:14px">
+      <div class="ap-faixa">${ic('checkCircle')} CHECK-LIST DO MÊS</div>
+      <div style="padding:14px" class="muted">Tudo concluído neste mês. Bom trabalho.</div></div>`}
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="ap-faixa">${ic('flame')} O QUE EU APONTEI</div>
+      <div style="padding:12px">
+        ${meusCham.length?meusCham.slice(0,6).map(t=>`
+          <div class="feed-item ${t.prioridade==='Alta'?'red':'amber'}">
+            <div class="fi-ic">${ic('route')}</div>
+            <div style="flex:1"><div class="ft">${esc(t.titulo)}</div>
+              <div class="fd">${esc(t.responsavel?('com '+t.responsavel):'aguardando direcionamento')} · ${fmt(t.vencimento)}</div></div>
+          </div>`).join('')
+        :'<div class="muted">Nenhum chamado seu em aberto.</div>'}
+      </div></div>
+
+    ${nc.length?`<div class="card">
+      <div class="ap-faixa">${ic('alert')} NÃO CONFORMIDADES DO MÊS</div>
+      <div class="tablewrap"><table class="ap-tb"><thead><tr>
+        <th>SISTEMA</th><th>PEÇAS</th><th>ANDARES</th></tr></thead><tbody>
+        ${nc.map(r=>`<tr><td><b>${esc(r.nome)}</b></td><td><span class="badge red">${r.qtd}</span></td>
+          <td class="muted">${esc(r.andares.map(brigAndarNome).join(', '))}</td></tr>`).join('')}
+      </tbody></table></div></div>`:''}`;
+}
+
+/* ============ DASHBOARD DA LIDERANÇA DE LIMPEZA E PORTARIA ============ */
+function dashLimpeza(){
+  const cid=P().condos[0]||'c1';
+  const hoje=today();
+  const lAgua=leituras.filter(l=>l.condoId===cid&&l.tipo==='agua'&&l.status==='Registrada')
+    .sort((a,b)=>b.data.localeCompare(a.data));
+  const lEner=leituras.filter(l=>l.condoId===cid&&l.tipo==='energia'&&l.status==='Registrada')
+    .sort((a,b)=>b.data.localeCompare(a.data));
+  const feitaHoje=lAgua.some(l=>l.data===hoje);
+  const enerHoje=lEner.some(l=>l.data===hoje);
+  const pend=leituras.filter(l=>l.condoId===cid&&l.status!=='Registrada'&&diffDays(l.data,hoje)<0);
+  const minhaRonda=brigRondas.filter(r=>r.condoId===cid&&r.data===hoje);
+  const ocor=minhaRonda.filter(r=>!r.ok).length;
+  const meusCham=tasks.filter(t=>t.origem==='ronda'&&t.criadoPor===session.nome&&
+    t.status!=='Concluída'&&!t.arquivada);
+  const aguardando=meusCham.filter(t=>t.triagem==='pendente').length;
+  $('#content').innerHTML=`
+    <div class="card" style="margin-bottom:14px;background:linear-gradient(115deg,#0d1b2e 0%,#1d3557 65%,#1d7a4c 175%);color:#fff;border:0">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div class="avatar" style="width:46px;height:46px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:11px">${ic('sparkles','ico-lg')}</div>
+        <div style="flex:1;min-width:150px">
+          <div style="font-size:17px;font-weight:650;letter-spacing:-.02em">Olá, ${esc(session.nome)}</div>
+          <div style="opacity:.85;font-size:13px">${esc(session.role)} · ${esc(condoName(cid))} · ${fmt(hoje)}</div></div>
+        <div class="rowact no-print">
+          <button class="btn" style="background:#fff;color:var(--navy)" onclick="go('leituras')">Registrar leitura</button>
+          <button class="btn ghost" style="background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)" onclick="go('brigada-ronda')">Ronda do dia</button>
+        </div></div></div>
+
+    <div class="grid metrics" style="margin-bottom:14px">
+      <div class="card metric ${feitaHoje?'green':'red'}" onclick="go('leituras')">
+        <div class="lbl">${ic('water')}Leitura de água</div>
+        <div class="val">${feitaHoje?'OK':'—'}</div>
+        <div class="sub">${feitaHoje?'registrada hoje':'ainda não registrada'}</div></div>
+      <div class="card metric ${enerHoje?'green':''}" onclick="leitTab='energia';go('leituras')">
+        <div class="lbl">${ic('bolt')}Leitura de energia</div>
+        <div class="val">${enerHoje?'OK':'—'}</div>
+        <div class="sub">${enerHoje?'registrada hoje':'pendente'}</div></div>
+      <div class="card metric ${pend.length?'amber':''}" onclick="go('leituras')">
+        <div class="lbl">${ic('clock')}Leituras atrasadas</div>
+        <div class="val">${pend.length}</div><div class="sub">dias sem registro</div></div>
+      <div class="card metric ${ocor?'amber':''}" onclick="go('brigada-ronda')">
+        <div class="lbl">${ic('route')}Ronda de hoje</div>
+        <div class="val">${new Set(minhaRonda.map(r=>r.andar)).size}</div>
+        <div class="sub">${ocor} ocorrência(s)</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="ap-faixa">${ic('water')} ÚLTIMAS LEITURAS</div>
+      <div style="padding:12px">
+        ${lAgua.slice(0,5).map(l=>`
+          <div class="feed-item">
+            <div class="fi-ic">${ic('water')}</div>
+            <div style="flex:1"><div class="ft">${fmtLeit(l.leitura,'agua')} m³ · ${fmt(l.data)}</div>
+              <div class="fd">${l.consumo!=null?('consumo de '+fmtLeit(l.consumo,'agua')+' m³'):'consumo não calculado'} · por ${esc(l.responsavel||'—')}</div></div>
+          </div>`).join('')||'<div class="muted">Nenhuma leitura registrada ainda.</div>'}
+      </div></div>
+
+    <div class="card">
+      <div class="ap-faixa">${ic('bell')} MEUS CHAMADOS</div>
+      <div style="padding:12px">
+        ${aguardando?`<div class="bg-av bg-amber" style="margin-bottom:8px">
+          <div class="bg-ic">${ic('clock')}</div>
+          <div><div class="bg-tit">${aguardando} aguardando o Gestor</div>
+          <div class="bg-txt">Assim que ele direcionar, a manutenção recebe.</div></div></div>`:''}
+        ${meusCham.length?meusCham.slice(0,6).map(t=>`
+          <div class="feed-item ${t.prioridade==='Alta'?'red':''}">
+            <div class="fi-ic">${ic('route')}</div>
+            <div style="flex:1"><div class="ft">${esc(t.titulo)}</div>
+              <div class="fd">${t.triagem==='pendente'?'aguardando direcionamento':'com '+esc(t.responsavel||'manutenção')} · ${fmt(t.vencimento)}</div></div>
+          </div>`).join('')
+        :'<div class="muted">Nenhum chamado seu em aberto.</div>'}
+      </div></div>`;
+}
+
 function dashManutencao(){
   const meus=apontamentos.filter(a=>P().condos.includes(a.condoId));
   const abertos=meus.filter(a=>a.status==='Aberto');
@@ -7355,7 +7558,16 @@ function verFoto(apId,i){
 function ehMobile(){ return window.innerWidth<=820 }
 function tabsDoPerfil(){
   if(!session) return [];
-  if(!P().tipos.length){   // manutenção (Cleiton) — fluxo de campo
+  if(!P().tipos.length){
+    /* Brigadista: só o que é da brigada */
+    if(P().brigada) return [['dashboard','gauge','Início'],
+      ['brigada-inicio','play','Check-list'],['brigada','flame','Andares'],
+      ['brigada-ronda','route','Ronda'],['config','settings','Ajustes']];
+    /* Limpeza e portaria: leitura e ronda */
+    if(P().leituras||P().ronda) return [['dashboard','gauge','Início'],
+      ['leituras','water','Leituras'],['brigada-ronda','route','Ronda'],
+      ['config','settings','Ajustes']];
+    /* Manutenção (Cleiton) — fluxo de campo */
     return [['dashboard','gauge','Início'],['apontamentos','wrench','Serviços'],
             ['estoque','box','Estoque'],['pedidos','cart','Pedidos'],['config','settings','Ajustes']];
   }
@@ -7381,12 +7593,17 @@ function abrirMaisMenu(){
     ['calendario','calendar','Calendário'],['notas','invoice','Notas Fiscais'],
     ['cessoes','contract','Cessão de Direitos'],['vendascustas','money','Vendas e Custas'],['publicidade','megaphone','Publicidade nos Elevadores'],
     ['leituras','water','Leituras — Água e Energia'],
+    ['brigada-inicio','play','Iniciar Check-list'],['brigada','flame','Check-list por Andar'],
+    ['brigada-ronda','route','Ronda Diária'],
     ['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material'],
     ['relatorios','chart','Relatórios'],['relmensal','doc','Relatório Mensal'],
     ['config','settings','Configurações']]
     .filter(([k])=>{
       if(k==='tarefas-gestor') return P().tipos.includes('Gestor');
-      if(['notas','cessoes','vendascustas','publicidade','leituras','calendario','tarefas-adm','relatorios','relmensal'].includes(k)) return P().tipos.length;
+      if(['brigada-inicio','brigada'].includes(k)) return !!P().brigada;
+      if(k==='brigada-ronda') return !!(P().brigada||P().ronda);
+      if(k==='leituras') return !!(P().tipos.length||P().leituras);
+      if(['notas','cessoes','vendascustas','publicidade','calendario','tarefas-adm','relatorios','relmensal'].includes(k)) return P().tipos.length;
       if(['estoque','pedidos'].includes(k)) return P().estoque;
       return true;
     });
@@ -7403,13 +7620,19 @@ const FAB={apontamentos:['plus','formApont'],estoque:['plus','formItem'],
 function atualizaFab(){
   const f=$('#fab'); if(!f)return;
   let cfg=FAB[page];
-  if(page==='dashboard'&&session&&!P().tipos.length) cfg=['wrench','formApont'];
+  if(page==='dashboard'&&session&&!P().tipos.length){
+    if(P().brigada) cfg=['play','irIniciarChecklist'];
+    else if(P().leituras||P().ronda) cfg=['water','irLeituras'];
+    else cfg=['wrench','formApont'];
+  }
   const pode = cfg && (page!=='estoque'||P().estoqueTotal);
   if(!pode||!ehMobile()){ f.classList.add('hidden'); return }
   f.classList.remove('hidden');
   f.innerHTML=ic(cfg[0]);
   f.dataset.fn=cfg[1];
 }
+function irIniciarChecklist(){ go('brigada-inicio') }
+function irLeituras(){ go('leituras') }
 function fabAcao(){
   const f=$('#fab'), fn=f&&f.dataset?f.dataset.fn:null;
   if(fn&&typeof window[fn]==='function') window[fn]();
@@ -9643,11 +9866,104 @@ function brigPular(){
   brigAbrirDaSessao();
 }
 
+/* ============ TRIAGEM DE CHAMADOS ============
+   Chamado aberto pela liderança de limpeza/portaria não vai direto para a
+   manutenção: aparece primeiro para o Gestor, que direciona. Os da brigada
+   continuam indo direto ao oficial, por serem de segurança. */
+function chamadosTriagem(){
+  return tasks.filter(t=>t.origem==='ronda'&&t.triagem==='pendente'&&
+    t.status!=='Concluída'&&!t.arquivada&&P().condos.includes(t.condoId))
+    .sort((a,b)=>(a.prioridade==='Alta'?0:1)-(b.prioridade==='Alta'?0:1)||
+      String(a.vencimento).localeCompare(String(b.vencimento)));
+}
+/* o que já foi direcionado e está com a manutenção */
+function chamadosDirecionados(){
+  return tasks.filter(t=>t.origem==='ronda'&&t.triagem!=='pendente'&&
+    t.status!=='Concluída'&&!t.arquivada&&P().condos.includes(t.condoId))
+    .sort((a,b)=>(a.prioridade==='Alta'?0:1)-(b.prioridade==='Alta'?0:1)||
+      String(a.vencimento).localeCompare(String(b.vencimento)));
+}
+function podeTriar(){ return session&&(session.role==='Gestor'||P().tipos.includes('Gestor')) }
+
+function direcionarChamado(id,para){
+  const t=tasks.find(x=>x.id===id); if(!t) return;
+  t.triagem='direcionado'; t.responsavel=para||'Cleiton';
+  t.historico.push({q:session.nome,w:nowStamp(),
+    t:'Direcionado para '+t.responsavel+' pelo '+session.role});
+  audit('Chamado direcionado',t.titulo,'para '+t.responsavel,t.condoId,'Triagem');
+  save();
+  toast('Chamado direcionado para '+t.responsavel+'.');
+  const resta=chamadosTriagem();
+  if(resta.length) abrirTriagemChamados(resta); else { closeModal(); render() }
+}
+function dispensarChamado(id){
+  const t=tasks.find(x=>x.id===id); if(!t) return;
+  const m=prompt('Por que este chamado não será aberto?');
+  if(m===null) return;
+  t.triagem='dispensado'; t.status='Concluída'; t.concluidoEm=today();
+  t.concluidoPor=session.nome; t.obsConclusao='Dispensado na triagem: '+(m||'sem motivo');
+  t.historico.push({q:session.nome,w:nowStamp(),t:'Dispensado na triagem',obs:m});
+  audit('Chamado dispensado',t.titulo,m,t.condoId,'Triagem');
+  save();
+  const resta=chamadosTriagem();
+  if(resta.length) abrirTriagemChamados(resta); else { closeModal(); render() }
+}
+/* pop-up do Gestor: chamados aguardando direcionamento */
+function avisarTriagem(forcar){
+  if(!podeTriar()) return false;
+  const l=chamadosTriagem();
+  if(!l.length) return false;
+  if(!forcar&&notifState._triagemAviso===today()) return false;
+  notifState._triagemAviso=today(); save();
+  abrirTriagemChamados(l);
+  return true;
+}
+function abrirTriagemChamados(lista){
+  lista=lista||chamadosTriagem();
+  if(!lista.length) return toast('Nenhum chamado aguardando direcionamento.');
+  const quem=[...new Set(lista.map(t=>t.criadoPor))].filter(Boolean);
+  const item=t=>{
+    const r=brigRondas.find(x=>x.id===t.rondaId)||{};
+    const local=r.andar?brigAndarNome(r.andar):'';
+    const quando=r.data?fmt(r.data)+' às '+(r.hora||'—'):fmt(t.vencimento);
+    return `<div class="rc-item ${t.prioridade==='Alta'?'urg':''}">
+      ${t.anexo?`<img src="${t.anexo}" class="rc-foto" onclick="verFotoChamado('${t.id}')" alt="foto">`
+              :`<div class="rc-foto vazio">${ic('camera')}</div>`}
+      <div class="rc-txt">
+        <div class="rc-t">${esc(local||t.titulo)}
+          ${t.prioridade==='Alta'?'<span class="badge red">urgente</span>':''}</div>
+        <div class="rc-d">${esc(r.obs||t.titulo)}</div>
+        <div class="rc-m">${esc(quando)} · aberto por ${esc(r.autor||t.criadoPor||'—')}</div>
+      </div>
+      <div class="rc-acoes">
+        <button class="btn sm primary" onclick="direcionarChamado('${t.id}','Cleiton')">Direcionar</button>
+        <button class="btn sm ghost" onclick="dispensarChamado('${t.id}')">Dispensar</button>
+      </div>
+    </div>`;
+  };
+  openModal('Chamados aguardando seu direcionamento',
+    `<div class="muted" style="margin-bottom:10px">
+       <b>${lista.length}</b> chamado(s) aberto(s)${quem.length?' por '+esc(quem.join(', ')):''}.
+       Direcione para a manutenção ou dispense com o motivo.</div>
+     <div class="rc-lista">${lista.slice(0,12).map(item).join('')}</div>
+     ${lista.length>12?`<div class="muted" style="margin-top:8px">e mais ${lista.length-12}…</div>`:''}`,
+    `<button class="btn" onclick="closeModal()">Depois</button>
+     <button class="btn primary" onclick="closeModal();direcionarTodos()">Direcionar todos</button>`);
+}
+function direcionarTodos(){
+  const l=chamadosTriagem(); if(!l.length) return;
+  l.forEach(t=>{ t.triagem='direcionado'; t.responsavel='Cleiton';
+    t.historico.push({q:session.nome,w:nowStamp(),t:'Direcionado para Cleiton pelo '+session.role}) });
+  audit('Chamados direcionados','Ronda',l.length+' chamado(s) para Cleiton','c1','Triagem');
+  save(); toast(l.length+' chamado(s) direcionado(s) para a manutenção.'); render();
+}
+
 /* ============ CHAMADOS DA RONDA — aviso de abertura ============
    O oficial de manutenção recebe, ao entrar, tudo que a brigada apontou
    nas rondas e ainda não foi resolvido. O Gestor vê o mesmo painel. */
 function rondaChamadosAbertos(){
   return tasks.filter(t=>t.origem==='ronda'&&t.status!=='Concluída'&&!t.arquivada)
+    .filter(t=>t.triagem!=='pendente')   /* o que aguarda o Gestor ainda não chega à manutenção */
     .filter(t=>P().condos.includes(t.condoId))
     .sort((a,b)=>{
       const pa=a.prioridade==='Alta'?0:1, pb=b.prioridade==='Alta'?0:1;
@@ -9733,7 +10049,8 @@ function viewBrigRonda(){
     <div class="card" style="margin-bottom:14px">
       <div class="ap-faixa">${ic('route')} RONDA DE HOJE — ${fmt(hoje).toUpperCase()}</div>
       <div style="padding:12px">
-        <div class="muted" style="margin-bottom:8px">Toque no andar ao passar por ele. Se encontrar algo, registre a ocorrência com foto — ela abre o chamado da manutenção na hora.</div>
+        <div class="muted" style="margin-bottom:8px">Toque no andar ao passar por ele. Se encontrar algo, registre a ocorrência com foto —
+          ${P().brigada?'ela abre o chamado da manutenção na hora.':'o Gestor recebe o chamado e direciona para a manutenção.'}</div>
         ${brigQuemCobriu(cid,hoje)}
         <div class="bg-grade">${grade}</div>
       </div>
@@ -9785,6 +10102,8 @@ function brigRondaMarcar(cid,andar){
          <button class="btn sm" onclick="brigRondaFoto()">${ic('camera')} Tirar foto</button>
          <div id="brFoto" class="bg-fotos"></div>
        </div>
+       <div class="muted" style="font-size:11.5px;margin-top:8px">
+         ${P().brigada?'O chamado vai direto para a manutenção.':'O chamado será enviado ao Gestor, que direciona para a manutenção.'}</div>
        <label style="margin-top:10px">Prioridade</label>
        <select id="brPrio">
          <option value="Média">Normal — pode ser programado</option>
@@ -9826,20 +10145,25 @@ function brigRondaSalvar(cid,andar){
     autor:session.nome,userId:session.id,chamadoId:null};
   brigRondas.push(r);
   if(!ok){
-    /* Chamado vai para a manutenção (Cleiton), não para o Gestor:
-       é ele quem organiza a execução no dia seguinte. */
+    /* Brigada: vai direto para a manutenção, por ser segurança.
+       Demais perfis (limpeza/portaria): passam pela triagem do Gestor. */
+    const direto=!!P().brigada;
     const t=mkTask({titulo:'Ronda — '+brigAndarNome(andar)+': '+obs.slice(0,60),
       condoId:cid,tipo:'Gestor',periodicidade:'Sob Demanda',repetitiva:false,
       tipoTarefa:'Avulsa do dia',prioridade:prio,vencimento:today(),
-      responsavel:'Cleiton',origem:'ronda',rondaId:r.id,anexo:_rondaFoto,
+      responsavel:direto?'Cleiton':'',origem:'ronda',rondaId:r.id,anexo:_rondaFoto,
+      triagem:direto?'direcionado':'pendente',
       criadoPor:session.nome,
       procedimento:'Registrado na ronda diária da brigada em '+fmt(r.data)+' às '+r.hora+
         ' por '+session.nome+'.\n\nLocal: '+brigAndarNome(andar)+
         '\nOcorrência: '+obs+'\n\nA foto do problema está anexada ao chamado.'});
-    t.historico=[{q:session.nome,w:nowStamp(),t:'Chamado aberto pela ronda da brigada (com foto)'}];
+    t.historico=[{q:session.nome,w:nowStamp(),
+      t:direto?'Chamado aberto pela ronda da brigada (com foto)'
+             :'Chamado aberto na ronda (com foto) — aguardando direcionamento do Gestor'}];
     tasks.push(t); r.chamadoId=t.id;
     audit('Ocorrência na ronda',brigAndarNome(andar),obs,cid,'Ronda diária');
-    toast('Chamado aberto para a manutenção com a foto.');
+    toast(direto?'Chamado aberto para a manutenção com a foto.'
+                :'Chamado registrado com a foto. O Gestor vai direcionar.');
   } else toast('Ronda registrada.');
   _rondaFoto=null;
   save(); closeModal(); render();
@@ -10566,6 +10890,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3d2088c89ee6396',t:'MTc4OTc1MjE1Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3d38be4fe0f6d6f',t:'MTc4OTc2ODAxOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+</body>
 </html>
