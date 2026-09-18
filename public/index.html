@@ -5453,10 +5453,20 @@ const PUB_FILA_SEED=[
   {pos:48,empresa:'Diego Lima',telefone:'',sala:'403',pref:'Qualquer um'},
   {pos:49,empresa:'Zulene',telefone:'(91) 99171-0306',sala:'505',pref:'Todas'}
 ];
-/* Carrega a fila uma única vez; depois a ordem passa a ser gerida pelo sistema. */
+/* Carrega a fila uma única vez; depois a ordem passa a ser gerida pelo sistema.
+   O marcador sozinho não basta: se ele ficou gravado sem que os registros
+   entrassem (limpeza de banco, sincronização parcial), a importação precisa
+   rodar de novo. Por isso o marcador só vale quando a fila existe de fato. */
 function migrarFilaPub(){
-  if(CFG.pubFilaSeed==='v1') return false;
   const jaTem=anuncios.some(a=>a.condoId==='c1'&&a.fila);
+  if(CFG.pubFilaSeed==='v1'&&jaTem) return false;
+  /* alguém pode ter esvaziado a fila de propósito, atendendo todo mundo:
+     nesse caso os nomes da lista já viraram contrato e não devem voltar */
+  if(CFG.pubFilaSeed==='v1'&&!jaTem){
+    const nomes=PUB_FILA_SEED.map(x=>x.empresa);
+    const algumJaExistiu=anuncios.some(a=>nomes.includes(a.empresa));
+    if(algumJaExistiu){ return false; }
+  }
   if(!jaTem){
     PUB_FILA_SEED.forEach((s,i)=>{
       anuncios.push({id:uid('pb'),condoId:'c1',elevador:'',
@@ -10557,5 +10567,5 @@ window.addEventListener('keydown',e=>{
 });
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3d14987ab72e2ad',t:'MTc4OTc0NDMyOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3d2088c89ee6396',t:'MTc4OTc1MjE1Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
