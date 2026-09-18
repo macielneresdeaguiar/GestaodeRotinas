@@ -85,10 +85,25 @@ export async function gravarWorkspace({ id = 'default', snapshot, versaoBase, au
   }
 
   const nova = atual.versao + 1;
-  await db.execute({
+  const up = await db.execute({
     sql: `UPDATE workspace SET snapshot = ?, versao = ?, atualizado = ?, autor = ? WHERE id = ? AND versao = ?`,
     args: [texto, nova, agora, autor || null, id, atual.versao],
   });
+  /* Dois aparelhos podem ler a mesma versão e gravar ao mesmo tempo. Quem chega
+     depois não altera nenhuma linha (o WHERE não casa mais) e, sem esta conferência,
+     recebia "ok" enquanto sua gravação se perdia — junto com o trabalho do usuário.
+     Agora isso vira conflito e o app faz a junção dos dois lados. */
+  if (up.rowsAffected === 0) {
+    const novo = await lerWorkspace(id);
+    return {
+      ok: false,
+      conflito: true,
+      versao: novo ? novo.versao : atual.versao,
+      atualizado: novo ? novo.atualizado : atual.atualizado,
+      autor: novo ? novo.autor : atual.autor,
+      snapshot: novo ? novo.snapshot : atual.snapshot,
+    };
+  }
   await registrarEvento({ workspace: id, versao: nova, autor, dispositivo, bytes: texto.length });
   return { ok: true, versao: nova, atualizado: agora };
 }
