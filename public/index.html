@@ -491,6 +491,119 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 .ap-pos{color:#1d7a4c}
 @media(max-width:820px){ .ap-grid{grid-template-columns:1fr}
   .ap-grid .rot{background:#e9ecf2} }
+
+/* ---- IA ---- */
+.ia-faixa{background:linear-gradient(90deg,#1f3864,#2f5597);color:#fff;font-weight:700;font-size:11px;
+  letter-spacing:.5px;padding:7px 11px;text-transform:uppercase;display:flex;align-items:center;gap:7px}
+.ia-faixa svg{width:15px;height:15px;stroke:#fff}
+.ia-card{padding:0;overflow:hidden}
+.iabtn svg{stroke:var(--accent)}
+.ia-chat{max-height:46vh;overflow:auto;padding:4px 2px 8px;display:flex;flex-direction:column;gap:10px}
+.ia-msg{display:flex;gap:9px;align-items:flex-start}
+.ia-msg.user{justify-content:flex-end}
+.ia-msg.user .ia-txt{background:var(--navy);color:#fff;border-radius:12px 12px 3px 12px;max-width:80%}
+.ia-msg.bot .ia-txt{background:#f2f5fa;border:1px solid var(--line);border-radius:12px 12px 12px 3px;max-width:88%}
+.ia-txt{padding:9px 12px;font-size:13px;line-height:1.5}
+.ia-av{width:26px;height:26px;border-radius:50%;background:#e8eefb;display:grid;place-items:center;flex:none}
+.ia-av svg{width:15px;height:15px;stroke:var(--accent)}
+.ia-ul{margin:6px 0 0;padding-left:17px}
+.ia-ul li{margin-bottom:3px}
+.ia-alerta{margin-top:8px;padding:7px 10px;background:#fdf3f4;border-left:3px solid #c2384a;
+  border-radius:5px;font-size:12.5px}
+.ia-input{display:flex;gap:7px;margin-top:10px}
+.ia-input input{flex:1}
+.ia-sug{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.ia-chip{padding:5px 11px;border:1px solid var(--line);background:#fff;border-radius:14px;
+  font-size:11.5px;cursor:pointer;color:var(--text-2)}
+.ia-chip:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---- Brigada ---- */
+.rc-lista{display:flex;flex-direction:column;gap:7px;max-height:56vh;overflow:auto}
+.rc-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);
+  border-radius:8px;border-left-width:3px;border-left-color:#c9d0dc;background:#fff}
+.rc-item.urg{border-left-color:#c2384a;background:#fdf6f7}
+.rc-foto{width:54px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--line);
+  cursor:pointer;flex:none}
+.rc-foto.vazio{display:grid;place-items:center;background:#eef1f6}
+.rc-foto.vazio svg{width:16px;height:16px;opacity:.45}
+.rc-txt{flex:1;min-width:0}
+.rc-t{font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px}
+.rc-d{font-size:12px;color:var(--text-2);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rc-m{font-size:10.5px;color:var(--text-3);margin-top:2px}
+
+.bg-picks{display:flex;flex-direction:column;gap:7px}
+.bg-pick{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:8px;cursor:pointer;background:#fff}
+.bg-pick:hover{border-color:#cfd8e4}
+.bg-pick.done{opacity:.72}
+.bg-pick input{width:17px;height:17px;flex:none}
+.bg-pk-ic svg{width:18px;height:18px;opacity:.8}
+.bg-pk-t{flex:1;display:flex;flex-direction:column}
+.bg-pk-t b{font-size:13px}
+.bg-pk-t em{font-style:normal;font-size:11.5px;color:var(--text-2);margin-top:1px}
+.bg-prev{margin-top:11px;padding:9px 11px;background:#eef1f6;border-radius:7px;font-size:12.5px;color:var(--text-2)}
+.bg-barra{display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:11px 13px;flex-wrap:wrap}
+.bg-bt-l{flex:1 1 220px}
+.bg-bt-n{font-weight:700;font-size:13px}
+.bg-bt-p{height:6px;background:#e3e7ee;border-radius:4px;margin-top:6px;overflow:hidden}
+.bg-bt-p div{height:100%;background:var(--accent);border-radius:4px;transition:width .25s}
+.bg-bt-a{display:flex;gap:6px}
+.bg-fim{text-align:center;padding:6px 0}
+.bg-fim-n{font-size:38px;font-weight:700;color:var(--navy);line-height:1}
+.bg-fim .bg-av{text-align:left}
+
+.bg-av{display:flex;gap:10px;padding:9px 11px;border-radius:7px;margin-bottom:7px;border:1px solid var(--line);background:#fafbfd}
+.bg-av .bg-ic{flex:0 0 auto;margin-top:1px}
+.bg-av .bg-ic svg{width:17px;height:17px}
+.bg-av.bg-red{border-left:3px solid #c2384a;background:#fdf3f4}
+.bg-av.bg-red .bg-ic svg{stroke:#c2384a}
+.bg-av.bg-amber{border-left:3px solid #a8690b;background:#fdf8ef}
+.bg-av.bg-amber .bg-ic svg{stroke:#a8690b}
+.bg-av.bg-green{border-left:3px solid #1d7a4c;background:#f2f9f5}
+.bg-av.bg-green .bg-ic svg{stroke:#1d7a4c}
+.bg-tit{font-weight:700;font-size:13px;color:var(--text)}
+.bg-txt{font-size:12px;color:var(--text-2);margin-top:2px;line-height:1.45}
+.bg-abas{display:flex;gap:7px;flex-wrap:wrap}
+.bg-aba{display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;font-size:12.5px;color:var(--text-2)}
+.bg-aba svg{width:16px;height:16px}
+.bg-aba em{font-style:normal;font-size:11px;color:#8b95a6;background:#eef1f6;padding:1px 6px;border-radius:9px}
+.bg-aba.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.bg-aba.on svg{stroke:#fff} .bg-aba.on em{background:rgba(255,255,255,.2);color:#fff}
+.bg-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px}
+.bg-and{text-align:left;padding:10px 11px;border:1px solid var(--line);border-radius:7px;
+  background:#fff;cursor:pointer;border-left-width:4px}
+.bg-and:hover{box-shadow:0 2px 8px rgba(13,27,46,.09)}
+.bg-and .bg-a{font-weight:700;font-size:13px;color:var(--text)}
+.bg-and .bg-s{font-size:12px;margin-top:3px;font-weight:600}
+.bg-and .bg-d{font-size:10.5px;color:var(--text-2);margin-top:2px}
+.bg-and.pend{border-left-color:#c9d0dc} .bg-and.pend .bg-s{color:var(--text-2)}
+.bg-and.ok{border-left-color:#1d7a4c} .bg-and.ok .bg-s{color:#1d7a4c}
+.bg-and.nc{border-left-color:#c2384a;background:#fdf6f7} .bg-and.nc .bg-s{color:#c2384a}
+.bg-and.and{border-left-color:#a8690b} .bg-and.and .bg-s{color:#a8690b}
+.bg-pt{border:1px solid var(--line);border-radius:7px;padding:10px 11px;margin-bottom:8px;border-left-width:4px}
+.bg-pt.ok{border-left-color:#1d7a4c} .bg-pt.nc{border-left-color:#c2384a;background:#fdf6f7}
+.bg-pt.na{border-left-color:#c9d0dc;opacity:.72}
+.bg-pth{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;justify-content:space-between}
+.bg-ptd{flex:1 1 230px;font-size:13px;line-height:1.4}
+.bg-bt{display:flex;gap:5px;flex-wrap:wrap}
+.bg-sit{padding:6px 11px;border:1px solid var(--line);background:#fff;border-radius:6px;
+  cursor:pointer;font-size:11px;font-weight:700;color:var(--text-2);letter-spacing:.2px}
+.bg-sit.on.good{background:#1d7a4c;color:#fff;border-color:#1d7a4c}
+.bg-sit.on.bad{background:#c2384a;color:#fff;border-color:#c2384a}
+.bg-sit.on.na{background:#7a8596;color:#fff;border-color:#7a8596}
+.bg-sit:disabled{opacity:.6;cursor:default}
+.bg-det{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
+.bg-itens{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px}
+.bg-chk{display:flex;gap:6px;align-items:flex-start;font-size:12px;color:var(--text-2);cursor:pointer}
+.bg-chk input{margin-top:2px}
+.bg-fotos{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+@media(max-width:820px){
+  .bg-grade{grid-template-columns:repeat(auto-fill,minmax(142px,1fr))}
+  .bg-bt{width:100%} .bg-sit{flex:1;text-align:center;padding:9px 6px}
+  .bg-aba{flex:1 1 44%;justify-content:center}
+}
+
 @media print{
   body.print-rel .rel-doc{border:0;box-shadow:none;padding:0;max-width:none}
   body.print-rel .content{padding:0}
@@ -762,6 +875,8 @@ body.crit-open{overflow:hidden}
       <button class="gsearch no-print" onclick="openSearch()" title="Busca global (Ctrl+K)">
         <svg class="ico ico-sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-4.2-4.2"/></svg><span class="gs-ph">Buscar no sistema…</span><kbd>Ctrl K</kbd></button>
       <div class="condo-filter" id="condoFilter"></div>
+      <button class="iconbtn iabtn no-print hidden" id="iaBtn" title="Assistente" onclick="iaAbrir()">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2 13.7 8l4.8 1.7-4.8 1.7L12 16.2 10.3 11.4 5.5 9.7l4.8-1.7Z"/><path d="M18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7Z"/></svg></button>
       <span id="syncBadge"></span>
       <button class="iconbtn searchbtn no-print" title="Buscar" onclick="openSearch()">
         <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-4.2-4.2"/></svg></button>
@@ -864,13 +979,27 @@ function audit(acao,alvo,detalhe,condoId,motivo){
 const USERS=[
   {id:'u1',nome:'Maciel',login:'maciel',role:'Gestor',
    perms:{condos:['c1','c2'],tipos:['Administrativo','Gestor'],manutencao:true,estoque:true,estoqueTotal:true,
-          apontamentos:true,create:true,edit:true,complete:true,delete:true}},
+          apontamentos:true,brigada:true,ia:true,create:true,edit:true,complete:true,delete:true}},
   {id:'u2',nome:'Alef',login:'alef',role:'Coordenador Administrativo',
    perms:{condos:['c1','c2'],tipos:['Administrativo'],manutencao:false,estoque:true,estoqueTotal:false,
-          apontamentos:false,create:true,edit:true,complete:true,delete:false}},
+          apontamentos:false,ia:true,create:true,edit:true,complete:true,delete:false}},
   {id:'u3',nome:'Cleiton',login:'cleiton',role:'Oficial de Manutenção',
    perms:{condos:['c1'],tipos:[],manutencao:true,estoque:true,estoqueTotal:true,
-          apontamentos:true,create:true,edit:true,complete:true,delete:false}}
+          apontamentos:true,create:true,edit:true,complete:true,delete:false}},
+  /* Brigada de incêndio — 4 contas prontas, o nome de cada uma é editado
+     em Configurações. Veem o check-list, a ronda e abrem demandas. */
+  {id:'b1',nome:'Brigadista 1',login:'brigada1',role:'Brigadista',
+   perms:{condos:['c1'],tipos:[],manutencao:false,estoque:false,estoqueTotal:false,
+          apontamentos:false,brigada:true,create:true,edit:false,complete:false,delete:false}},
+  {id:'b2',nome:'Brigadista 2',login:'brigada2',role:'Brigadista',
+   perms:{condos:['c1'],tipos:[],manutencao:false,estoque:false,estoqueTotal:false,
+          apontamentos:false,brigada:true,create:true,edit:false,complete:false,delete:false}},
+  {id:'b3',nome:'Brigadista 3',login:'brigada3',role:'Brigadista',
+   perms:{condos:['c1'],tipos:[],manutencao:false,estoque:false,estoqueTotal:false,
+          apontamentos:false,brigada:true,create:true,edit:false,complete:false,delete:false}},
+  {id:'b4',nome:'Brigadista 4',login:'brigada4',role:'Brigadista',
+   perms:{condos:['c1'],tipos:[],manutencao:false,estoque:false,estoqueTotal:false,
+          apontamentos:false,brigada:true,create:true,edit:false,complete:false,delete:false}}
 ];
 let session=null, condoFilter='all', taskView='lista', calRef=new Date(), tipoLock=null;
 let CFG={retroativas:false,coordPodeExcluirPrestador:false,
@@ -882,6 +1011,7 @@ let CFG={retroativas:false,coordPodeExcluirPrestador:false,
   tarifas:{c1:{agua:12.50,esgoto:1.00,energia:0.92,fixaAgua:29.83,fixaEnergia:25,porFaixa:true},
            c2:{agua:12.50,esgoto:1.00,energia:0.92,fixaAgua:29.83,fixaEnergia:25,porFaixa:true}},
   notif:{ativo:true,hora:'08:00',resumoDiario:true,desktop:false},
+  ia:{ativo:true,resumoSemanal:true},
   /* Publicidade nos elevadores — dados usados no contrato em PDF */
   pub:{repNome:'',repDoc:'',repCargo:'Síndico',condoDoc:'',elevadores:{},t1Nome:'',t1Doc:'',t2Nome:'',t2Doc:''}};
 // avança uma data para o futuro quando retroativas estão desligadas
@@ -1199,7 +1329,8 @@ function visibleMaints(){ return []; }
 
 /* ============ LOGIN ============ */
 let pickedUser='u1';
-const PROFILE_UI={u1:{icon:'briefcase'},u2:{icon:'clipboardCheck'},u3:{icon:'helmet'}};
+const PROFILE_UI={u1:{icon:'briefcase'},u2:{icon:'clipboardCheck'},u3:{icon:'helmet'},
+  b1:{icon:'flame'},b2:{icon:'flame'},b3:{icon:'flame'},b4:{icon:'flame'}};
 function buildProfiles(){
   const box=document.querySelector('#profiles'); if(!box)return;
   box.innerHTML=USERS.map(u=>`<div class="pcard ${pickedUser===u.id?'active':''}" id="pc_${u.id}" onclick="pickUser('${u.id}')">
@@ -1251,14 +1382,17 @@ function entrar(u){
   $('#login').style.display='none'; $('#app').style.display='block';
   $('#uName').textContent=u.nome; $('#uRole').textContent=u.role; $('#uAvatar').textContent=u.nome[0];
   aplicarMarca();
+  { const b=$('#iaBtn'); if(b) b.classList.toggle('hidden',!P().ia); }
   gerarNotificacoes();
   buildNav(); buildCondoFilter(); go(paginaInicial()); buildTabbar();
   setTimeout(()=>{
     _filaAlerta=[];
     if(nfCriticas().length) _filaAlerta.push(alertaNF);   // NF entra na fila
     if(alertaCritico()) return;               // manutenção que não pode vencer vem primeiro
+    if(avisarChamadosRonda()) return;         // chamados que a brigada abriu na ronda
     if(_filaAlerta.length){ _filaAlerta.shift()(); return; }
     if(avisarDelegacoes()) return;            // depois, delegação nova
+    if(avisarResumoSemanal()) return;          // resumo da semana, às segundas
     if(CFG.notif&&CFG.notif.resumoDiario) abrirResumoDiario();
   },400);
 }
@@ -1277,7 +1411,7 @@ let _saveTimer=null, _booting=true;
 function store(){ try{ return window.localStorage }catch(e){ return null } }
 function dbSnapshot(){
   return {v:DB_VER, savedAt:new Date().toISOString(),
-    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,
+    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,brigInsp,brigRondas,
     auditLog, CFG, creds, notifs, notifState};
 }
 function salvarLocal(){
@@ -1305,12 +1439,15 @@ function load(){
     apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
     pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
     prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
-    analises=d.analises||[];
+    analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[];
     if(!prestadores.length) seedPrestadores();
     migrarPrestadoresEB();
     if(d.CFG) CFG=Object.assign(CFG,d.CFG);
     creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
-    let mig=migrarLeiturasAgua(); if(migrarTarifaCaesb()) mig=true; migrarManutObrig(); migrarVendasCustas(); if(mig) save();
+  aplicarNomesUsuarios();
+    aplicarNomesUsuarios();
+    let mig=migrarLeiturasAgua(); if(migrarTarifaCaesb()) mig=true; migrarManutObrig(); migrarVendasCustas();
+    if(migrarFilaPub()) mig=true; if(mig) save();
     return true;
   }catch(e){ console.warn('Base corrompida:',e); return false }
 }
@@ -1365,6 +1502,24 @@ function definirSenha(uid,senha){
   save();
 }
 /* O Gestor pode zerar a senha de um usuário — ele define uma nova no próximo acesso. */
+/* O Gestor nomeia cada conta de brigadista; o nome fica salvo em CFG
+   e é reaplicado a cada carga, já que USERS é constante no código. */
+function renomearUsuario(uid){
+  if(session.role!=='Gestor') return toast('Somente o Gestor pode renomear.');
+  const u=USERS.find(x=>x.id===uid); if(!u) return;
+  const n=prompt('Nome do brigadista (login '+u.login+'):',u.nome);
+  if(n===null) return;
+  const nome=n.trim(); if(!nome) return toast('Informe um nome.');
+  const antes=u.nome; u.nome=nome;
+  CFG.nomesUsuarios=CFG.nomesUsuarios||{}; CFG.nomesUsuarios[uid]=nome;
+  if(session.id===uid) session.nome=nome;
+  audit('Renomeou usuário',antes+' -> '+nome,'','','Configurações');
+  save(); toast('Agora é '+nome+'.'); render();
+}
+function aplicarNomesUsuarios(){
+  const m=CFG.nomesUsuarios||{};
+  USERS.forEach(u=>{ if(m[u.id]) u.nome=m[u.id] });
+}
 function podeResetarSenha(){ return session && session.role==='Gestor' }
 function resetarSenha(uid){
   if(!podeResetarSenha()) return toast('Somente o Gestor pode redefinir senhas.');
@@ -1396,7 +1551,7 @@ function toggleSidebar(){
 /* Módulo que cada página usa para decidir quais condomínios oferecer.
    Sem isso, páginas financeiras herdavam a lista de 'tarefas' e o Taguá Life
    (regime Somente Financeiro) sumia do seletor do topo. */
-const MODULO_DA_PAGINA={notas:'notas',cessoes:'cessoes',vendascustas:'vendascustas',publicidade:'publicidade',manutobrig:'manutobrig',analises:'analises',
+const MODULO_DA_PAGINA={brigada:'brigada','brigada-inicio':'brigada','brigada-ronda':'brigada','brigada-form':'brigada',notas:'notas',cessoes:'cessoes',vendascustas:'vendascustas',publicidade:'publicidade',manutobrig:'manutobrig',analises:'analises',
   leituras:'leituras',estoque:'estoque',pedidos:'pedidos',apontamentos:'apontamentos'};
 function moduloDaPagina(){ return MODULO_DA_PAGINA[page]||'tarefas' }
 function buildCondoFilter(){
@@ -1492,7 +1647,12 @@ const ICONS={
  doc:'<path d="M6 2.5h8l4.5 4.5V21a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5Z"/><path d="M14 2.5V7h4.5M8.5 12h7M8.5 16h5"/>',
  empty:'<path d="M3.5 13.5h4l1.5 3h6l1.5-3h4"/><path d="M5.4 4.5h13.2l2.9 9v5a2 2 0 0 1-2 2H4.5a2 2 0 0 1-2-2v-5Z"/>',
  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>',
- flag:'<path d="M5 21V4.5M5 4.5h11l-1.6 3.4L16 11.3H5"/>'
+ flag:'<path d="M5 21V4.5M5 4.5h11l-1.6 3.4L16 11.3H5"/>',
+ door:'<path d="M4 21h16M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"/><circle cx="14.5" cy="12" r="1"/>',
+ play:'<path d="M7 4.8v14.4l11.5-7.2Z"/>',
+ camera:'<path d="M3 8.5h3.2l1.5-2.2h8.6l1.5 2.2H21v11H3Z"/><circle cx="12" cy="13.5" r="3.4"/>',
+ arrowLeft:'<path d="M20 12H4.5M10.5 5.5 4 12l6.5 6.5"/>',
+ clipboardCheck:'<path d="M9 4.5h6M8 4.5H6.5a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V5.5a1 1 0 0 0-1-1H16"/><path d="m9 13 2.2 2.2L15.5 11"/>'
 };
 function ic(name,cls){
   const p=ICONS[name]||ICONS.file;
@@ -1514,7 +1674,10 @@ function buildNav(){
     items.push(['leituras','water','Leituras — Água e Energia']);
     items.push(['analises','helmet','Análise de Projetos']);
   }
-  if(P().manutencao){ if(!P().tipos.length) items.push(['#','','Predial']);
+  if(P().brigada){ if(!P().tipos.length) items.push(['#','','Brigada de Incêndio']);
+    items.push(['brigada-inicio','play','Iniciar Check-list'],
+      ['brigada','flame','Check-list por Andar'],['brigada-ronda','route','Ronda Diária']); }
+  if(P().manutencao){ if(!P().tipos.length&&!P().brigada) items.push(['#','','Predial']);
     items.push(['apontamentos','wrench','Apontamentos'],['manutobrig','shieldCheck','Manutenções Obrigatórias']); }
   if(P().estoque) items.push(['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material']);
   if(P().tipos.length) items.push(['#','','Gestão'],['relatorios','chart','Relatórios'],['relmensal','doc','Relatório Mensal']);
@@ -1525,8 +1688,10 @@ function buildNav(){
   ).join('');
 }
 
-function paginaInicial(){ return (P().tipos.length||P().manutencao)?'dashboard':'estoque'; }
-function go(p,filter){ apEditId=null; apAtual=null;
+function paginaInicial(){ if(P().tipos.length||P().manutencao) return 'dashboard';
+  if(P().brigada) return 'brigada-inicio';
+  return 'estoque'; }
+function go(p,filter){ apEditId=null; apAtual=null; if(p!=='brigada-form') brigAtual=null;
   page=p;pageFilter=filter||null;document.body.classList.remove('mobile-open');
   /* Se o condomínio selecionado não participa do módulo da nova página,
      volta para "Todos" — senão a tela ficaria vazia sem explicação. */
@@ -1541,9 +1706,13 @@ function render(){
     'tarefas-adm':'Tarefas Administrativas','tarefas-gestor':'Tarefas do Gestor',calendario:'Calendário',rotina:'Minha Rotina',
     hoje:'Tarefas de Hoje — Planejamento Diário',leituras:'Leituras / Água e Energia',notas:'Controle de Notas Fiscais',
     estoque:'Controle de Estoque',pedidos:'Pedidos de Material',relmensal:'Relatório Mensal de Gestão',
-    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',analises:'Análise de Projetos — Check-list de Aprovação',relatorios:'Relatórios',config:'Configurações'};
+    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',analises:'Análise de Projetos — Check-list de Aprovação','brigada-inicio':'Brigada — Iniciar Check-list',brigada:'Brigada de Incêndio — Check-list por Andar','brigada-ronda':'Brigada — Ronda Diária','brigada-form':'Brigada — Check-list',relatorios:'Relatórios',config:'Configurações'};
   $('#pageTitle').textContent=titles[page];
   if(page==='analises'){ return (apAtual&&apEditId!==null)?apRender(apAtual):viewAnalises() }
+  if(page==='brigada-inicio'){ return viewBrigInicio() }
+  if(page==='brigada-form'){ return viewBrigForm() }
+  if(page==='brigada'){ return viewBrigada() }
+  if(page==='brigada-ronda'){ return viewBrigRonda() }
   if(page==='tarefas-adm'){tipoLock='Administrativo';return viewTasks()}
   if(page==='tarefas-gestor'){tipoLock='Gestor';return viewTasks()}
   if(page==='calendario'){tipoLock=null;taskView='calendario';return viewTasks()}
@@ -1607,6 +1776,16 @@ function viewDashboard(){
     avisos.push(['red',ic('water'),`Leitura atrasada: ${l.tipo==='agua'?'Água':'Energia'}`,`${condoName(l.condoId)} · programada para ${fmt(l.data)}`,null]));
     visibleCess().filter(c=>cessStatusAuto(c)==='Atrasada').slice(0,4).forEach(c=>
       avisos.push(['red',ic('contract'),`Cessão atrasada: ${c.unidade}`,`${condoName(c.condoId)} · ${c.nome} · previsto ${fmt(c.vencimento)}`,null]));
+    /* Chamados que a brigada abriu na ronda — manutenção e gestor */
+    { const rc=rondaChamadosAbertos();
+      if(rc.length) avisos.push(['red',ic('route'),
+        `${rc.length} chamado(s) da ronda da brigada`,
+        `${rc.filter(t=>t.prioridade==='Alta').length} urgente(s) · clique para organizar o atendimento`,
+        null,'abrirPainelChamadosRonda()']); }
+    /* Brigada: não conformidades abertas viram aviso no painel do Gestor */
+    if(P().brigada||P().tipos.includes('Gestor')) brigResumoNC('c1',brigMesAtual()).slice(0,4).forEach(r=>
+      avisos.push(['red',ic('flame'),`${r.qtd} ${r.qtd>1?'itens não conformes':'item não conforme'}: ${r.nome}`,
+        `E-Business · ${r.andares.length} andar(es): ${r.andares.map(brigAndarNome).join(', ')} — apontado pela brigada`,null]));
     moVencendo(30).slice(0,5).forEach(m=>
       avisos.push([m._dias<0?'red':'amber',ic('shieldCheck'),
         (m._dias<0?`Manutenção vencida: ${m.servico}`:`Manutenção a vencer: ${m.servico}`),
@@ -1623,7 +1802,7 @@ function viewDashboard(){
   html+=`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));margin-top:18px">
     <div class="card"><div class="section-title" style="margin-top:0"><h3>Avisos Importantes</h3>
       <span class="spacer badge b-atr">${avisos.filter(a=>a[0]==='red').length} críticos</span></div>
-      ${avisos.length?avisos.map(a=>`<div class="feed-item ${a[0]}" ${a[4]?`style="cursor:pointer" onclick="openTask('${a[4]}')"`:''}>
+      ${avisos.length?avisos.map(a=>`<div class="feed-item ${a[0]}" ${a[5]?`style="cursor:pointer" onclick="${a[5]}"`:(a[4]?`style="cursor:pointer" onclick="openTask('${a[4]}')"`:'')}>
         <div>${a[1]}</div><div><div class="ft">${esc(a[2])}</div><div class="fd">${esc(a[3])}</div></div></div>`).join('')
         :'<div class="empty">'+ic('inbox','ico-lg')+'<div>Nenhuma pendência crítica.</div></div>'}
     </div>
@@ -1648,7 +1827,7 @@ function viewDashboard(){
       <div class="t-sub" style="margin-top:6px">${pc}% de conclusão geral</div></div>`;
   });
   html+=`</div>`;
-  $('#content').innerHTML=html;
+  $('#content').innerHTML=iaCard('Leitura do dia',iaTudo(condoFilter).slice(0,5),false)+html;
 }
 function badgeStatus(s){const m={'Pendente':'b-pend','Em Andamento':'b-and','Concluída':'b-conc','Atrasada':'b-atr'};return `<span class="badge ${m[s]}">${s}</span>`}
 function badgePrio(p){const m={'Urgente':'b-urg','Alta':'b-alta','Média':'b-media','Baixa':'b-baixa'};
@@ -1714,6 +1893,9 @@ function renderDrill(){
 
 /* ============ CONFIGURAÇÕES ============ */
 function viewConfig(){
+  /* O brigadista só administra a própria senha — nada de tarifas,
+     backup, auditoria ou senhas da equipe. */
+  const soSenha=!P().tipos.length&&!P().manutencao&&!P().estoque;
   $('#content').innerHTML=`
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
       <div class="card">
@@ -1736,7 +1918,7 @@ function viewConfig(){
             onkeydown="if(event.key==='Enter')trocarSenha()"></div>
         <button class="btn accent block" onclick="trocarSenha()">${ic('check')}Salvar nova senha</button>
       </div>
-
+      ${soSenha?'':`
       <div class="card">
         <div class="section-title" style="margin-top:0"><h3>${ic('building')}Identidade Visual</h3></div>
         <div class="t-sub" style="margin-bottom:10px">A logo aparece no menu lateral, na tela de acesso e no relatório mensal.</div>
@@ -1867,6 +2049,8 @@ function viewConfig(){
               <div class="ft">${esc(u.nome)} <span class="badge b-tag">${esc(u.role)}</span></div>
               <div class="fd">${temSenha(u.id)?('senha definida'+(creds[u.id]&&creds[u.id].trocadaEm?' em '+String(creds[u.id].trocadaEm).slice(0,10).split('-').reverse().join('/'):'')):'aguardando primeiro acesso'}</div>
             </div>
+            ${u.role==='Brigadista'&&session.role==='Gestor'
+              ? `<button class="btn ghost sm" onclick="renomearUsuario('${u.id}')">${ic('edit')}Renomear</button>`:''}
             ${u.id===session.id
               ? `<span class="badge b-pend">você</span>`
               : (temSenha(u.id)
@@ -1912,7 +2096,7 @@ function viewConfig(){
         <div class="section-title" style="margin-top:0"><h3>Notas Fiscais</h3></div>
         <div class="t-sub">Competência corrente: <b>${compAtual()}</b> · ${notas.length} lançamentos monitorados.</div>
         <div style="margin-top:10px"><button class="btn ghost" onclick="go('notas')">Abrir módulo</button></div>
-      </div>
+      </div>`}
     </div>`;
 }
 
@@ -1962,7 +2146,7 @@ function viewTasks(){
   if(taskView==='lista') html+=tasksTable(list);
   else if(taskView==='kanban') html+=tasksKanban(list);
   else html+=tasksCalendar(list);
-  $('#content').innerHTML=html;
+  $('#content').innerHTML=iaCard('Análise das tarefas',iaTarefas(condoFilter),false)+html;
 }
 function opt(vals,cur,ph){return vals.map(v=>`<option value="${v}" ${v===cur?'selected':''}>${v||'Todos · '+ph}</option>`).join('')}
 function tasksTable(list){
@@ -2765,7 +2949,7 @@ function viewNotas(){
   const comps=[...new Set(notas.map(n=>n.competencia))].sort((a,b)=>{
     const [ma,ya]=a.split('/'),[mb,yb]=b.split('/');return (ya+ma).localeCompare(yb+mb)});
   const conc=cnt('Concluído'), pct=all.length?Math.round(conc/all.length*100):0;
-  $('#content').innerHTML=`
+  $('#content').innerHTML=iaCard('Análise das notas fiscais',iaNotas(condoFilter),'Nenhum ponto de atenção nas notas.')+`
     <div class="toolbar no-print">
       <div class="viewtabs">
         ${condosDo('notas').map(c=>
@@ -3216,6 +3400,11 @@ function bulkPassivos(cid,modo){
 }
 
 /* ============ BUSCA GLOBAL ============ */
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==='i'&&session&&P().ia){
+    e.preventDefault(); iaAbrir();
+  }
+});
 function openSearch(){
   $('#modalTitle').textContent='Busca Global';
   $('#modalBody').innerHTML=`<input id="gsInput" placeholder="Tarefas, prestadores, insumos, NFs, unidades, manutenções…"
@@ -4283,7 +4472,17 @@ table{width:100%;border-collapse:collapse;font-size:11px}
 .fim .rt{background:#d9d9d9;font-weight:700;font-size:10px;color:#1f3864;text-transform:uppercase;
   padding:7px 10px;border-right:1px solid #9aa4b5;letter-spacing:.2px}
 .fim .vl{padding:7px 10px;min-height:26px}
-@media print{ body{background:#fff} .folha{margin:0;max-width:none;border:0} @page{size:A4;margin:8mm} }
+/* O Chrome desliga cor de fundo na impressão por padrão: sem isto as faixas
+   azuis e os rótulos cinza saem brancos e o documento perde a estrutura. */
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
+@media print{
+  body{background:#fff}
+  .folha{margin:0;max-width:none;border:0;padding:0}
+  @page{size:A4;margin:8mm}
+  .faixa,.faixa2,.lst th,.id .r,.fim .rt{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tr,.bloco,.id{page-break-inside:avoid}
+  thead{display:table-header-group}
+}
 `;
 function apImprimir(id){
   const a=apDo(id); if(!a) return toast('Análise não encontrada.');
@@ -5226,6 +5425,126 @@ function pubOcupacao(cid){
   return {espacos,ocupados,livres:Math.max(0,espacos-ocupados),
     taxa:espacos?Math.round(ocupados/espacos*100):0,mensal,anual:mensal*12};
 }
+/* ===== FILA DE ESPERA — PUBLICIDADE NOS ELEVADORES =====================
+   Importada da planilha "Lista de Espera do Elevador" (posições 15 a 49).
+   A ordem original da lista é a ordem de atendimento. */
+const PUB_FILA_SEED=[
+  {pos:15,empresa:'Henrique Guerra',telefone:'(61) 98366-4141',sala:'305',pref:'Térreo',
+   origem:'Solicitado por e-mail em 26/10/2023 às 13:00'},
+  {pos:16,empresa:'Recriar Estética',contato:'Amanda',telefone:'(61) 98369-4390',sala:'507/508',pref:''},
+  {pos:17,empresa:'La Femme',contato:'Erica',telefone:'(61) 99949-3230',sala:'2208',pref:'Térreo e 1º subsolo'},
+  {pos:20,empresa:'Nayane',telefone:'(62) 98525-2925',sala:'1112',pref:'Todos',
+   origem:'Solicitado pessoalmente em 19/12/2023 às 16:00'},
+  {pos:22,empresa:'Josiel',telefone:'(61) 99638-7912',sala:'1902',pref:'E4 — Subsolo'},
+  {pos:23,empresa:'Adriana Neris',telefone:'(61) 98423-6803',sala:'807',pref:'E4 ou E3 — Térreo'},
+  {pos:24,empresa:'Fabiana / Fernando',telefone:'(61) 99811-0950 / (61) 98158-1569',sala:'902',pref:'Qualquer um'},
+  {pos:32,empresa:'Enjoy',contato:'Nathalia',telefone:'(61) 98190-4147 / (61) 99998-9417',sala:'Enjoy',pref:'Menos garagem'},
+  {pos:33,empresa:'Trendbuild',contato:'Seles',telefone:'(61) 98122-2555',sala:'1703',pref:''},
+  {pos:34,empresa:'Judity',telefone:'(61) 98594-8735',sala:'1611',pref:''},
+  {pos:37,empresa:'Samantha',telefone:'',sala:'312',pref:'Qualquer um'},
+  {pos:38,empresa:'Fisio3',contato:'Silvana',telefone:'(61) 98181-8262',sala:'1603',pref:''},
+  {pos:39,empresa:'Clínica Mind',telefone:'(61) 98260-5971',sala:'1205',pref:''},
+  {pos:40,empresa:'Alpha Assessoria',telefone:'',sala:'201',pref:'Qualquer um'},
+  {pos:41,empresa:'Engeteles',telefone:'(61) 98272-5952',sala:'2407',pref:'Qualquer um'},
+  {pos:42,empresa:'BeautyDerm',telefone:'(61) 99977-9219',sala:'303',pref:''},
+  {pos:44,empresa:'Elizandra Gonçalves',telefone:'(61) 99844-5198',sala:'1109',pref:'Qualquer um'},
+  {pos:45,empresa:'Açaí do Ninja',telefone:'',sala:'Loja 08',pref:'Qualquer um'},
+  {pos:47,empresa:'Nice',telefone:'(61) 99178-8912',sala:'1507',pref:''},
+  {pos:48,empresa:'Diego Lima',telefone:'',sala:'403',pref:'Qualquer um'},
+  {pos:49,empresa:'Zulene',telefone:'(91) 99171-0306',sala:'505',pref:'Todas'}
+];
+/* Carrega a fila uma única vez; depois a ordem passa a ser gerida pelo sistema. */
+function migrarFilaPub(){
+  if(CFG.pubFilaSeed==='v1') return false;
+  const jaTem=anuncios.some(a=>a.condoId==='c1'&&a.fila);
+  if(!jaTem){
+    PUB_FILA_SEED.forEach((s,i)=>{
+      anuncios.push({id:uid('pb'),condoId:'c1',elevador:'',
+        empresa:s.empresa,doc:'',contato:s.contato||'',telefone:s.telefone||'',email:'',
+        endereco:'',cpfRep:'',status:'Interessado',fila:true,ordem:i+1,
+        sala:s.sala||'',preferencia:s.pref||'',posOrig:s.pos,
+        inicio:null,fim:null,valorMensal:null,
+        obs:[s.sala?('Sala '+s.sala):'',s.pref?('Preferência: '+s.pref):'',s.origem||''].filter(Boolean).join(' · '),
+        criadoEm:nowStamp(),criadoPor:'Importação da lista de espera',contratos:[],
+        historico:[{q:'Sistema',w:nowStamp(),t:'Importado da lista de espera (posição '+s.pos+')'}]});
+    });
+  }
+  CFG.pubFilaSeed='v1';
+  return true;
+}
+/* ---- operações da fila ---- */
+function pubFila(cid){
+  return anuncios.filter(a=>a.fila&&a.status==='Interessado'&&(!cid||a.condoId===cid))
+    .sort((a,b)=>(a.ordem||999)-(b.ordem||999));
+}
+function pubRenumerar(cid){
+  pubFila(cid).forEach((a,i)=>{ a.ordem=i+1 });
+}
+function pubMover(id,dir){
+  const a=anuncios.find(x=>x.id===id); if(!a) return;
+  const f=pubFila(a.condoId), i=f.findIndex(x=>x.id===id), j=i+dir;
+  if(i<0||j<0||j>=f.length) return;
+  const o=f[i].ordem; f[i].ordem=f[j].ordem; f[j].ordem=o;
+  pubRenumerar(a.condoId); save(); render();
+}
+/* Espaços de elevador ainda sem contrato ativo. */
+function pubLivres(cid){
+  const ocup=new Set(anuncios.filter(a=>a.condoId===cid&&a.status==='Ativo'&&a.elevador).map(a=>a.elevador));
+  return pubElevs(cid).filter(e=>!ocup.has(e));
+}
+
+/* Entregar um elevador a quem está na fila: sai da espera e vira contrato. */
+function pubAtribuir(id){
+  const a=anuncios.find(x=>x.id===id); if(!a) return;
+  if(!P().edit&&!P().create) return toast('Sem permissão.');
+  const livres=pubLivres(a.condoId);
+  const hoje=today();
+  $('#modalTitle').textContent='Dar elevador — '+a.empresa;
+  $('#modalBody').innerHTML=`
+    <div class="t-sub" style="margin-bottom:10px">Ao confirmar, ${esc(a.empresa)} sai da fila de espera e passa a contrato ativo.
+      ${a.preferencia?`Preferência anotada: <b>${esc(a.preferencia)}</b>.`:''}</div>
+    <div class="field"><label>Elevador</label>
+      <select id="paElev">${livres.length
+        ? livres.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join('')
+        : pubElevs(a.condoId).map(e=>`<option value="${esc(e)}">${esc(e)} (já ocupado)</option>`).join('')}</select>
+      <div class="t-sub">${livres.length?livres.length+' espaço(s) livre(s).':'Nenhum espaço livre — o elevador escolhido já tem anúncio.'}</div></div>
+    <div class="f2">
+      <div class="field"><label>Início do contrato</label><input type="date" id="paIni" value="${hoje}"></div>
+      <div class="field"><label>Fim do contrato</label><input type="date" id="paFim" value=""></div>
+    </div>
+    <div class="field"><label>Valor mensal (R$)</label><input type="number" step="0.01" min="0" id="paVal" placeholder="0,00"></div>`;
+  $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="pubConfirmarAtrib('${id}')">Confirmar</button>`;
+  $('#modal').classList.add('open');
+}
+function pubConfirmarAtrib(id){
+  const a=anuncios.find(x=>x.id===id); if(!a) return;
+  const elev=$('#paElev').value;
+  if(!elev) return toast('Escolha o elevador.');
+  a.elevador=elev; a.status='Ativo'; a.fila=false;
+  a.inicio=$('#paIni').value||null; a.fim=$('#paFim').value||null;
+  const v=$('#paVal').value; a.valorMensal=v===''?null:Number(v);
+  a.atualizadoEm=nowStamp();
+  (a.historico=a.historico||[]).push({q:session?session.nome:'—',w:nowStamp(),
+    t:'Saiu da fila e recebeu o elevador '+elev});
+  pubRenumerar(a.condoId);
+  audit('Elevador atribuído da fila de espera',a.empresa,elev,a.condoId,'');
+  save(); closeModal(); render();
+  toast(a.empresa+' agora ocupa '+elev+'.');
+}
+/* Tirar da fila sem dar elevador (desistiu, não atende, etc.). */
+function pubSairFila(id){
+  const a=anuncios.find(x=>x.id===id); if(!a) return;
+  const motivo=prompt('Por que sair da fila? (fica no histórico)','Desistiu');
+  if(motivo===null) return;
+  a.fila=false; a.status='Encerrado'; a.atualizadoEm=nowStamp();
+  (a.historico=a.historico||[]).push({q:session?session.nome:'—',w:nowStamp(),
+    t:'Saiu da fila de espera — '+(motivo||'sem motivo informado')});
+  pubRenumerar(a.condoId);
+  audit('Saída da fila de espera',a.empresa,'',a.condoId,motivo||'—');
+  save(); render(); toast(a.empresa+' saiu da fila.');
+}
+
 function pubDataExtenso(iso){
   const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const d=iso?parse(iso):new Date();
@@ -5366,6 +5685,32 @@ function viewPublicidade(){
           <div class="card metric"><div class="lbl">Projeção anual</div><div class="val">${brl(o.anual)}</div><div class="sub">se mantida a ocupação</div></div>
         </div>
       </div>`;}).join('')}
+
+    ${(()=>{
+      const cid=condoFilter!=='all'?condoFilter:'c1';
+      const f=pubFila(cid); if(!f.length) return '';
+      const livres=pubLivres(cid);
+      return `<div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
+        <div class="ap-faixa">FILA DE ESPERA<span class="sub">${f.length} interessado(s) · ${livres.length} espaço(s) livre(s)</span></div>
+        ${livres.length?`<div class="feed-item green" style="margin:12px 14px 4px">
+          <div class="fi-ic">${ic('check')}</div><div style="flex:1"><b>${livres.length} elevador(es) sem anúncio</b>
+          <div class="t-sub">${livres.slice(0,6).map(esc).join(' · ')}${livres.length>6?' e mais '+(livres.length-6):''}</div></div></div>`:''}
+        <div class="tablewrap"><table class="ap-tb"><thead><tr>
+          <th style="width:56px;text-align:center">Ordem</th><th>Interessado</th><th>Sala</th>
+          <th>Contato</th><th>Preferência</th><th style="width:210px;text-align:right">Ações</th></tr></thead><tbody>
+        ${f.map((a,i)=>`<tr>
+          <td class="it"><b>${i+1}</b>${a.posOrig?`<div class="t-sub" style="font-size:10px">lista ${a.posOrig}</div>`:''}</td>
+          <td><b>${esc(a.empresa)}</b>${a.contato?`<div class="t-sub">${esc(a.contato)}</div>`:''}</td>
+          <td>${esc(a.sala||'—')}</td>
+          <td>${esc(a.telefone||'—')}</td>
+          <td>${esc(a.preferencia||'—')}</td>
+          <td style="text-align:right;white-space:nowrap">
+            <button class="btn sm ghost" onclick="pubMover('${a.id}',-1)" ${i===0?'disabled':''} title="Subir">${ic('chevUp')}</button>
+            <button class="btn sm ghost" onclick="pubMover('${a.id}',1)" ${i===f.length-1?'disabled':''} title="Descer">${ic('chevDown')}</button>
+            <button class="btn sm" onclick="pubAtribuir('${a.id}')">Dar elevador</button>
+            <button class="btn sm ghost" onclick="pubSairFila('${a.id}')" title="Tirar da fila">${ic('close')}</button>
+          </td></tr>`).join('')}
+        </tbody></table></div></div>`;})()}
 
     ${(()=>{ const v=pubVencendo(30); if(!v.length) return '';
       return `<div class="card" style="margin-bottom:14px;border-left:3px solid #a8690b">
@@ -5952,7 +6297,7 @@ function viewLeituras(){
   const meses=[...new Set(todas.map(x=>x.data.slice(0,7)))].sort().reverse();
   const criticas=todas.filter(x=>{const f=farol(x);return f&&f.cor==='vermelho'});
   const condosProj=CONDOS.filter(c=>P().condos.includes(c.id)&&condoNoModulo(c.id,'tarefas'));
-  $('#content').innerHTML=`
+  $('#content').innerHTML=iaCard('Análise do consumo',iaLeituras(condoFilter),'Sem leituras suficientes para analisar ainda.')+`
     <div class="section-title" style="margin-top:0"><h3>${ic('money')}Projeção da Conta — ${(()=>{const d=new Date();
       return ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][d.getMonth()]+'/'+d.getFullYear()})()}</h3>
       <div class="spacer no-print"><button class="btn ghost sm" onclick="go('config')">${ic('settings')}Ajustar tarifas</button></div></div>
@@ -6170,10 +6515,48 @@ function saveLeitura(id,tipo){
       historico:[{q:'Sistema',w:nowStamp(),t:'Próxima leitura programada automaticamente (+'+intervalo+' dia'+(intervalo>1?'s':'')+')'}]});
   }
   const f=farol(alvo);
+  const conc=concluirTarefaLeitura(cid,data,tipo,alvo);
   closeModal(); render();
   toast(f&&f.cor==='vermelho'
     ? 'Consumo acima de 1.5x da média! Verificar vazamento ou anomalia.'
-    : `Leitura salva. Próxima programada para ${fmt(pi)}.`);
+    : `Leitura salva.${conc?' Tarefa do dia concluída.':''} Próxima programada para ${fmt(pi)}.`);
+}
+/* Registrar a leitura já encerra a tarefa do dia — antes era preciso
+   ir até o gerenciador e concluir na mão. */
+function concluirTarefaLeitura(cid,data,tipo,leit){
+  const alvo=tasks.filter(t=>!t.arquivada&&t.status!=='Concluída'&&
+    t.condoId===cid&&/leitura/i.test(t.titulo)&&
+    (t.vencimento===data||t.dataProgramada===data));
+  if(!alvo.length) return 0;
+  let n=0;
+  alvo.forEach(t=>{
+    t.status='Concluída'; t.concluidoEm=data; t.concluidoPor=session.nome;
+    t.concluidoHora=nowHora();
+    t.obsConclusao='Concluída automaticamente ao registrar a leitura de '+
+      (tipo==='agua'?'água':'energia')+': '+fmtLeit(leit.leitura,tipo)+' '+unid(tipo)+
+      (leit.consumo!=null?' · consumo '+fmtLeit(leit.consumo,tipo)+' '+unid(tipo):'');
+    t.historico.push({q:session.nome,w:nowStamp(),
+      t:'Concluída automaticamente pelo registro da leitura'});
+    n++;
+    /* mantém a recorrência: gera a próxima ocorrência como o fluxo normal */
+    if(t.repetitiva&&t.periodicidade!=='Sob Demanda'){
+      const base=t.vencimento||data;
+      let nd=ajustaRetro(nextDate(base,t.periodicidade),t.periodicidade);
+      const jaTem=tasks.some(x=>!x.arquivada&&x.titulo===t.titulo&&x.condoId===t.condoId&&
+        x.vencimento===nd&&x.status!=='Concluída');
+      if(!jaTem){
+        const nt=mkTask({titulo:t.titulo,condoId:t.condoId,tipo:t.tipo,responsavel:t.responsavel,
+          periodicidade:t.periodicidade,vencimento:nd,prioridade:t.prioridade,
+          procedimento:t.procedimento,serieId:t.serieId,rotina:t.rotina,rotinaRef:t.rotinaRef,
+          origem:t.origem,criadoPor:'Sistema'});
+        nt.historico=[{q:'Sistema',w:nowStamp(),t:'Gerada após o registro da leitura'}];
+        tasks.push(nt);
+      }
+    }
+  });
+  audit('Tarefa de leitura concluída automaticamente',
+    (tipo==='agua'?'Água':'Energia')+' · '+fmt(data),n+' tarefa(s)',cid,'Registro de leitura');
+  return n;
 }
 function histLeitura(id){
   const l=leituras.find(x=>x.id===id); const f=farol(l);
@@ -6386,7 +6769,7 @@ function viewEstoque(){
   l.sort((a,b)=>(a.qtd<=a.minimo?0:1)-(b.qtd<=b.minimo?0:1)||a.nome.localeCompare(b.nome,'pt-BR'));
   const baixo=estoqueBaixo();
   const podeMexer=P().estoqueTotal;
-  $('#content').innerHTML=`
+  $('#content').innerHTML=iaCard('Análise do estoque',iaEstoque(),false)+`
     <div class="grid metrics" style="margin-bottom:14px">
       <div class="card metric" onclick="estFiltro='';render()"><div class="lbl">Itens cadastrados</div>
         <div class="val">${estoque.length}</div><div class="sub">clique para limpar filtro</div></div>
@@ -8110,10 +8493,1794 @@ async function syncBaixar(){
   }
 }
 /* Coleções sincronizadas que têm registros com id. */
+
+/* ============ BRIGADA — CHECK-LIST DE COMBATE A INCÊNDIO ============ */
+/* Inventário real do E-Business, extraído das planilhas de inspeção
+   (Extintores, Hidrantes/VGA, Acionadores, Portas Corta-Fogo e Iluminação
+   de Emergência). São 311 pontos distribuídos do 24º andar ao 4º subsolo. */
+const BRIG_ANDARES=[
+  {id:'COB',nome:'Cobertura',soRonda:true},
+  {id:'CMA',nome:'Casa de Máquinas — Lado A',soRonda:true},
+  {id:'CMB',nome:'Casa de Máquinas — Lado B',soRonda:true},
+  {id:'24',nome:'24º andar'},{id:'22',nome:'22º andar'},{id:'20',nome:'20º andar'},
+  {id:'19',nome:'19º andar'},{id:'18',nome:'18º andar'},{id:'17',nome:'17º andar'},
+  {id:'16',nome:'16º andar'},{id:'15',nome:'15º andar'},{id:'14',nome:'14º andar'},
+  {id:'13',nome:'13º andar'},{id:'12',nome:'12º andar'},{id:'11',nome:'11º andar'},
+  {id:'10',nome:'10º andar'},{id:'9',nome:'9º andar'},{id:'8',nome:'8º andar'},
+  {id:'7',nome:'7º andar'},{id:'6',nome:'6º andar'},{id:'5',nome:'5º andar'},
+  {id:'4',nome:'4º andar'},{id:'3',nome:'3º andar'},{id:'2',nome:'2º andar'},
+  {id:'MEZ',nome:'Mezanino'},{id:'CM',nome:'Casa de Máquinas'},{id:'TER',nome:'Térreo'},
+  {id:'SS1',nome:'1º Subsolo'},{id:'SS2',nome:'2º Subsolo'},
+  {id:'SS3',nome:'3º Subsolo'},{id:'SS4',nome:'4º Subsolo'}
+];
+const BRIG_SISTEMAS=[
+  {id:'extintores',nome:'Extintores',icone:'flame',periodicidade:'Quinzenal',
+   itens:['Prazo de validade','Integridade do lacre','Pressão da carga (exceto CO²)',
+          'Componentes (mangueira, difusor, válvula, manômetro)','Etiquetas (fabricante e INMETRO)',
+          'Aspectos gerais (pintura, suporte e sinalização)']},
+  {id:'hidrantes',nome:'Hidrantes e VGA',icone:'water',periodicidade:'Mensal',
+   itens:['Mangueiras acondicionadas e íntegras','Esguicho e chave de mangueira no abrigo',
+          'Registro sem vazamento','Sinalização e desobstrução','Vidro e fechadura do abrigo',
+          'Válvula de governo e alarme (VGA)']},
+  {id:'acionadores',nome:'Acionadores Manuais',icone:'alertCircle',periodicidade:'Mensal',
+   itens:['Acionador íntegro e sem obstrução','Sinalização visível',
+          'Teste de acionamento (dispara a central)','Martelo/vidro de emergência presente']},
+  {id:'pcf',nome:'Portas Corta-Fogo',icone:'door',periodicidade:'Mensal',
+   itens:['Aspectos gerais (revestimento, amassados, pintura)','Fechamento automático',
+          'Acessórios (fechadura, antipânico, travas, dobradiças)','Placa identificadora íntegra',
+          'Livre de objetos que impeçam abrir ou fechar']},
+  {id:'iluminacao',nome:'Iluminação de Emergência',icone:'sun',periodicidade:'Mensal',
+   itens:['Luminária acende no teste','Autonomia da bateria','Fixação e integridade da luminária',
+          'Sinalização de rota de fuga']}
+];
+const BRIG_INV=[
+ {s:'extintores',a:"2",d:"2 extintores (PQS-ABC- 6Kg)/ Nº43 e Nº44"},
+ {s:'extintores',a:"3",d:"2 extintores (PQS-ABC- 6Kg)/ Nº41 e Nº42"},
+ {s:'extintores',a:"4",d:"2 extintores (PQS-ABC- 6Kg)/ Nº39 e Nº40"},
+ {s:'extintores',a:"5",d:"2 extintores (PQS-ABC- 6Kg)/ Nº37 e Nº38"},
+ {s:'extintores',a:"6",d:"2 extintores (PQS-ABC- 6Kg)/ Nº35 e Nº36"},
+ {s:'extintores',a:"7",d:"2 extintores (PQS-ABC- 6Kg)/ Nº33 e Nº34"},
+ {s:'extintores',a:"8",d:"2 extintores (PQS-ABC- 6Kg)/ Nº31 e Nº32"},
+ {s:'extintores',a:"9",d:"2 extintores (PQS-ABC- 6Kg)/ Nº29 e Nº30"},
+ {s:'extintores',a:"10",d:"2 extintores (PQS-ABC- 6Kg)/ Nº27 e Nº28"},
+ {s:'extintores',a:"11",d:"2 extintores (PQS-ABC- 6Kg)/ Nº25 e Nº26"},
+ {s:'extintores',a:"12",d:"2 extintores (PQS-ABC- 6Kg)/ Nº23 e Nº24"},
+ {s:'extintores',a:"13",d:"2 extintores (PQS-ABC- 6Kg)/ Nº21 e Nº22"},
+ {s:'extintores',a:"14",d:"2 extintores (PQS-ABC- 6Kg)/ Nº19 e Nº20"},
+ {s:'extintores',a:"15",d:"2 extintores (PQS-ABC- 6Kg)/ Nº17 e Nº18"},
+ {s:'extintores',a:"16",d:"2 extintores (PQS-ABC- 6Kg)/ Nº15 e Nº16"},
+ {s:'extintores',a:"17",d:"2 extintores (PQS-ABC- 6Kg)/ Nº13 e Nº14"},
+ {s:'extintores',a:"18",d:"2 extintores (PQS-ABC- 6Kg)/ Nº11 e Nº12"},
+ {s:'extintores',a:"19",d:"2 extintores (PQS-ABC- 6Kg)/ Nº9 e Nº10"},
+ {s:'extintores',a:"20",d:"2 extintores (PQS-ABC- 6Kg)/ Nº7 e Nº8"},
+ {s:'extintores',a:"22",d:"2 extintores (PQS-ABC- 6Kg)/ Nº5 e Nº6"},
+ {s:'extintores',a:"24",d:"2 extintores (PQS-ABC- 6Kg)/ Nº3 e Nº4"},
+ {s:'extintores',a:"CM",d:"2 extintores (CO² 6Kg) / Nº 1 e Nº2"},
+ {s:'extintores',a:"SS4",d:"1 extintor (PQS-ABC- 6Kg)/ Nº83"},
+ {s:'extintores',a:"SS4",d:"1 extintor (PQS-ABC- 6Kg)/ Nº82"},
+ {s:'extintores',a:"SS4",d:"1 extintor (PQS-ABC- 6Kg)/ Nº81"},
+ {s:'extintores',a:"SS4",d:"1 extintor (PQS-ABC- 6Kg)/ Nº80"},
+ {s:'extintores',a:"SS4",d:"1 extintor (PQS-ABC- 6Kg)/ Nº79"},
+ {s:'extintores',a:"SS4",d:"1 extintor (PQS-ABC- 6Kg)/ Nº78"},
+ {s:'extintores',a:"SS4",d:"1 extintor (PQS-ABC- 6Kg)/ Nº77"},
+ {s:'extintores',a:"SS4",d:"1 extintor (PQS-ABC- 6Kg)/ Nº76"},
+ {s:'extintores',a:"SS3",d:"1 extintor (PQS-ABC- 6Kg)/ Nº75"},
+ {s:'extintores',a:"SS3",d:"1 extintor (PQS-ABC- 6Kg)/ Nº74"},
+ {s:'extintores',a:"SS3",d:"1 extintor (PQS-ABC- 6Kg)/ Nº73"},
+ {s:'extintores',a:"SS3",d:"1 extintor (PQS-ABC- 6Kg)/ Nº72"},
+ {s:'extintores',a:"SS3",d:"1 extintor (PQS-ABC- 6Kg)/ Nº71"},
+ {s:'extintores',a:"SS3",d:"1 extintor (PQS-ABC- 6Kg)/ Nº70"},
+ {s:'extintores',a:"SS2",d:"1 extintor (PQS-ABC- 6Kg)/ Nº69"},
+ {s:'extintores',a:"SS2",d:"1 extintor (PQS-ABC- 6Kg)/ Nº68"},
+ {s:'extintores',a:"SS2",d:"1 extintor (PQS-ABC- 6Kg)/ Nº67"},
+ {s:'extintores',a:"SS2",d:"1 extintor (PQS-ABC- 6Kg)/ Nº66"},
+ {s:'extintores',a:"SS2",d:"1 extintor (PQS-ABC- 6Kg)/ Nº65"},
+ {s:'extintores',a:"SS1",d:"1 extintor (PQS-ABC- 6Kg)/ Nº64"},
+ {s:'extintores',a:"SS1",d:"1 extintor (PQS-ABC- 6Kg)/ Nº63"},
+ {s:'extintores',a:"SS1",d:"1 extintor (PQS-ABC- 6Kg)/ Nº62"},
+ {s:'extintores',a:"SS1",d:"1 extintor (PQS-ABC- 6Kg)/ Nº61"},
+ {s:'extintores',a:"SS1",d:"1 extintor (PQS-ABC- 6Kg)/ Nº60"},
+ {s:'extintores',a:"SS1",d:"1 extintor (PQS-ABC- 6Kg)/ Nº59"},
+ {s:'extintores',a:"SS1",d:"1 extintor (PQS-ABC- 6Kg)/ Nº58"},
+ {s:'extintores',a:"SS4",d:"2 extintores (PQS-ABC- 6Kg)/ Nº56 e Nº57"},
+ {s:'extintores',a:"TER",d:"1 ext. (PQS-ABC- 6Kg) Nº54 e 1 ext. (CO² - 6kg) Nº55"},
+ {s:'extintores',a:"TER",d:"2 extintores (PQS-ABC- 6Kg)/ Nº52 e Nº53"},
+ {s:'extintores',a:"TER",d:"3 ext. (PQS-ABC- 6Kg)/ Nº49 e Nº50 e Nº51"},
+ {s:'extintores',a:"TER",d:"1 extintor (PQS-ABC- 6Kg)/ Nº48(recepção)"},
+ {s:'extintores',a:"MEZ",d:"3 ext. (PQS-ABC- 6Kg)/ Nº45 e Nº46 e Nº47"},
+ {s:'hidrantes',a:"11",d:"VGA"},
+ {s:'hidrantes',a:"11",d:"Hidrante conjunto 1 / Nº 14"},
+ {s:'hidrantes',a:"12",d:"VGA"},
+ {s:'hidrantes',a:"12",d:"Hidrante conjunto 1 / Nº 13"},
+ {s:'hidrantes',a:"13",d:"VGA"},
+ {s:'hidrantes',a:"13",d:"Hidrante conjunto 1 / Nº 12"},
+ {s:'hidrantes',a:"14",d:"VGA"},
+ {s:'hidrantes',a:"14",d:"Hidrante conjunto 1 / Nº 11"},
+ {s:'hidrantes',a:"15",d:"VGA"},
+ {s:'hidrantes',a:"15",d:"Hidrante conjunto 1 / Nº 10"},
+ {s:'hidrantes',a:"16",d:"VGA"},
+ {s:'hidrantes',a:"16",d:"Hidrante conjunto 1 / Nº 09"},
+ {s:'hidrantes',a:"17",d:"VGA"},
+ {s:'hidrantes',a:"17",d:"Hidrante conjunto 1 / Nº 08"},
+ {s:'hidrantes',a:"18",d:"VGA"},
+ {s:'hidrantes',a:"18",d:"Hidrante conjunto 1 / Nº 07"},
+ {s:'hidrantes',a:"19",d:"VGA"},
+ {s:'hidrantes',a:"19",d:"Hidrante conjunto 1 / Nº 06"},
+ {s:'hidrantes',a:"20",d:"VGA"},
+ {s:'hidrantes',a:"20",d:"Hidrante conjunto 2 / Nº 05"},
+ {s:'hidrantes',a:"20",d:"Hidrante conjunto 1 / Nº 04"},
+ {s:'hidrantes',a:"22",d:"VGA"},
+ {s:'hidrantes',a:"22",d:"Hidrante conjunto 2 / Nº 03"},
+ {s:'hidrantes',a:"22",d:"Hidrante conjunto 1 / Nº 02"},
+ {s:'hidrantes',a:"24",d:"VGA"},
+ {s:'hidrantes',a:"24",d:"Hidrante conjunto 1 / Nº 01"},
+ {s:'hidrantes',a:"SS3",d:"VGA"},
+ {s:'hidrantes',a:"SS3",d:"Hidrante conjunto 2 / Nº 36"},
+ {s:'hidrantes',a:"SS3",d:"Hidrante conjunto 1 / Nº 35"},
+ {s:'hidrantes',a:"SS2",d:"VGA"},
+ {s:'hidrantes',a:"SS2",d:"Hidrante conjunto 2 / Nº 34"},
+ {s:'hidrantes',a:"SS2",d:"Hidrante conjunto 1 / Nº 33"},
+ {s:'hidrantes',a:"SS1",d:"VGA"},
+ {s:'hidrantes',a:"SS1",d:"Hidrante conjunto 2 / Nº 32"},
+ {s:'hidrantes',a:"SS1",d:"Hidrante conjunto 1 / Nº 31"},
+ {s:'hidrantes',a:"TER",d:"VGA"},
+ {s:'hidrantes',a:"TER",d:"Hidrante conjunto 2 / Nº 30"},
+ {s:'hidrantes',a:"TER",d:"Hidrante conjunto 1 / Nº 29"},
+ {s:'hidrantes',a:"TER",d:"VGA"},
+ {s:'hidrantes',a:"TER",d:"Hidrante conjunto 2 / Nº 28"},
+ {s:'hidrantes',a:"TER",d:"Hidrante conjunto 1 / Nº 27"},
+ {s:'hidrantes',a:"TER",d:"VGA"},
+ {s:'hidrantes',a:"TER",d:"Hidrante conjunto 1 / Nº 26"},
+ {s:'hidrantes',a:"MEZ",d:"VGA"},
+ {s:'hidrantes',a:"MEZ",d:"Hidrante conjunto 2 / Nº 25"},
+ {s:'hidrantes',a:"MEZ",d:"Hidrante conjunto 1 / Nº 24"},
+ {s:'hidrantes',a:"2",d:"VGA"},
+ {s:'hidrantes',a:"2",d:"Hidrante conjunto 1 / Nº 23"},
+ {s:'hidrantes',a:"3",d:"VGA"},
+ {s:'hidrantes',a:"3",d:"Hidrante conjunto 1 / Nº 22"},
+ {s:'hidrantes',a:"4",d:"VGA"},
+ {s:'hidrantes',a:"4",d:"Hidrante conjunto 1 / Nº 21"},
+ {s:'hidrantes',a:"5",d:"VGA"},
+ {s:'hidrantes',a:"5",d:"Hidrante conjunto 1 / Nº 20"},
+ {s:'hidrantes',a:"6",d:"VGA"},
+ {s:'hidrantes',a:"6",d:"Hidrante conjunto 1 / Nº 19"},
+ {s:'hidrantes',a:"7",d:"VGA"},
+ {s:'hidrantes',a:"7",d:"Hidrante conjunto 1 / Nº 18"},
+ {s:'hidrantes',a:"8",d:"VGA"},
+ {s:'hidrantes',a:"8",d:"Hidrante conjunto 1 / Nº 17"},
+ {s:'hidrantes',a:"9",d:"VGA"},
+ {s:'hidrantes',a:"9",d:"Hidrante conjunto 1 / Nº 16"},
+ {s:'hidrantes',a:"10",d:"VGA"},
+ {s:'hidrantes',a:"10",d:"Hidrante conjunto 1 / Nº 15"},
+ {s:'hidrantes',a:"SS4",d:"Hidrante conjunto 2 / Nº 38"},
+ {s:'hidrantes',a:"SS4",d:"Hidrante conjunto 1 / Nº 37"},
+ {s:'acionadores',a:"SS1",d:"Ao lado DML Nº 29"},
+ {s:'acionadores',a:"SS1",d:"Frente Lava Jato Nº 28"},
+ {s:'acionadores',a:"SS1",d:"Lado Elev. De Serviço Nº 27"},
+ {s:'acionadores',a:"TER",d:"Elevador de Baldeação Nº 26"},
+ {s:'acionadores',a:"TER",d:"Elevador de Baldeação Nº 25"},
+ {s:'acionadores',a:"TER",d:"Ao lado Elev. E1 Nº 24"},
+ {s:'acionadores',a:"MEZ",d:"Ao lado Urbana Nº 23"},
+ {s:'acionadores',a:"MEZ",d:"Ao lado sala M2 Nº 22"},
+ {s:'acionadores',a:"2",d:"Ao lado sala 205 Nº 21"},
+ {s:'acionadores',a:"3",d:"Ao lado sala 305 Nº 20"},
+ {s:'acionadores',a:"4",d:"Ao lado sala 405 Nº 19"},
+ {s:'acionadores',a:"5",d:"Ao lado sala 505 Nº 18"},
+ {s:'acionadores',a:"6",d:"Ao lado sala 605 Nº 17"},
+ {s:'acionadores',a:"7",d:"ao lado sala 705 Nº 16"},
+ {s:'acionadores',a:"8",d:"Ao lado sala 805 Nº 15"},
+ {s:'acionadores',a:"9",d:"Ao lado sala 905 Nº 14"},
+ {s:'acionadores',a:"10",d:"Ao lado sala 1005 Nº 13"},
+ {s:'acionadores',a:"11",d:"Ao lado sala 1105 Nº 12"},
+ {s:'acionadores',a:"12",d:"Ao lado sala 1205 Nº 11"},
+ {s:'acionadores',a:"13",d:"Ao lado sala 1305 Nº 10"},
+ {s:'acionadores',a:"14",d:"Ao lado sala 1405 Nº 09"},
+ {s:'acionadores',a:"15",d:"Ao lado sala 1505 Nº 08"},
+ {s:'acionadores',a:"16",d:"Ao lado sala 1605 Nº 07"},
+ {s:'acionadores',a:"17",d:"Ao lado sala 1705 Nº 06"},
+ {s:'acionadores',a:"18",d:"Ao lado sala 1805 Nº 05"},
+ {s:'acionadores',a:"19",d:"Ao lado sala 1905 Nº 04"},
+ {s:'acionadores',a:"20",d:"Ao lado sala 2005 Nº 03"},
+ {s:'acionadores',a:"22",d:"Ao lado sala 2205 Nº 02"},
+ {s:'acionadores',a:"24",d:"Ao lado sala 2405 Nº 01"},
+ {s:'acionadores',a:"SS4",d:"Lado Elev. De Baldeação Nº 42"},
+ {s:'acionadores',a:"SS4",d:"Ao lado Dép. 20 Nº 41"},
+ {s:'acionadores',a:"SS4",d:"Ao lado vaga 240 Nº 40"},
+ {s:'acionadores',a:"SS4",d:"Lado Elev. De Serviço Nº 39"},
+ {s:'acionadores',a:"SS3",d:"Lado Elev. De Baldeação Nº 38"},
+ {s:'acionadores',a:"SS3",d:"Ao lado Dép. 11 Nº 37"},
+ {s:'acionadores',a:"SS3",d:"Ao lado vaga 168 Nº 36"},
+ {s:'acionadores',a:"SS3",d:"Lado Elev. De Serviço Nº 35"},
+ {s:'acionadores',a:"SS2",d:"Lado Elev. De Baldeação Nº 34"},
+ {s:'acionadores',a:"SS2",d:"Ao lado Dép. 02 Nº 33"},
+ {s:'acionadores',a:"SS2",d:"Ao lado vaga 096 Nº 32"},
+ {s:'acionadores',a:"SS2",d:"Lado Elev. De Serviço Nº 31"},
+ {s:'acionadores',a:"SS1",d:"Lado Elev. De Baldeação Nº 30"},
+ {s:'pcf',a:"10",d:"PCF ESCADA 1 Lado Banheiro - Nº 28"},
+ {s:'pcf',a:"10",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 27"},
+ {s:'pcf',a:"11",d:"PCF ESCADA 1 Lado Banheiro - Nº 26"},
+ {s:'pcf',a:"11",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 25"},
+ {s:'pcf',a:"12",d:"PCF ESCADA 1 Lado Banheiro - Nº 24"},
+ {s:'pcf',a:"12",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 23"},
+ {s:'pcf',a:"13",d:"PCF ESCADA 1 Lado Banheiro - Nº 22"},
+ {s:'pcf',a:"13",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 21"},
+ {s:'pcf',a:"14",d:"PCF ESCADA 1 Lado Banheiro - Nº 20"},
+ {s:'pcf',a:"14",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 19"},
+ {s:'pcf',a:"15",d:"PCF ESCADA 1 Lado Banheiro - Nº 18"},
+ {s:'pcf',a:"15",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 17"},
+ {s:'pcf',a:"16",d:"PCF ESCADA 1 Lado Banheiro - Nº 16"},
+ {s:'pcf',a:"16",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 15"},
+ {s:'pcf',a:"17",d:"PCF ESCADA 1 Lado Banheiro - Nº 14"},
+ {s:'pcf',a:"17",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 13"},
+ {s:'pcf',a:"18",d:"PCF ESCADA 1 Lado Banheiro - Nº 12"},
+ {s:'pcf',a:"18",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 11"},
+ {s:'pcf',a:"19",d:"PCF ESCADA 1 Lado Banheiro - Nº 10"},
+ {s:'pcf',a:"19",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 09"},
+ {s:'pcf',a:"20",d:"PCF ESCADA 1 Lado Banheiro - Nº 08"},
+ {s:'pcf',a:"20",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 07"},
+ {s:'pcf',a:"22",d:"PCF ESCADA 1 Lado Banheiro - Nº 06"},
+ {s:'pcf',a:"22",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 05"},
+ {s:'pcf',a:"24",d:"PCF ESCADA 1 Lado Banheiro - Nº 04"},
+ {s:'pcf',a:"24",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 03"},
+ {s:'pcf',a:"CM",d:"PCF ESCADA 1 Lado Banheiro - Nº 02"},
+ {s:'pcf',a:"CM",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 01"},
+ {s:'pcf',a:"SS4",d:"PCF ESCADA 2 Ao Lado DG - Nº 65"},
+ {s:'pcf',a:"SS4",d:"PCF ESCADA 1 Ao Lado Elev. Baldeação - Nº 64"},
+ {s:'pcf',a:"SS3",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 63"},
+ {s:'pcf',a:"SS3",d:"PCF ESCADA 2 Ao Lado DG - Nº 62"},
+ {s:'pcf',a:"SS3",d:"PCF ESCADA 1 Ao Lado Elev. Baldeação - Nº 61"},
+ {s:'pcf',a:"SS2",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 60"},
+ {s:'pcf',a:"SS2",d:"PCF ESCADA 2 Ao Lado DG - Nº 59"},
+ {s:'pcf',a:"SS2",d:"PCF ESCADA 1 Ao Lado Elev. Baldeação - Nº 58"},
+ {s:'pcf',a:"SS1",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 57"},
+ {s:'pcf',a:"SS1",d:"PCF ESCADA 2 Ao Lado sala manutenção - Nº 56"},
+ {s:'pcf',a:"SS1",d:"PCF ESCADA 1 Ao Lado Elev. Baldeação - Nº 55"},
+ {s:'pcf',a:"SS1",d:"PCF ESCADA 3 Ao Lado escada preta - Nº 54"},
+ {s:'pcf',a:"TER",d:"PCF ESCADA PRESSURIZADA Refeitório - Nº 53"},
+ {s:'pcf',a:"TER",d:"PCF ESCADA 2 Ao Lado refeitório - Nº 52"},
+ {s:'pcf',a:"TER",d:"PCF ESCADA 1 Ao Lado Sala da brigada - Nº 51"},
+ {s:'pcf',a:"TER",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 50"},
+ {s:'pcf',a:"MEZ",d:"PCF ESCADA 2 Lado Banheiro - Nº 49"},
+ {s:'pcf',a:"MEZ",d:"PCF INTERNA CFTV CFTV - Nº 48"},
+ {s:'pcf',a:"MEZ",d:"PCF CFTV CFTV - Nº 47"},
+ {s:'pcf',a:"MEZ",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 46"},
+ {s:'pcf',a:"2",d:"PCF AO LADO ADM Ao Lado ADM- Nº 45"},
+ {s:'pcf',a:"2",d:"PCF ESCADA 1 Lado Banheiro - Nº 44"},
+ {s:'pcf',a:"2",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 43"},
+ {s:'pcf',a:"3",d:"PCF ESCADA 1 Lado Banheiro - Nº 42"},
+ {s:'pcf',a:"3",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 41"},
+ {s:'pcf',a:"4",d:"PCF ESCADA 1 Lado Banheiro - Nº 40"},
+ {s:'pcf',a:"4",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 39"},
+ {s:'pcf',a:"5",d:"PCF ESCADA 1 Lado Banheiro - Nº 38"},
+ {s:'pcf',a:"5",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 37"},
+ {s:'pcf',a:"6",d:"PCF ESCADA 1 Lado Banheiro - Nº 36"},
+ {s:'pcf',a:"6",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 35"},
+ {s:'pcf',a:"7",d:"PCF ESCADA 1 Lado Banheiro - Nº 34"},
+ {s:'pcf',a:"7",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 33"},
+ {s:'pcf',a:"8",d:"PCF ESCADA 1 Lado Banheiro - Nº 32"},
+ {s:'pcf',a:"8",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 31"},
+ {s:'pcf',a:"9",d:"PCF ESCADA 1 Lado Banheiro - Nº 30"},
+ {s:'pcf',a:"9",d:"PCF ELEVADOR DE EMERGÊNCIA Lado Elevador - Nº 29"},
+ {s:'iluminacao',a:"15",d:"Escada lado B - 02 luminárias (30 leds) Nº 77 e Nº 78"},
+ {s:'iluminacao',a:"15",d:"Escada lado A - 02 luminárias (30 leds) Nº 75 e Nº 76"},
+ {s:'iluminacao',a:"15",d:"Área comum - 05 luminárias (30 leds) Nº 70, Nº 71, Nº 72, Nº 73 e Nº 74"},
+ {s:'iluminacao',a:"16",d:"Escada lado B - 02 luminárias (30 leds) Nº 68 e Nº 69"},
+ {s:'iluminacao',a:"16",d:"Escada lado A - 02 luminárias (30 leds) Nº 66 e Nº 67"},
+ {s:'iluminacao',a:"16",d:"Área comum - 05 luminárias (30 leds) Nº 61, Nº 62, Nº 63, Nº 64 e Nº 65"},
+ {s:'iluminacao',a:"17",d:"Escada lado B - 02 luminárias (30 leds) Nº 59 e Nº 60"},
+ {s:'iluminacao',a:"17",d:"Escada lado A - 02 luminárias (30 leds) Nº 57 e Nº 58"},
+ {s:'iluminacao',a:"17",d:"Área comum - 05 luminárias (30 leds) Nº 52, Nº 53, Nº 54, Nº 55 e Nº 56"},
+ {s:'iluminacao',a:"18",d:"Escada lado B - 02 luminárias (30 leds) Nº 50 e Nº 51"},
+ {s:'iluminacao',a:"18",d:"Escada lado A - 02 luminárias (30 leds) Nº 48 e Nº 49"},
+ {s:'iluminacao',a:"18",d:"Área comum - 05 luminárias (30 leds) Nº 43, Nº 44, Nº 45, Nº 46 e Nº 47"},
+ {s:'iluminacao',a:"19",d:"Escada lado B - 02 luminárias (30 leds) Nº 41 e Nº 42"},
+ {s:'iluminacao',a:"19",d:"Escada lado A - 02 luminárias (30 leds) Nº 39 e Nº 40"},
+ {s:'iluminacao',a:"19",d:"Área comum - 05 luminárias (30 leds) Nº 34, Nº 35, Nº 36, Nº 37 e Nº 38"},
+ {s:'iluminacao',a:"20",d:"Escada lado B - 03 luminárias (30 leds) Nº 31, Nº 32 e Nº 33"},
+ {s:'iluminacao',a:"20",d:"Escada lado A - 03 luminárias (30 leds) Nº 28, Nº 29 e Nº 30"},
+ {s:'iluminacao',a:"20",d:"Área comum - 04 luminárias (30 leds) Nº 23, Nº 24, Nº 25, Nº 26 e Nº 27"},
+ {s:'iluminacao',a:"22",d:"Escada lado B - 03 luminárias (30 leds) Nº 20, Nº 21 e Nº 22"},
+ {s:'iluminacao',a:"22",d:"Escada lado A - 03 luminárias (30 leds) Nº 17, Nº 18 e Nº 19"},
+ {s:'iluminacao',a:"22",d:"Área comum - 03 luminárias (30 leds) Nº 12, Nº 13, Nº 14, Nº15 e Nº 16"},
+ {s:'iluminacao',a:"24",d:"Escada lado B - 02 luminárias (30 leds) Nº 10 e Nº 11"},
+ {s:'iluminacao',a:"24",d:"Escada lado A - 02 luminárias (30 leds) Nº 08 e Nº 09"},
+ {s:'iluminacao',a:"24",d:"Área comum - 05 luminárias (30 leds) Nº 03, Nº 04, Nº 05, Nº 06 e Nº 07"},
+ {s:'iluminacao',a:"CM",d:"Escada lado B - 01 luminária (30 leds) Nº 02"},
+ {s:'iluminacao',a:"CM",d:"Escada lado A - 01 luminária (30 leds) Nº 01"},
+ {s:'iluminacao',a:"CM",d:"Área comum -"},
+ {s:'iluminacao',a:"MEZ",d:"Escada lado B -03 luminárias (30 leds) Nº 211, Nº 212 e Nº 213"},
+ {s:'iluminacao',a:"MEZ",d:"Escada lado A - 03 luminárias (30 leds) Nº 208, Nº 209 e Nº 210"},
+ {s:'iluminacao',a:"MEZ",d:"Área comum - 12 luminárias (30 leds) Nº 196 à Nº 207"},
+ {s:'iluminacao',a:"2",d:"Escada lado B -02 luminárias (30 leds) Nº 194 e Nº 195"},
+ {s:'iluminacao',a:"2",d:"Escada lado A - 02 luminárias (30 leds) Nº 192 e Nº 193"},
+ {s:'iluminacao',a:"2",d:"Área comum - 05 luminárias (30 leds) Nº 187, Nº 188, Nº 189, Nº 190 e Nº 191"},
+ {s:'iluminacao',a:"3",d:"Escada lado B -02 luminárias (30 leds) Nº 185 e Nº 186"},
+ {s:'iluminacao',a:"3",d:"Escada lado A - 02 luminárias (30 leds) Nº 183 e Nº 184"},
+ {s:'iluminacao',a:"3",d:"Área comum - 05 luminárias (30 leds) Nº 178, Nº 179, Nº 180, Nº 181 e Nº 182"},
+ {s:'iluminacao',a:"4",d:"Escada lado B - 02 luminárias (30 leds) Nº 176 e Nº 177"},
+ {s:'iluminacao',a:"4",d:"Escada lado A - 02 luminárias (30 leds) Nº 174 e Nº 175"},
+ {s:'iluminacao',a:"4",d:"Área comum - 05 luminárias (30 leds) Nº 169, Nº 170, Nº 171, Nº 172 e Nº 173"},
+ {s:'iluminacao',a:"5",d:"Escada lado B - 02 luminárias (30 leds) Nº 167 e Nº 168"},
+ {s:'iluminacao',a:"5",d:"Escada lado A - 02 luminárias (30 leds) Nº 165 e Nº 166"},
+ {s:'iluminacao',a:"5",d:"Área comum - 05 luminárias (30 leds) Nº 160, Nº 161, Nº 162, Nº 163 e Nº 164"},
+ {s:'iluminacao',a:"6",d:"Escada lado B - 02 luminárias (30 leds) Nº 158 e Nº 159"},
+ {s:'iluminacao',a:"6",d:"Escada lado A - 02 luminárias (30 leds) Nº 156 e Nº 157"},
+ {s:'iluminacao',a:"6",d:"Área comum - 05 luminárias (30 leds) Nº 151, Nº 152, Nº 153, Nº 154 e Nº 155"},
+ {s:'iluminacao',a:"7",d:"Escada lado B - 02 luminárias (30 leds) Nº 149 e Nº 150"},
+ {s:'iluminacao',a:"7",d:"Escada lado A - 02 luminárias (30 leds) Nº 147 e Nº 148"},
+ {s:'iluminacao',a:"7",d:"Área comum - 05 luminárias (30 leds) Nº 142, Nº 143, Nº 144, Nº 145 e Nº 146"},
+ {s:'iluminacao',a:"8",d:"Escada lado B - 02 luminárias (30 leds) Nº 140 e Nº 141"},
+ {s:'iluminacao',a:"8",d:"Escada lado A - 02 luminárias (30 leds) Nº 138 e Nº 139"},
+ {s:'iluminacao',a:"8",d:"Área comum - 05 luminárias (30 leds) Nº 133, Nº 134, Nº 135, Nº 136 e Nº 137"},
+ {s:'iluminacao',a:"9",d:"Escada lado B - 02 luminárias (30 leds) Nº 131 e Nº 132"},
+ {s:'iluminacao',a:"9",d:"Escada lado A - 02 luminárias (30 leds) Nº 129 e Nº 130"},
+ {s:'iluminacao',a:"9",d:"Área comum - 05 luminárias (30 leds) Nº 124, Nº 125, Nº 126, Nº 127 e Nº 128"},
+ {s:'iluminacao',a:"10",d:"Escada lado B - 02 luminárias (30 leds) Nº 122 e Nº 123"},
+ {s:'iluminacao',a:"10",d:"Escada lado A - 02 luminárias (30 leds) Nº 120 e Nº 121"},
+ {s:'iluminacao',a:"10",d:"Área comum - 04 luminárias (30 leds) Nº115, Nº 116, Nº 117, Nº 118 e Nº 119"},
+ {s:'iluminacao',a:"11",d:"Escada lado B - 02 luminárias (30 leds) Nº 113 e Nº 114"},
+ {s:'iluminacao',a:"11",d:"Escada lado A - 02 luminárias (30 leds) Nº 111 e Nº 112"},
+ {s:'iluminacao',a:"11",d:"Área comum - 05 luminárias (30 leds) Nº 106, Nº 107, Nº 108, Nº 109 e Nº 110"},
+ {s:'iluminacao',a:"12",d:"Escada lado B - 02 luminárias (30 leds) Nº 104 e Nº 105"},
+ {s:'iluminacao',a:"12",d:"Escada lado A - 02 luminárias (30 leds) Nº 102 e Nº 103"},
+ {s:'iluminacao',a:"12",d:"Área comum - 05 luminárias (30 leds) Nº 97, Nº 98, Nº 99, Nº 100 e Nº 101"},
+ {s:'iluminacao',a:"13",d:"Escada lado B - 02 luminárias (30 leds) Nº 95 e Nº 96"},
+ {s:'iluminacao',a:"13",d:"Escada lado A - 02 luminárias (30 leds) Nº 93 e Nº 94"},
+ {s:'iluminacao',a:"13",d:"Área comum - 05 luminárias (30 leds) Nº 88, Nº 89, Nº 90, Nº 91 e Nº 92"},
+ {s:'iluminacao',a:"14",d:"Escada lado B - 02 luminárias (30 leds) Nº 86 e Nº 87"},
+ {s:'iluminacao',a:"14",d:"Escada lado A - 02 luminárias (30 leds) Nº 84 e Nº 85"},
+ {s:'iluminacao',a:"14",d:"Área comum - 04 luminárias (30 leds) Nº 79, Nº 80, Nº 81, Nº 82 e Nº 83"},
+ {s:'iluminacao',a:"SS4",d:"Área comum - 13 luminárias (30 leds) Nº 272 à Nº 284"},
+ {s:'iluminacao',a:"SS4",d:"Escada lado B - 02 luminárias (30 leds) Nº 270 e Nº 271"},
+ {s:'iluminacao',a:"SS4",d:"Escada lado A - 01 luminárias (30 leds) Nº 269"},
+ {s:'iluminacao',a:"SS3",d:"Área comum - 14 luminárias (30 leds) Nº 255 à Nº 268"},
+ {s:'iluminacao',a:"SS3",d:"Escada lado B - 02 luminárias (30 leds) Nº 253 e Nº 254"},
+ {s:'iluminacao',a:"SS3",d:"Escada lado A - 01 luminárias (30 leds) Nº 252"},
+ {s:'iluminacao',a:"SS2",d:"Área comum - 12 luminárias (30 leds) Nº 240 à Nº 251"},
+ {s:'iluminacao',a:"SS2",d:"Escada lado B - 02 luminárias (30 leds) Nº 238 e Nº 239"},
+ {s:'iluminacao',a:"SS2",d:"Escada lado A - 01 luminárias (30 leds) Nº 237"},
+ {s:'iluminacao',a:"SS1",d:"Área comum - 14 luminárias (30 leds) Nº 223 à Nº 236"},
+ {s:'iluminacao',a:"SS1",d:"Escada lado B - 02 luminárias (30 leds) Nº 221 e Nº 222"},
+ {s:'iluminacao',a:"SS1",d:"Escada lado A - 01 luminárias (30 leds) Nº 220"},
+ {s:'iluminacao',a:"TER",d:"Escada lado B -02 luminárias (30 leds) Nº 218 e Nº 219"},
+ {s:'iluminacao',a:"TER",d:"Escada lado A -01 luminárias (30 leds) Nº 217"},
+ {s:'iluminacao',a:"TER",d:"Área comum - 03 luminárias (30 leds) Nº 214, Nº 215 e Nº 216"}
+];
+function brigSis(id){ return BRIG_SISTEMAS.find(s=>s.id===id)||{nome:id,itens:[]} }
+function brigAndarNome(id){ const a=BRIG_ANDARES.find(x=>x.id===id); return a?a.nome:id }
+/* pontos de um andar, opcionalmente de um sistema */
+function brigPontos(andar,sis){
+  return BRIG_INV.filter(p=>p.a===andar&&(!sis||p.s===sis));
+}
+/* andares que têm ao menos um ponto do sistema */
+function brigAndaresDo(sis){
+  return BRIG_ANDARES.filter(a=>BRIG_INV.some(p=>p.a===a.id&&(!sis||p.s===sis)));
+}
+
+/* ---- estado ---- */
+let brigInsp=[];   // inspeções (check-list por andar)
+let brigRondas=[]; // ronda diária
+let brigAtual=null, brigFotoAlvo=null;
+
+const BRIG_SIT=['CONFORME','NÃO CONFORME','NÃO APLICÁVEL'];
+
+/* Uma inspeção cobre UM andar e UM sistema, com a situação de cada ponto.
+   {id,condoId,andar,sistema,data,hora,responsavel,userId,status,
+    pontos:[{idx,desc,sit,itens{},obs,fotos:[],qtd}],obs,historico[]} */
+function brigNova(andar,sistema){
+  const pts=brigPontos(andar,sistema).map((p,i)=>({
+    idx:i,desc:p.d,sit:'CONFORME',itens:{},obs:'',fotos:[],qtd:0}));
+  return {id:uid('bi'),condoId:'c1',andar,sistema,data:today(),hora:nowHora(),
+    responsavel:session?session.nome:'',userId:session?session.id:'',
+    status:'Em andamento',pontos:pts,obs:'',
+    historico:[{q:session?session.nome:'Sistema',w:nowStamp(),t:'Check-list iniciado'}]};
+}
+function nowHora(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0') }
+
+/* não conformidades de uma inspeção */
+function brigNC(insp){ return (insp.pontos||[]).filter(p=>p.sit==='NÃO CONFORME') }
+/* quantas peças não conformes — a planilha agrupa (ex.: "05 luminárias") */
+function brigQtdNC(insp){
+  return brigNC(insp).reduce((s,p)=>s+(p.qtd>0?p.qtd:brigQtdDesc(p.desc)),0);
+}
+/* lê a quantidade declarada na descrição: "05 luminárias", "2 extintores" */
+function brigQtdDesc(d){
+  const m=String(d).match(/(\d+)\s*(luminária|luminarias|luminárias|extintor|ext\.|hidrante|porta)/i);
+  return m?parseInt(m[1],10):1;
+}
+function brigInspDo(cid,andar,sistema,mesRef){
+  return brigInsp.filter(i=>i.condoId===cid&&(!andar||i.andar===andar)&&
+    (!sistema||i.sistema===sistema)&&(!mesRef||String(i.data).slice(0,7)===mesRef));
+}
+function brigMesAtual(){ return today().slice(0,7) }
+/* progresso do mês: quantos pares andar+sistema já foram inspecionados */
+function brigProgresso(cid,mesRef){
+  let total=0,feitos=0;
+  BRIG_SISTEMAS.forEach(s=>brigAndaresDo(s.id).forEach(a=>{
+    total++;
+    if(brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&i.sistema===s.id&&
+       String(i.data).slice(0,7)===mesRef&&i.status==='Concluído')) feitos++;
+  }));
+  return {total,feitos,pct:total?Math.round(feitos*100/total):0};
+}
+/* todas as NCs abertas do condomínio, agrupadas por sistema */
+function brigNCAbertas(cid,mesRef){
+  const out=[];
+  brigInsp.filter(i=>i.condoId===cid&&i.status==='Concluído'&&(!mesRef||String(i.data).slice(0,7)===mesRef))
+   .forEach(i=>brigNC(i).forEach(p=>out.push({insp:i,ponto:p,
+      qtd:p.qtd>0?p.qtd:brigQtdDesc(p.desc)})));
+  return out;
+}
+/* resumo por sistema: peças não conformes somadas */
+function brigResumoNC(cid,mesRef){
+  const m={};
+  brigNCAbertas(cid,mesRef).forEach(x=>{
+    const s=x.insp.sistema;
+    if(!m[s]) m[s]={sistema:s,nome:brigSis(s).nome,qtd:0,pontos:0,andares:{}};
+    m[s].qtd+=x.qtd; m[s].pontos++; m[s].andares[x.insp.andar]=true;
+  });
+  return Object.values(m).map(v=>({...v,andares:Object.keys(v.andares)}))
+    .sort((a,b)=>b.qtd-a.qtd);
+}
+
+/* ---- ALERTA AUTOMÁTICO ----
+   Ao concluir um check-list com não conformidade, o sistema abre sozinho
+   uma tarefa para o Gestor, já com o resumo do que precisa ser trocado. */
+function brigGerarAlerta(insp){
+  const ncs=brigNC(insp); if(!ncs.length) return null;
+  const qtd=brigQtdNC(insp);
+  const sis=brigSis(insp.sistema).nome;
+  const andar=brigAndarNome(insp.andar);
+  const linhas=ncs.map(p=>{
+    const q=p.qtd>0?p.qtd:brigQtdDesc(p.desc);
+    const falhas=Object.keys(p.itens||{}).filter(k=>p.itens[k]===false);
+    return '• '+p.desc+(q>1?'  ('+q+' peças)':'')+
+      (falhas.length?'\n     Falhou em: '+falhas.join('; '):'')+
+      (p.obs?'\n     Obs.: '+p.obs:'');
+  }).join('\n');
+  const t=mkTask({
+    titulo:qtd+' '+(qtd>1?'itens':'item')+' não conforme — '+sis+' · '+andar,
+    condoId:insp.condoId,tipo:'Gestor',periodicidade:'Sob Demanda',repetitiva:false,
+    tipoTarefa:'Avulsa do dia',prioridade:brigPrioridade(insp.sistema,qtd),
+    vencimento:brigPrazo(insp.sistema),responsavel:'Maciel',
+    origem:'brigada',brigInspId:insp.id,criadoPor:insp.responsavel||'Brigada',
+    procedimento:'Apontado no check-list da brigada em '+fmt(insp.data)+' às '+(insp.hora||'—')+
+      ' por '+(insp.responsavel||'—')+'.\n\nNÃO CONFORMIDADES:\n'+linhas+
+      '\n\nProvidência: avaliar reparo ou substituição das peças.'});
+  t.historico=[{q:insp.responsavel||'Brigada',w:nowStamp(),t:'Aberta automaticamente pelo check-list da brigada'}];
+  tasks.push(t);
+  audit('Alerta automático da brigada',sis+' · '+andar,qtd+' item(ns) não conforme(s)',insp.condoId,'Check-list');
+  return t;
+}
+/* Sistema crítico com muita peça parada sobe a prioridade. */
+function brigPrioridade(sis,qtd){
+  const crit=['extintores','hidrantes','acionadores'].includes(sis);
+  if(crit||qtd>=5) return 'Alta';
+  if(qtd>=3) return 'Média';
+  return 'Média';
+}
+function brigPrazo(sis){
+  const dias=['extintores','hidrantes','acionadores'].includes(sis)?7:15;
+  const d=new Date(today()+'T12:00:00'); d.setDate(d.getDate()+dias);
+  return iso(d);
+}
+
+/* ---- ANÁLISE INTELIGENTE ----
+   Lê o histórico e devolve conclusões prontas, em texto, para apoiar a decisão.
+   Roda offline: é o próprio app cruzando os dados. */
+function brigAnalise(cid){
+  const mes=brigMesAtual(), av=[];
+  const prog=brigProgresso(cid,mes);
+  const resumo=brigResumoNC(cid,mes);
+  const totalNC=resumo.reduce((s,r)=>s+r.qtd,0);
+
+  /* 1. cobertura do mês */
+  if(prog.pct<100){
+    const falta=prog.total-prog.feitos;
+    av.push({t:prog.pct<50?'red':'amber',ic:'clipboardCheck',
+      tit:'Cobertura do mês em '+prog.pct+'%',
+      txt:falta+' check-list(s) ainda não foram feitos neste mês. '+
+        (prog.pct<50?'O ritmo está abaixo do necessário para fechar o mês.':'Falta pouco para concluir.')});
+  } else {
+    av.push({t:'green',ic:'checkCircle',tit:'Cobertura do mês completa',
+      txt:'Todos os '+prog.total+' check-lists do mês foram concluídos.'});
+  }
+
+  /* 2. concentração por sistema */
+  if(resumo.length){
+    const pior=resumo[0];
+    av.push({t:'red',ic:'alert',
+      tit:pior.qtd+' peça(s) não conforme(s) em '+pior.nome,
+      txt:'É o sistema com mais falhas no mês, em '+pior.andares.length+
+        ' andar(es): '+pior.andares.map(brigAndarNome).join(', ')+
+        '. Vale cotar a troca em lote — costuma sair mais barato que chamado avulso.'});
+  }
+
+  /* 3. reincidência: mesmo ponto falhando em meses seguidos */
+  const reinc=brigReincidentes(cid);
+  if(reinc.length){
+    av.push({t:'amber',ic:'repeat',tit:reinc.length+' ponto(s) com falha repetida',
+      txt:'Reprovaram em mais de um mês: '+reinc.slice(0,3).map(r=>
+        brigAndarNome(r.andar)+' — '+r.desc.slice(0,42)).join(' · ')+
+        (reinc.length>3?' e mais '+(reinc.length-3)+'.':'')+
+        ' Reparo paliativo não resolveu; considere substituir.'});
+  }
+
+  /* 4. andar mais problemático */
+  const porAndar={};
+  brigNCAbertas(cid,mes).forEach(x=>{porAndar[x.insp.andar]=(porAndar[x.insp.andar]||0)+x.qtd});
+  const ands=Object.entries(porAndar).sort((a,b)=>b[1]-a[1]);
+  if(ands.length>1&&ands[0][1]>=3){
+    av.push({t:'amber',ic:'building',tit:'Concentração no '+brigAndarNome(ands[0][0]),
+      txt:ands[0][1]+' peça(s) não conforme(s) só nesse andar. '+
+        'Uma visita única resolve tudo de uma vez e economiza deslocamento.'});
+  }
+
+  /* 5. leitura geral */
+  if(!totalNC&&prog.feitos){
+    av.push({t:'green',ic:'shieldCheck',tit:'Nenhuma não conformidade aberta',
+      txt:'Os check-lists concluídos no mês não apontaram falhas. Sistema de combate a incêndio regular.'});
+  }
+  if(totalNC>=10){
+    av.push({t:'red',ic:'alertCircle',tit:'Volume alto: '+totalNC+' peças a regularizar',
+      txt:'Acima de 10 peças já justifica uma ordem de serviço única com o prestador, '+
+        'em vez de chamados separados. Priorize extintores, hidrantes e acionadores.'});
+  }
+  return {avisos:av,prog,resumo,totalNC};
+}
+/* pontos que falharam em mais de um mês distinto */
+function brigReincidentes(cid){
+  const m={};
+  brigInsp.filter(i=>i.condoId===cid&&i.status==='Concluído').forEach(i=>{
+    brigNC(i).forEach(p=>{
+      const k=i.andar+'|'+i.sistema+'|'+p.desc;
+      if(!m[k]) m[k]={andar:i.andar,sistema:i.sistema,desc:p.desc,meses:{}};
+      m[k].meses[String(i.data).slice(0,7)]=true;
+    });
+  });
+  return Object.values(m).filter(x=>Object.keys(x.meses).length>1)
+    .map(x=>({...x,vezes:Object.keys(x.meses).length}))
+    .sort((a,b)=>b.vezes-a.vezes);
+}
+
+/* ============ TELA — BRIGADA ============ */
+let brigSisSel='extintores', brigMesSel='';
+function viewBrigada(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const mes=brigMesSel||brigMesAtual();
+  const prog=brigProgresso(cid,mes);
+  const an=brigAnalise(cid);
+  const sis=brigSisSel;
+  const andares=brigAndaresDo(sis);
+
+  const cards=`<div class="grid metrics" style="margin-bottom:14px">
+    <div class="card metric"><div class="lbl">${ic('clipboardCheck')}Check-lists do mês</div><div class="val">${prog.feitos}/${prog.total}</div><div class="sub">${prog.pct}% concluído</div></div>
+    <div class="card metric ${an.totalNC?'red':'green'}"><div class="lbl">${ic('alert')}Peças não conformes</div><div class="val">${an.totalNC}</div><div class="sub">aguardando providência</div></div>
+    <div class="card metric"><div class="lbl">${ic('flame')}Pontos inspecionados</div><div class="val">${BRIG_INV.length}</div><div class="sub">do 24º ao 4º subsolo</div></div>
+    <div class="card metric"><div class="lbl">${ic('shieldCheck')}Sistemas</div><div class="val">${BRIG_SISTEMAS.length}</div><div class="sub">combate a incêndio</div></div>
+  </div>`;
+
+  /* painel da análise automática */
+  const ia=`<div class="card" style="margin-bottom:14px">
+    <div class="ap-faixa">${ic('sparkles')} ANÁLISE AUTOMÁTICA — ${mesExtenso(mes)}</div>
+    <div style="padding:12px">
+      ${an.avisos.map(a=>`<div class="bg-av bg-${a.t}">
+        <div class="bg-ic">${ic(a.ic)}</div>
+        <div><div class="bg-tit">${esc(a.tit)}</div><div class="bg-txt">${esc(a.txt)}</div></div>
+      </div>`).join('')||'<div class="muted">Sem dados suficientes ainda.</div>'}
+    </div></div>`;
+
+  /* resumo do que está não conforme, separado por sistema */
+  const resumo=an.resumo.length?`<div class="card" style="margin-bottom:14px">
+    <div class="ap-faixa">${ic('alert')} NÃO CONFORMIDADES POR SISTEMA</div>
+    <div class="tablewrap"><table class="ap-tb"><thead><tr>
+      <th>SISTEMA</th><th>PEÇAS</th><th>PONTOS</th><th>ANDARES</th><th>AÇÕES</th></tr></thead><tbody>
+      ${an.resumo.map(r=>`<tr>
+        <td><b>${esc(r.nome)}</b></td>
+        <td><span class="badge red">${r.qtd}</span></td>
+        <td>${r.pontos}</td>
+        <td class="muted">${r.andares.map(brigAndarNome).join(', ')}</td>
+        <td><button class="btn sm" onclick="brigPdfNC('${cid}','${mes}')">Relatório de pendências</button></td>
+      </tr>`).join('')}
+    </tbody></table></div></div>`:'';
+
+  /* abas de sistema */
+  const abas=BRIG_SISTEMAS.map(s=>{
+    const p=brigProgSis(cid,s.id,mes);
+    return `<button class="bg-aba ${s.id===sis?'on':''}" onclick="brigSisSel='${s.id}';render()">
+      ${ic(s.icone)}<span>${s.nome}</span><em>${p.feitos}/${p.total}</em></button>`;
+  }).join('');
+
+  /* grade de andares */
+  const grade=andares.map(a=>{
+    const i=brigInsp.filter(x=>x.condoId===cid&&x.andar===a.id&&x.sistema===sis&&
+      String(x.data).slice(0,7)===mes).sort((x,y)=>y.data.localeCompare(x.data))[0];
+    const n=brigPontos(a.id,sis).length;
+    let cls='pend',txt='Não feito',det=n+' ponto(s)';
+    if(i&&i.status==='Concluído'){
+      const nc=brigNC(i).length;
+      cls=nc?'nc':'ok'; txt=nc?nc+' não conforme':'Conforme';
+      det=fmt(i.data)+' · '+(i.responsavel||'—');
+    } else if(i){ cls='and'; txt='Em andamento'; det=fmt(i.data); }
+    return `<button class="bg-and ${cls}" onclick="brigAbrir('${cid}','${a.id}','${sis}')">
+      <div class="bg-a">${esc(a.nome)}</div>
+      <div class="bg-s">${txt}</div>
+      <div class="bg-d">${esc(det)}</div></button>`;
+  }).join('');
+
+  $('#content').innerHTML=cards+ia+resumo+
+   `<div class="card" style="margin-bottom:14px">
+      <div class="ap-faixa">${ic('clipboardCheck')} CHECK-LIST POR ANDAR</div>
+      <div style="padding:12px">
+        <div class="bg-abas">${abas}</div>
+        <div class="muted" style="margin:10px 0 4px">
+          ${esc(brigSis(sis).nome)} · inspeção ${brigSis(sis).periodicidade.toLowerCase()} ·
+          toque no andar para preencher</div>
+        <div class="bg-grade">${grade}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ap-faixa">${ic('doc')} RELATÓRIOS</div>
+      <div style="padding:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="brigPdfGeral('${cid}','${mes}')">${ic('doc')} Geral do mês</button>
+        <button class="btn" onclick="brigPdfSistema('${cid}','${sis}','${mes}')">${ic('doc')} Só ${esc(brigSis(sis).nome)}</button>
+        <button class="btn danger" onclick="brigPdfNC('${cid}','${mes}')">${ic('alert')} Só não conformidades</button>
+        <button class="btn" onclick="brigEscolherAndar('${cid}','${sis}','${mes}')">${ic('building')} De um andar</button>
+      </div>
+    </div>`;
+}
+function brigProgSis(cid,sis,mes){
+  const as=brigAndaresDo(sis);
+  const feitos=as.filter(a=>brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&i.sistema===sis&&
+    String(i.data).slice(0,7)===mes&&i.status==='Concluído')).length;
+  return {total:as.length,feitos};
+}
+function mesExtenso(m){
+  const M=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const [a,mm]=String(m).split('-'); return M[parseInt(mm,10)-1]+'/'+a;
+}
+
+/* ---- preenchimento do check-list ---- */
+function brigAbrir(cid,andar,sis){
+  let i=brigInsp.filter(x=>x.condoId===cid&&x.andar===andar&&x.sistema===sis&&
+    String(x.data).slice(0,7)===brigMesAtual()).sort((a,b)=>b.data.localeCompare(a.data))[0];
+  if(!i){ i=brigNova(andar,sis); i.condoId=cid; brigInsp.push(i); save(); }
+  brigAtual=i.id; page='brigada-form'; buildNav(); render();
+}
+function brigVoltar(){ brigAtual=null; page='brigada'; buildNav(); render(); }
+
+function viewBrigForm(){
+  const i=brigInsp.find(x=>x.id===brigAtual);
+  if(!i){ return brigVoltar() }
+  const s=brigSis(i.sistema);
+  const fechado=i.status==='Concluído';
+  const nc=brigNC(i).length;
+
+  const pontos=i.pontos.map((p,k)=>{
+    const cor=p.sit==='NÃO CONFORME'?'nc':(p.sit==='NÃO APLICÁVEL'?'na':'ok');
+    const q=p.qtd>0?p.qtd:brigQtdDesc(p.desc);
+    return `<div class="bg-pt ${cor}" id="bgpt_${k}">
+      <div class="bg-pth">
+        <div class="bg-ptd"><b>${esc(p.desc)}</b>${q>1?`<span class="badge" style="margin-left:6px">${q} peças</span>`:''}</div>
+        <div class="bg-bt">
+          ${BRIG_SIT.map(sit=>`<button class="bg-sit ${p.sit===sit?'on '+(sit==='NÃO CONFORME'?'bad':(sit==='CONFORME'?'good':'na')):''}"
+            ${fechado?'disabled':''} onclick="brigSit('${i.id}',${k},'${sit}')">${sit==='NÃO CONFORME'?'NÃO CONF.':sit}</button>`).join('')}
+        </div>
+      </div>
+      ${p.sit==='NÃO CONFORME'?`<div class="bg-det">
+        <div class="bg-itens">${s.itens.map(it=>`<label class="bg-chk">
+          <input type="checkbox" ${p.itens&&p.itens[it]===false?'checked':''} ${fechado?'disabled':''}
+            onchange="brigItem('${i.id}',${k},'${esc(it).replace(/'/g,"\\'")}',this.checked)">
+          <span>${esc(it)}</span></label>`).join('')}</div>
+        <div class="f2" style="margin-top:8px">
+          <div><label>Quantas peças com problema</label>
+            <input type="number" min="1" value="${q}" ${fechado?'disabled':''}
+              onchange="brigQtd('${i.id}',${k},this.value)"></div>
+          <div><label>Observação</label>
+            <input value="${esc(p.obs||'')}" ${fechado?'disabled':''} placeholder="o que foi encontrado"
+              onchange="brigObs('${i.id}',${k},this.value)"></div>
+        </div>
+        <div style="margin-top:8px">
+          ${fechado?'':`<button class="btn sm" onclick="brigFoto('${i.id}',${k})">${ic('camera')} Anexar foto</button>`}
+          <div class="bg-fotos">${(p.fotos||[]).map((f,fi)=>`<div class="fwrap">
+            <img src="${f}" class="fthumb" onclick="brigVerFoto('${i.id}',${k},${fi})" alt="foto">
+            ${fechado?'':`<button class="fdel" onclick="brigDelFoto('${i.id}',${k},${fi})">${ic('close')}</button>`}
+          </div>`).join('')}</div>
+        </div>
+      </div>`:''}
+    </div>`;
+  }).join('');
+
+  $('#content').innerHTML=brigBarraSessao()+`
+    <div class="card" style="margin-bottom:12px">
+      <div class="ap-faixa">${ic(s.icone)} ${esc(s.nome).toUpperCase()} — ${esc(brigAndarNome(i.andar)).toUpperCase()}</div>
+      <div class="ap-grid" style="padding:12px">
+        <div class="rot">Responsável</div><div class="val">${esc(i.responsavel||'—')}</div>
+        <div class="rot">Data</div><div class="val">${fmt(i.data)} às ${esc(i.hora||'—')}</div>
+        <div class="rot">Pontos</div><div class="val">${i.pontos.length} neste andar</div>
+        <div class="rot">Situação</div><div class="val">${fechado
+          ? (nc?`<span class="badge red">Concluído · ${nc} não conforme</span>`:'<span class="badge green">Concluído · tudo conforme</span>')
+          : '<span class="badge amber">Em andamento</span>'}</div>
+      </div>
+      <div style="padding:0 12px 12px" class="muted">
+        Verificar em cada ponto: ${s.itens.join(' · ')}.
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px"><div style="padding:12px">${pontos}</div></div>
+    <div class="card"><div style="padding:12px">
+      <div><label style="display:block;margin-bottom:5px">Observações gerais do andar</label>
+      <textarea rows="2" style="width:100%" ${fechado?'disabled':''} onchange="brigObsGeral('${i.id}',this.value)"
+        placeholder="algo que valha registrar">${esc(i.obs||'')}</textarea></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn" onclick="brigVoltar()">${ic('arrowLeft')} Voltar</button>
+        ${fechado?`<button class="btn" onclick="brigPdfInsp('${i.id}')">${ic('doc')} PDF deste check-list</button>
+          <button class="btn danger" onclick="brigReabrir('${i.id}')">Reabrir</button>`
+        :`<button class="btn primary" onclick="brigConcluir('${i.id}')">${ic('checkCircle')} Concluir check-list</button>`}
+      </div>
+      ${histHtml(i.historico)}
+    </div></div>`;
+  $('#pageTitle').textContent='Brigada — '+s.nome+' · '+brigAndarNome(i.andar);
+}
+function _bi(id){ return brigInsp.find(x=>x.id===id) }
+function brigSit(id,k,sit){
+  const i=_bi(id); if(!i||i.status==='Concluído')return;
+  i.pontos[k].sit=sit;
+  if(sit!=='NÃO CONFORME'){ i.pontos[k].itens={}; i.pontos[k].qtd=0 }
+  save(); render();
+}
+function brigItem(id,k,it,falhou){
+  const i=_bi(id); if(!i)return;
+  i.pontos[k].itens=i.pontos[k].itens||{};
+  if(falhou) i.pontos[k].itens[it]=false; else delete i.pontos[k].itens[it];
+  save();
+}
+function brigQtd(id,k,v){ const i=_bi(id); if(i){ i.pontos[k].qtd=Math.max(1,parseInt(v,10)||1); save(); render() } }
+function brigObs(id,k,v){ const i=_bi(id); if(i){ i.pontos[k].obs=v; save() } }
+function brigObsGeral(id,v){ const i=_bi(id); if(i){ i.obs=v; save() } }
+function brigConcluir(id){
+  const i=_bi(id); if(!i)return;
+  const nc=brigNC(i);
+  const semFoto=nc.filter(p=>!(p.fotos||[]).length).length;
+  let msg='Concluir o check-list de '+brigSis(i.sistema).nome+' — '+brigAndarNome(i.andar)+'?';
+  if(nc.length) msg+='\n\n'+nc.length+' ponto(s) não conforme(s) — será aberto um aviso automático para o Gestor.';
+  if(semFoto) msg+='\n('+semFoto+' sem foto anexada — a foto é opcional.)';
+  if(!confirm(msg)) return;
+  i.status='Concluído'; i.data=i.data||today(); i.concluidoEm=nowStamp();
+  i.historico.push({q:session.nome,w:nowStamp(),t:'Check-list concluído — '+nc.length+' não conformidade(s)'});
+  const t=brigGerarAlerta(i);
+  save();
+  toast(nc.length?('Aviso criado: '+t.titulo):'Check-list concluído — tudo conforme.');
+  if(brigSessao) return brigProximo();
+  brigVoltar();
+}
+function brigReabrir(id){
+  const i=_bi(id); if(!i)return;
+  if(!confirm('Reabrir este check-list para correção?')) return;
+  i.status='Em andamento';
+  i.historico.push({q:session.nome,w:nowStamp(),t:'Check-list reaberto'});
+  save(); render();
+}
+/* fotos por ponto */
+function brigFoto(id,k){
+  brigFotoAlvo={id,k};
+  let inp=document.querySelector('#bgFile');
+  if(!inp){ inp=document.createElement('input'); inp.type='file'; inp.id='bgFile';
+    inp.accept='image/*'; inp.capture='environment'; inp.style.display='none';
+    inp.onchange=brigFotoSel; document.body.appendChild(inp); }
+  inp.value=''; inp.click();
+}
+async function brigFotoSel(e){
+  const f=(e.target.files||[])[0]; if(!f||!brigFotoAlvo)return;
+  const i=_bi(brigFotoAlvo.id); if(!i)return;
+  const p=i.pontos[brigFotoAlvo.k];
+  if((p.fotos||[]).length>=3) return toast('Máximo de 3 fotos por ponto.');
+  toast('Processando imagem...');
+  try{ p.fotos=p.fotos||[]; p.fotos.push(await comprimirImagem(f)); save(); render(); toast('Foto anexada.') }
+  catch(err){ toast('Não foi possível ler a imagem.') }
+}
+function brigDelFoto(id,k,fi){
+  const i=_bi(id); if(!i)return;
+  i.pontos[k].fotos.splice(fi,1); save(); render();
+}
+function brigVerFoto(id,k,fi){
+  const i=_bi(id); if(!i)return;
+  openModal('Foto — '+i.pontos[k].desc,
+    `<img src="${i.pontos[k].fotos[fi]}" style="width:100%;border-radius:8px">`,'');
+}
+
+/* ============ RELATÓRIOS EM PDF — BRIGADA ============ */
+const BRIG_CSS=`
+*{box-sizing:border-box} body{font:12px/1.45 Arial,Helvetica,sans-serif;color:#15202e;background:#f0f2f6;margin:0}
+.folha{background:#fff;max-width:860px;margin:14px auto;padding:20px 24px;border:1px solid #c9d0dc}
+.cab{display:flex;align-items:center;gap:14px;border-bottom:3px solid #1f3864;padding-bottom:10px;margin-bottom:12px}
+.cab img{height:34px} .cab .t{flex:1}
+.cab h1{margin:0;font-size:17px;color:#1f3864;letter-spacing:.3px}
+.cab .sub{font-size:11px;color:#5c6879;margin-top:2px}
+.faixa{background:#1f3864;color:#fff;font-weight:700;font-size:11px;letter-spacing:.5px;
+  padding:6px 10px;text-transform:uppercase;margin:14px 0 0}
+.id{display:grid;grid-template-columns:150px 1fr 150px 1fr;border:1px solid #9aa4b5;border-top:0}
+.id .r{background:#d9d9d9;font-weight:700;font-size:10px;color:#1f3864;text-transform:uppercase;
+  padding:6px 9px;border-right:1px solid #9aa4b5;border-bottom:1px solid #9aa4b5}
+.id .v{padding:6px 9px;border-right:1px solid #9aa4b5;border-bottom:1px solid #9aa4b5}
+table{width:100%;border-collapse:collapse;margin-top:0}
+th{background:#203864;color:#fff;font-size:10px;text-transform:uppercase;padding:6px 8px;text-align:left;letter-spacing:.3px}
+td{border:1px solid #c9d0dc;padding:5px 8px;font-size:11px;vertical-align:top}
+tr.nc td{background:#fdecee} tr.na td{color:#7a8596}
+.st{font-weight:700;font-size:10px;text-align:center;white-space:nowrap}
+.st.ok{color:#1d7a4c} .st.bad{color:#c2384a} .st.na{color:#7a8596}
+.fal{font-size:10px;color:#c2384a;margin-top:2px}
+.obs{font-size:10px;color:#5c6879;font-style:italic;margin-top:2px}
+.fts{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
+.fts img{width:92px;height:70px;object-fit:cover;border:1px solid #9aa4b5;border-radius:3px}
+.tot{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.tot div{border:1px solid #c9d0dc;padding:7px 9px}
+.tot .k{font-size:9px;color:#5c6879;text-transform:uppercase;letter-spacing:.3px}
+.tot .v{font-size:17px;font-weight:700;color:#1f3864;margin-top:2px}
+.tot .v.bad{color:#c2384a}
+.ass{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:26px}
+.ass div{border-top:1px solid #15202e;padding-top:5px;font-size:10px;text-align:center;color:#5c6879}
+.rod{margin-top:16px;border-top:1px solid #c9d0dc;padding-top:7px;font-size:9px;color:#7a8596}
+h2.sec{font-size:12px;color:#1f3864;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.3px}
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
+@media print{body{background:#fff}.folha{margin:0;max-width:none;border:0;padding:0}
+ @page{size:A4;margin:9mm}
+ tr{page-break-inside:avoid} .bloco{page-break-inside:avoid}
+ thead{display:table-header-group}}
+`;
+function brigCab(tit,sub){
+  return `<div class="cab">${typeof LOGO_EBIZ!=='undefined'&&LOGO_EBIZ?`<img src="${LOGO_EBIZ}">`:''}
+    <div class="t"><h1>${esc(tit)}</h1><div class="sub">${esc(sub)}</div></div>
+    ${typeof LOGO_ABL!=='undefined'&&LOGO_ABL?`<img src="${LOGO_ABL}">`:''}</div>`;
+}
+function brigAbrirPdf(titulo,corpo){
+  const w=window.open('','_blank');
+  if(!w) return toast('Permita a abertura de janelas para gerar o PDF.');
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+    <title>${esc(titulo)}</title><style>${BRIG_CSS}</style></head>
+    <body><div class="folha">${corpo}</div>
+    <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>`);
+  w.document.close();
+}
+/* tabela de pontos de uma inspeção */
+function brigTabela(i,soNC){
+  const s=brigSis(i.sistema);
+  const pts=soNC?brigNC(i):i.pontos;
+  if(!pts.length) return '';
+  return `<table><thead><tr><th style="width:52%">PONTO INSPECIONADO</th>
+    <th style="width:14%">SITUAÇÃO</th><th style="width:34%">CONSTATAÇÃO / FOTO</th></tr></thead><tbody>
+    ${pts.map(p=>{
+      const falhas=Object.keys(p.itens||{}).filter(k=>p.itens[k]===false);
+      const cls=p.sit==='NÃO CONFORME'?'nc':(p.sit==='NÃO APLICÁVEL'?'na':'');
+      const stc=p.sit==='NÃO CONFORME'?'bad':(p.sit==='NÃO APLICÁVEL'?'na':'ok');
+      const q=p.qtd>0?p.qtd:brigQtdDesc(p.desc);
+      return `<tr class="${cls}">
+        <td>${esc(p.desc)}${q>1&&p.sit==='NÃO CONFORME'?` <b>(${q} peças)</b>`:''}</td>
+        <td class="st ${stc}">${p.sit==='NÃO CONFORME'?'NÃO CONFORME':p.sit}</td>
+        <td>${falhas.length?`<div class="fal">Falhou: ${esc(falhas.join('; '))}</div>`:''}
+            ${p.obs?`<div class="obs">${esc(p.obs)}</div>`:''}
+            ${(p.fotos||[]).length?`<div class="fts">${p.fotos.map(f=>`<img src="${f}">`).join('')}</div>`:''}
+            ${!falhas.length&&!p.obs&&!(p.fotos||[]).length?'—':''}</td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+function brigBlocoInsp(i,soNC){
+  const s=brigSis(i.sistema);
+  const nc=brigNC(i).length;
+  return `<div class="bloco">
+    <div class="faixa">${esc(s.nome)} — ${esc(brigAndarNome(i.andar))}</div>
+    <div class="id">
+      <div class="r">Responsável</div><div class="v">${esc(i.responsavel||'—')}</div>
+      <div class="r">Data / hora</div><div class="v">${fmt(i.data)} ${esc(i.hora||'')}</div>
+      <div class="r">Pontos</div><div class="v">${i.pontos.length}</div>
+      <div class="r">Não conformes</div><div class="v">${nc?'<b style="color:#c2384a">'+nc+'</b>':'nenhum'}</div>
+    </div>
+    ${brigTabela(i,soNC)}
+    ${i.obs?`<div class="obs" style="margin-top:5px"><b>Observações:</b> ${esc(i.obs)}</div>`:''}
+  </div>`;
+}
+/* 1 — um check-list */
+function brigPdfInsp(id){
+  const i=_bi(id); if(!i) return toast('Check-list não encontrado.');
+  brigAbrirPdf('Check-list '+brigSis(i.sistema).nome,
+    brigCab('Relatório de Inspeção — '+brigSis(i.sistema).nome,
+      condoName(i.condoId)+' · '+brigAndarNome(i.andar)+' · '+fmt(i.data))+
+    brigBlocoInsp(i,false)+brigAss(i.responsavel));
+  audit('Gerou PDF de check-list da brigada',brigSis(i.sistema).nome+' · '+brigAndarNome(i.andar),'',i.condoId);
+}
+/* 2 — por andar (todos os sistemas) */
+function brigPdfAndar(cid,andar,mes){
+  const is=brigInsp.filter(x=>x.condoId===cid&&x.andar===andar&&String(x.data).slice(0,7)===mes)
+    .sort((a,b)=>a.sistema.localeCompare(b.sistema));
+  if(!is.length) return toast('Nenhum check-list deste andar no mês.');
+  brigAbrirPdf('Brigada — '+brigAndarNome(andar),
+    brigCab('Relatório da Brigada — '+brigAndarNome(andar),
+      condoName(cid)+' · '+mesExtenso(mes)+' · '+is.length+' check-list(s)')+
+    brigResumoBox(is)+is.map(i=>brigBlocoInsp(i,false)).join('')+brigAss());
+  audit('Gerou PDF da brigada por andar',brigAndarNome(andar),'',cid);
+}
+/* 3 — por sistema */
+function brigPdfSistema(cid,sis,mes){
+  const is=brigInsp.filter(x=>x.condoId===cid&&x.sistema===sis&&String(x.data).slice(0,7)===mes)
+    .sort((a,b)=>brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
+  if(!is.length) return toast('Nenhum check-list de '+brigSis(sis).nome+' no mês.');
+  brigAbrirPdf('Brigada — '+brigSis(sis).nome,
+    brigCab('Relatório de Inspeção — '+brigSis(sis).nome,
+      condoName(cid)+' · '+mesExtenso(mes)+' · '+is.length+' andar(es)')+
+    brigResumoBox(is)+is.map(i=>brigBlocoInsp(i,false)).join('')+brigAss());
+  audit('Gerou PDF da brigada por sistema',brigSis(sis).nome,'',cid);
+}
+/* 4 — geral do mês */
+function brigPdfGeral(cid,mes){
+  const is=brigInsp.filter(x=>x.condoId===cid&&String(x.data).slice(0,7)===mes)
+    .sort((a,b)=>a.sistema.localeCompare(b.sistema)||brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
+  if(!is.length) return toast('Nenhum check-list neste mês.');
+  brigAbrirPdf('Brigada — geral '+mes,
+    brigCab('Relatório Geral da Brigada',condoName(cid)+' · '+mesExtenso(mes))+
+    brigResumoBox(is)+brigSecNC(cid,mes)+
+    '<h2 class="sec">Detalhamento por sistema e andar</h2>'+
+    is.map(i=>brigBlocoInsp(i,false)).join('')+brigAss());
+  audit('Gerou PDF geral da brigada',mesExtenso(mes),'',cid);
+}
+/* 5 — só não conformidades */
+function brigPdfNC(cid,mes){
+  const is=brigInsp.filter(x=>x.condoId===cid&&String(x.data).slice(0,7)===mes&&brigNC(x).length)
+    .sort((a,b)=>a.sistema.localeCompare(b.sistema)||brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
+  if(!is.length) return toast('Nenhuma não conformidade no mês — tudo conforme.');
+  brigAbrirPdf('Brigada — não conformidades',
+    brigCab('Relatório de Não Conformidades',
+      condoName(cid)+' · '+mesExtenso(mes)+' · itens que exigem providência')+
+    brigSecNC(cid,mes)+
+    '<h2 class="sec">Detalhamento das não conformidades</h2>'+
+    is.map(i=>brigBlocoInsp(i,true)).join('')+brigAss());
+  audit('Gerou PDF de não conformidades da brigada',mesExtenso(mes),'',cid);
+}
+function brigOrdAndar(a){ const i=BRIG_ANDARES.findIndex(x=>x.id===a); return i<0?99:i }
+function brigResumoBox(is){
+  const tot=is.length;
+  const nc=is.reduce((s,i)=>s+brigNC(i).length,0);
+  const pc=is.reduce((s,i)=>s+brigQtdNC(i),0);
+  const pts=is.reduce((s,i)=>s+i.pontos.length,0);
+  return `<div class="tot">
+    <div><div class="k">Check-lists</div><div class="v">${tot}</div></div>
+    <div><div class="k">Pontos verificados</div><div class="v">${pts}</div></div>
+    <div><div class="k">Pontos não conformes</div><div class="v ${nc?'bad':''}">${nc}</div></div>
+    <div><div class="k">Peças a regularizar</div><div class="v ${pc?'bad':''}">${pc}</div></div>
+  </div>`;
+}
+/* quadro-resumo das pendências, separado por sistema */
+function brigSecNC(cid,mes){
+  const r=brigResumoNC(cid,mes);
+  if(!r.length) return '<div class="faixa">Não conformidades</div><table><tbody><tr><td>Nenhuma não conformidade registrada no período.</td></tr></tbody></table>';
+  return `<div class="faixa">Resumo das não conformidades</div>
+    <table><thead><tr><th>SISTEMA</th><th style="width:90px">PEÇAS</th><th style="width:90px">PONTOS</th><th>ANDARES</th></tr></thead><tbody>
+    ${r.map(x=>`<tr class="nc"><td><b>${esc(x.nome)}</b></td>
+      <td class="st bad">${x.qtd}</td><td class="st bad">${x.pontos}</td>
+      <td>${esc(x.andares.map(brigAndarNome).join(', '))}</td></tr>`).join('')}
+    <tr><td><b>TOTAL</b></td><td class="st bad">${r.reduce((s,x)=>s+x.qtd,0)}</td>
+      <td class="st bad">${r.reduce((s,x)=>s+x.pontos,0)}</td><td></td></tr>
+    </tbody></table>`;
+}
+function brigAss(resp){
+  return `<div class="ass"><div>${esc(resp||'Brigadista responsável')}<br>Brigada de Incêndio</div>
+    <div>Síndico / Administração<br>${esc(condoName('c1'))}</div></div>
+    <div class="rod">Documento gerado pelo sistema de Gestão de Rotinas Condominiais em ${nowStamp()}.
+    As fotos anexadas integram o registro da inspeção.</div>`;
+}
+/* escolher um andar para o relatório */
+function brigEscolherAndar(cid,sis,mes){
+  const as=BRIG_ANDARES.filter(a=>brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&String(i.data).slice(0,7)===mes));
+  if(!as.length) return toast('Nenhum check-list registrado no mês.');
+  openModal('Relatório por andar',
+    `<label>Andar</label><select id="bgAnd">${as.map(a=>`<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select>
+     <div class="muted" style="margin-top:8px">Sai um PDF com todos os sistemas inspecionados nesse andar.</div>`,
+    `<button class="btn" onclick="closeModal()">Cancelar</button>
+     <button class="btn primary" onclick="brigPdfAndar('${cid}',$('#bgAnd').value,'${mes}');closeModal()">Gerar PDF</button>`);
+}
+
+/* ============ SESSÃO GUIADA DE CHECK-LIST ============
+   O brigadista escolhe os sistemas que vai inspecionar e o app monta a
+   fila na ordem em que eles realmente trabalham: do 24º andar para baixo,
+   um andar por vez, avançando sozinho até o último. */
+let brigSessao=null;   // {sistemas:[],fila:[{andar,sistema}],pos,iniciadaEm}
+
+function viewBrigInicio(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const mes=brigMesAtual();
+  if(brigSessao&&brigSessao.fila.length) return viewBrigSessao();
+
+  const sis=BRIG_SISTEMAS.map(s=>{
+    const p=brigProgSis(cid,s.id,mes);
+    const falta=p.total-p.feitos;
+    return `<label class="bg-pick ${falta?'':'done'}">
+      <input type="checkbox" value="${s.id}" ${falta?'checked':''} onchange="brigPrever()">
+      <span class="bg-pk-ic">${ic(s.icone)}</span>
+      <span class="bg-pk-t"><b>${esc(s.nome)}</b>
+        <em>${falta?falta+' andar(es) a fazer':'tudo feito neste mês'} · ${s.periodicidade.toLowerCase()}</em></span>
+      <span class="badge ${falta?'amber':'green'}">${p.feitos}/${p.total}</span>
+    </label>`;
+  }).join('');
+
+  $('#content').innerHTML=`
+    <div class="card" style="margin-bottom:14px">
+      <div class="ap-faixa">${ic('play')} INICIAR CHECK-LIST</div>
+      <div style="padding:14px">
+        <div class="muted" style="margin-bottom:12px">
+          Escolha o que vai inspecionar hoje. O sistema abre andar por andar,
+          começando no 24º e descendo até o último, e avança sozinho quando você concluir.
+        </div>
+        <div class="bg-picks">${sis}</div>
+        <label class="bg-pick" style="margin-top:10px">
+          <input type="checkbox" id="bgPular" checked onchange="brigPrever()">
+          <span class="bg-pk-t"><b>Pular o que já foi feito neste mês</b>
+            <em>desmarque para refazer tudo</em></span></label>
+        <div id="bgPrev" class="bg-prev"></div>
+        <button class="btn primary block" style="margin-top:12px" onclick="brigIniciar()">
+          ${ic('play')} Começar pelo 24º andar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ap-faixa">${ic('clipboardCheck')} OU ESCOLHER UM ANDAR ESPECÍFICO</div>
+      <div style="padding:12px">
+        <div class="muted" style="margin-bottom:8px">Se precisar voltar num ponto específico, use a tela do check-list.</div>
+        <button class="btn" onclick="go('brigada')">${ic('building')} Abrir o quadro por andar</button>
+      </div>
+    </div>`;
+  brigPrever();
+}
+function _bgSisSel(){
+  return [...document.querySelectorAll('.bg-picks input:checked')].map(i=>i.value);
+}
+function brigPrever(){
+  const box=$('#bgPrev'); if(!box) return;
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const f=brigMontarFila(cid,_bgSisSel(),$('#bgPular')?$('#bgPular').checked:true);
+  if(!f.length){ box.innerHTML='<div class="muted">Nada a fazer com essa seleção.</div>'; return }
+  const pts=f.reduce((s,x)=>s+brigPontos(x.andar,x.sistema).length,0);
+  box.innerHTML=`<b>${f.length}</b> parada(s) · <b>${pts}</b> ponto(s) para verificar ·
+    começa em <b>${esc(brigAndarNome(f[0].andar))}</b> (${esc(brigSis(f[0].sistema).nome)})`;
+}
+/* Monta a fila: para cada andar, do topo para baixo, todos os sistemas
+   escolhidos daquele andar. Assim ele resolve o andar inteiro de uma vez. */
+function brigMontarFila(cid,sistemas,pular){
+  const mes=brigMesAtual(), fila=[];
+  BRIG_ANDARES.forEach(a=>{
+    sistemas.forEach(sid=>{
+      if(!brigPontos(a.id,sid).length) return;
+      if(pular&&brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&i.sistema===sid&&
+         String(i.data).slice(0,7)===mes&&i.status==='Concluído')) return;
+      fila.push({andar:a.id,sistema:sid});
+    });
+  });
+  return fila;
+}
+function brigIniciar(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const sel=_bgSisSel();
+  if(!sel.length) return toast('Escolha ao menos um sistema.');
+  const fila=brigMontarFila(cid,sel,$('#bgPular')?$('#bgPular').checked:true);
+  if(!fila.length) return toast('Nada a fazer: tudo já foi feito neste mês.');
+  brigSessao={sistemas:sel,fila,pos:0,iniciadaEm:nowStamp(),cid};
+  audit('Iniciou sessão de check-list',sel.map(x=>brigSis(x).nome).join(' + '),
+    fila.length+' parada(s)',cid,'Brigada');
+  brigAbrirDaSessao();
+}
+function brigAbrirDaSessao(){
+  if(!brigSessao) return go('brigada-inicio');
+  if(brigSessao.pos>=brigSessao.fila.length) return brigFinalizarSessao();
+  const p=brigSessao.fila[brigSessao.pos];
+  brigAbrir(brigSessao.cid,p.andar,p.sistema);
+}
+/* chamado ao concluir um check-list dentro da sessão */
+function brigProximo(){
+  if(!brigSessao) return brigVoltar();
+  brigSessao.pos++;
+  if(brigSessao.pos>=brigSessao.fila.length) return brigFinalizarSessao();
+  brigAbrirDaSessao();
+}
+function brigFinalizarSessao(){
+  const s=brigSessao; brigSessao=null;
+  if(!s) return go('brigada');
+  const feitos=s.fila.length;
+  const ncs=s.fila.reduce((n,p)=>{
+    const i=brigInsp.filter(x=>x.condoId===s.cid&&x.andar===p.andar&&x.sistema===p.sistema&&
+      x.status==='Concluído').sort((a,b)=>b.data.localeCompare(a.data))[0];
+    return n+(i?brigQtdNC(i):0);
+  },0);
+  page='brigada'; buildNav(); render();
+  openModal('Ronda de check-list concluída',
+    `<div class="bg-fim">
+      <div class="bg-fim-n">${feitos}</div>
+      <div class="muted">parada(s) concluída(s) — ${esc(s.sistemas.map(x=>brigSis(x).nome).join(', '))}</div>
+      ${ncs?`<div class="bg-av bg-red" style="margin-top:12px">
+        <div class="bg-ic">${ic('alert')}</div>
+        <div><div class="bg-tit">${ncs} peça(s) não conforme(s)</div>
+        <div class="bg-txt">Os avisos já foram abertos para o Gestor providenciar.</div></div></div>`
+      :`<div class="bg-av bg-green" style="margin-top:12px">
+        <div class="bg-ic">${ic('checkCircle')}</div>
+        <div><div class="bg-tit">Nenhuma não conformidade</div>
+        <div class="bg-txt">Tudo conforme nos pontos verificados.</div></div></div>`}
+    </div>`,
+    `<button class="btn" onclick="closeModal()">Fechar</button>
+     <button class="btn primary" onclick="closeModal();brigPdfGeral('${s.cid}',brigMesAtual())">Ver relatório</button>`);
+}
+function brigAbandonar(){
+  if(!confirm('Encerrar a sequência? O que já foi concluído fica salvo.')) return;
+  brigSessao=null; page='brigada'; buildNav(); render();
+}
+/* barra de progresso mostrada dentro do check-list quando há sessão */
+function brigBarraSessao(){
+  if(!brigSessao) return '';
+  const s=brigSessao, n=s.fila.length, at=s.pos+1;
+  const p=s.fila[s.pos];
+  const prox=s.fila[s.pos+1];
+  return `<div class="card bg-barra">
+    <div class="bg-bt-l">
+      <div class="bg-bt-n">Parada ${at} de ${n}</div>
+      <div class="bg-bt-p"><div style="width:${Math.round((s.pos)*100/n)}%"></div></div>
+      <div class="muted" style="font-size:11.5px;margin-top:4px">
+        ${prox?'Depois: '+esc(brigAndarNome(prox.andar))+' — '+esc(brigSis(prox.sistema).nome)
+              :'Esta é a última parada.'}</div>
+    </div>
+    <div class="bg-bt-a">
+      <button class="btn sm" onclick="brigPular()">Pular</button>
+      <button class="btn sm danger" onclick="brigAbandonar()">Encerrar</button>
+    </div>
+  </div>`;
+}
+function brigPular(){
+  if(!brigSessao) return;
+  brigSessao.pos++;
+  if(brigSessao.pos>=brigSessao.fila.length) return brigFinalizarSessao();
+  brigAbrirDaSessao();
+}
+
+/* ============ CHAMADOS DA RONDA — aviso de abertura ============
+   O oficial de manutenção recebe, ao entrar, tudo que a brigada apontou
+   nas rondas e ainda não foi resolvido. O Gestor vê o mesmo painel. */
+function rondaChamadosAbertos(){
+  return tasks.filter(t=>t.origem==='ronda'&&t.status!=='Concluída'&&!t.arquivada)
+    .filter(t=>P().condos.includes(t.condoId))
+    .sort((a,b)=>{
+      const pa=a.prioridade==='Alta'?0:1, pb=b.prioridade==='Alta'?0:1;
+      return pa-pb || String(a.vencimento).localeCompare(String(b.vencimento));
+    });
+}
+function avisarChamadosRonda(forcar){
+  const lista=rondaChamadosAbertos();
+  if(!lista.length) return false;
+  const hoje=today();
+  if(!forcar&&notifState._rondaAviso===hoje) return false;
+  notifState._rondaAviso=hoje; save();
+  abrirPainelChamadosRonda(lista);
+  return true;
+}
+function abrirPainelChamadosRonda(lista){
+  lista=lista||rondaChamadosAbertos();
+  if(!lista.length) return toast('Nenhum chamado da ronda em aberto.');
+  const urg=lista.filter(t=>t.prioridade==='Alta').length;
+  const ontem=lista.filter(t=>{
+    const r=brigRondas.find(x=>x.id===t.rondaId);
+    return r&&r.data<today();
+  }).length;
+  const item=t=>{
+    const r=brigRondas.find(x=>x.id===t.rondaId)||{};
+    const quando=r.data?fmt(r.data)+' às '+(r.hora||'—'):fmt(t.vencimento);
+    return `<div class="rc-item ${t.prioridade==='Alta'?'urg':''}">
+      ${t.anexo?`<img src="${t.anexo}" class="rc-foto" onclick="verFotoChamado('${t.id}')" alt="foto">`
+              :`<div class="rc-foto vazio">${ic('camera')}</div>`}
+      <div class="rc-txt">
+        <div class="rc-t">${esc(brigAndarNome(r.andar)||t.titulo)}
+          ${t.prioridade==='Alta'?'<span class="badge red">urgente</span>':''}</div>
+        <div class="rc-d">${esc(r.obs||t.titulo)}</div>
+        <div class="rc-m">${esc(quando)} · por ${esc(r.autor||t.criadoPor||'—')}</div>
+      </div>
+      <button class="btn sm" onclick="closeModal();abrirChamadoRonda('${t.id}')">Abrir</button>
+    </div>`;
+  };
+  openModal('Chamados da ronda da brigada',
+    `<div class="muted" style="margin-bottom:10px">
+       <b>${lista.length}</b> chamado(s) aguardando execução${urg?` · <b style="color:#c2384a">${urg} urgente(s)</b>`:''}${ontem?` · ${ontem} de dias anteriores`:''}.
+       Programe o atendimento pela tela de tarefas.</div>
+     <div class="rc-lista">${lista.slice(0,12).map(item).join('')}</div>
+     ${lista.length>12?`<div class="muted" style="margin-top:8px">e mais ${lista.length-12}…</div>`:''}`,
+    `<button class="btn" onclick="closeModal()">Depois</button>
+     <button class="btn primary" onclick="closeModal();go('tarefas')">Organizar na agenda</button>`);
+}
+function verFotoChamado(id){
+  const t=tasks.find(x=>x.id===id); if(!t||!t.anexo)return;
+  openModal('Foto do chamado',`<img src="${t.anexo}" style="width:100%;border-radius:8px">`,
+    `<button class="btn" onclick="closeModal();abrirPainelChamadosRonda()">Voltar</button>`);
+}
+function abrirChamadoRonda(id){
+  const t=tasks.find(x=>x.id===id); if(!t) return;
+  go('tarefas'); setTimeout(()=>openTask(id),260);
+}
+
+/* ============ RONDA DIÁRIA ============
+   Registro rápido da passagem pelos andares. Se algo estiver errado,
+   o brigadista abre a demanda ali mesmo. */
+function viewBrigRonda(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const hoje=today();
+  const minha=brigRondas.filter(r=>r.condoId===cid&&r.data===hoje);
+  const ultimas=brigRondas.filter(r=>r.condoId===cid).sort((a,b)=>
+    (b.data+b.hora).localeCompare(a.data+a.hora)).slice(0,25);
+
+  const grade=BRIG_ANDARES.map(a=>{
+    const r=minha.filter(x=>x.andar===a.id).sort((x,y)=>y.hora.localeCompare(x.hora))[0];
+    const cls=!r?'pend':(r.ok?'ok':'nc');
+    return `<button class="bg-and ${cls}" onclick="brigRondaMarcar('${cid}','${a.id}')">
+      <div class="bg-a">${esc(a.nome)}</div>
+      <div class="bg-s">${r?(r.ok?'Sem novidade':'Ocorrência'):'A percorrer'}</div>
+      <div class="bg-d">${r?('às '+esc(r.hora)+' · '+esc(r.autor||'')):'toque ao passar'}</div></button>`;
+  }).join('');
+
+  $('#content').innerHTML=`
+    <div class="grid metrics" style="margin-bottom:14px">
+      <div class="card metric"><div class="lbl">${ic('route')}Andares percorridos hoje</div><div class="val">${new Set(minha.map(r=>r.andar)).size}/${BRIG_ANDARES.length}</div><div class="sub">${fmt(hoje)}</div></div>
+      <div class="card metric ${minha.filter(r=>!r.ok).length?'red':'green'}"><div class="lbl">${ic('alert')}Ocorrências hoje</div><div class="val">${minha.filter(r=>!r.ok).length}</div><div class="sub">registradas na ronda</div></div>
+      <div class="card metric"><div class="lbl">${ic('clock')}Registros no mês</div><div class="val">${brigRondas.filter(r=>r.condoId===cid&&r.data.slice(0,7)===brigMesAtual()).length}</div><div class="sub">${mesExtenso(brigMesAtual())}</div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="ap-faixa">${ic('route')} RONDA DE HOJE — ${fmt(hoje).toUpperCase()}</div>
+      <div style="padding:12px">
+        <div class="muted" style="margin-bottom:8px">Toque no andar ao passar por ele. Se encontrar algo, registre a ocorrência com foto — ela abre o chamado da manutenção na hora.</div>
+        ${brigQuemCobriu(cid,hoje)}
+        <div class="bg-grade">${grade}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ap-faixa">${ic('clock')} ÚLTIMOS REGISTROS</div>
+      <div class="tablewrap"><table class="ap-tb"><thead><tr>
+        <th>DATA</th><th>HORA</th><th>ANDAR</th><th>SITUAÇÃO</th><th>OBSERVAÇÃO</th><th>BRIGADISTA</th></tr></thead><tbody>
+        ${ultimas.map(r=>`<tr>
+          <td>${fmt(r.data)}</td><td>${esc(r.hora)}</td><td>${esc(brigAndarNome(r.andar))}</td>
+          <td>${r.ok?'<span class="badge green">Sem novidade</span>':'<span class="badge red">Ocorrência</span>'}</td>
+          <td>${esc(r.obs||'—')}</td><td class="muted">${esc(r.autor||'—')}</td></tr>`).join('')
+          ||'<tr><td colspan="6" class="muted">Nenhuma ronda registrada ainda.</td></tr>'}
+      </tbody></table></div>
+    </div>`;
+}
+/* ---- Ocorrência na ronda: foto + descrição viram chamado ---- */
+let _rondaFoto=null;
+/* Dois brigadistas dividem o prédio sem divisão fixa: o quadro mostra
+   quem já cobriu o quê e o que ainda falta, para ninguém repetir andar. */
+function brigQuemCobriu(cid,dia){
+  const rs=brigRondas.filter(r=>r.condoId===cid&&r.data===dia);
+  if(!rs.length) return '<div class="bg-prev">Ninguém percorreu nenhum andar ainda hoje.</div>';
+  const por={};
+  rs.forEach(r=>{ (por[r.autor]=por[r.autor]||{n:0,oc:0}); por[r.autor].n++;
+                  if(!r.ok) por[r.autor].oc++; });
+  const falta=BRIG_ANDARES.length-new Set(rs.map(r=>r.andar)).size;
+  return `<div class="bg-prev">
+    ${Object.entries(por).map(([nome,v])=>
+      `<b>${esc(nome)}</b>: ${v.n} andar(es)${v.oc?` · ${v.oc} ocorrência(s)`:''}`).join(' &nbsp;|&nbsp; ')}
+    ${falta?` &nbsp;|&nbsp; faltam <b>${falta}</b> andar(es)`:' &nbsp;|&nbsp; <b>prédio todo coberto</b>'}
+  </div>`;
+}
+function brigRondaMarcar(cid,andar){
+  _rondaFoto=null;
+  openModal('Ronda — '+brigAndarNome(andar),
+    `<div class="muted" style="margin-bottom:10px">Como encontrou o andar?</div>
+     <label>Situação</label>
+     <select id="brOk" onchange="brigRondaTipo(this.value)">
+       <option value="1">Tudo em pleno funcionamento</option>
+       <option value="0">Encontrei uma ocorrência</option></select>
+     <div id="brBox" style="display:none;margin-top:12px">
+       <label>O que você encontrou <span style="color:#c2384a">*</span></label>
+       <textarea id="brObs" rows="3" placeholder="ex.: luminária da escada lado B apagada"></textarea>
+       <div style="margin-top:10px">
+         <label>Foto do problema <span style="color:#c2384a">*</span></label>
+         <div class="muted" style="font-size:11.5px;margin:2px 0 7px">
+           A foto é obrigatória para abrir o chamado — é ela que mostra à manutenção o que houve.</div>
+         <button class="btn sm" onclick="brigRondaFoto()">${ic('camera')} Tirar foto</button>
+         <div id="brFoto" class="bg-fotos"></div>
+       </div>
+       <label style="margin-top:10px">Prioridade</label>
+       <select id="brPrio">
+         <option value="Média">Normal — pode ser programado</option>
+         <option value="Alta">Urgente — risco ou parada de serviço</option></select>
+     </div>`,
+    `<button class="btn" onclick="closeModal()">Cancelar</button>
+     <button class="btn primary" onclick="brigRondaSalvar('${cid}','${andar}')">Registrar</button>`);
+}
+function brigRondaTipo(v){
+  const b=$('#brBox'); if(b) b.style.display=v==='0'?'block':'none';
+}
+function brigRondaFoto(){
+  let inp=document.querySelector('#brFile');
+  if(!inp){ inp=document.createElement('input'); inp.type='file'; inp.id='brFile';
+    inp.accept='image/*'; inp.capture='environment'; inp.style.display='none';
+    inp.onchange=brigRondaFotoSel; document.body.appendChild(inp); }
+  inp.value=''; inp.click();
+}
+async function brigRondaFotoSel(e){
+  const f=(e.target.files||[])[0]; if(!f) return;
+  toast('Processando imagem...');
+  try{
+    _rondaFoto=await comprimirImagem(f);
+    const box=$('#brFoto');
+    if(box) box.innerHTML=`<div class="fwrap"><img src="${_rondaFoto}" class="fthumb" alt="foto">
+      <button class="fdel" onclick="_rondaFoto=null;$('#brFoto').innerHTML='';">${ic('close')}</button></div>`;
+    toast('Foto anexada.');
+  }catch(err){ toast('Não foi possível ler a imagem.') }
+}
+
+function brigRondaSalvar(cid,andar){
+  const ok=$('#brOk').value==='1';
+  const obs=ok?'':($('#brObs').value||'').trim();
+  if(!ok&&!obs) return toast('Descreva o que você encontrou.');
+  if(!ok&&!_rondaFoto) return toast('Tire uma foto do problema para abrir o chamado.');
+  const prio=(!ok&&$('#brPrio'))?$('#brPrio').value:'Média';
+  const r={id:uid('br'),condoId:cid,andar,data:today(),hora:nowHora(),ok,obs,
+    foto:ok?'':_rondaFoto,prioridade:ok?'':prio,
+    autor:session.nome,userId:session.id,chamadoId:null};
+  brigRondas.push(r);
+  if(!ok){
+    /* Chamado vai para a manutenção (Cleiton), não para o Gestor:
+       é ele quem organiza a execução no dia seguinte. */
+    const t=mkTask({titulo:'Ronda — '+brigAndarNome(andar)+': '+obs.slice(0,60),
+      condoId:cid,tipo:'Gestor',periodicidade:'Sob Demanda',repetitiva:false,
+      tipoTarefa:'Avulsa do dia',prioridade:prio,vencimento:today(),
+      responsavel:'Cleiton',origem:'ronda',rondaId:r.id,anexo:_rondaFoto,
+      criadoPor:session.nome,
+      procedimento:'Registrado na ronda diária da brigada em '+fmt(r.data)+' às '+r.hora+
+        ' por '+session.nome+'.\n\nLocal: '+brigAndarNome(andar)+
+        '\nOcorrência: '+obs+'\n\nA foto do problema está anexada ao chamado.'});
+    t.historico=[{q:session.nome,w:nowStamp(),t:'Chamado aberto pela ronda da brigada (com foto)'}];
+    tasks.push(t); r.chamadoId=t.id;
+    audit('Ocorrência na ronda',brigAndarNome(andar),obs,cid,'Ronda diária');
+    toast('Chamado aberto para a manutenção com a foto.');
+  } else toast('Ronda registrada.');
+  _rondaFoto=null;
+  save(); closeModal(); render();
+}
+
+
+/* ============================================================
+   IA — ANÁLISE LOCAL
+   Roda dentro do app, sem serviço externo: cruza os dados que já
+   existem e devolve conclusões prontas. Disponível só para o
+   Gestor e o Coordenador Administrativo.
+   ============================================================ */
+function iaDisponivel(){ return !!(session&&P().ia) }
+function _iaPct(a,b){ return b?Math.round((a-b)*100/b):0 }
+function _iaBRL(v){ return brl(v) }
+
+/* ---------- TAREFAS ---------- */
+function iaTarefas(cid){
+  const av=[], t=today();
+  const base=tasks.filter(x=>!x.arquivada&&(!cid||cid==='all'||x.condoId===cid))
+    .filter(x=>P().tipos.includes(x.tipo));
+  const atras=base.filter(x=>x.status==='Atrasada');
+  if(atras.length){
+    /* quem concentra o atraso */
+    const porResp={};
+    atras.forEach(x=>{ const r=x.responsavel||'sem responsável'; porResp[r]=(porResp[r]||0)+1 });
+    const top=Object.entries(porResp).sort((a,b)=>b[1]-a[1])[0];
+    const velha=atras.slice().sort((a,b)=>String(a.vencimento).localeCompare(String(b.vencimento)))[0];
+    av.push({t:'red',ic:'alertCircle',tit:atras.length+' tarefa(s) atrasada(s)',
+      txt:(top&&top[1]>1?top[1]+' estão com '+top[0]+'. ':'')+
+        'A mais antiga venceu em '+fmt(velha.vencimento)+' ('+Math.abs(diffDays(velha.vencimento,t))+' dias): "'+
+        velha.titulo+'".',acao:"drill('atrasadas')",acaoTxt:'Ver atrasadas'});
+  }
+  /* tarefas que vivem atrasando — mesmo título reincidente */
+  const rein={};
+  tasks.filter(x=>x.status==='Concluída'&&x.vencimento&&x.concluidoEm)
+    .forEach(x=>{ if(diffDays(x.concluidoEm,x.vencimento)>0){ rein[x.titulo]=(rein[x.titulo]||0)+1 } });
+  const cron=Object.entries(rein).filter(([,n])=>n>=3).sort((a,b)=>b[1]-a[1])[0];
+  if(cron) av.push({t:'amber',ic:'repeat',tit:'"'+cron[0]+'" atrasa com frequência',
+    txt:'Foi concluída fora do prazo '+cron[1]+' vezes. Ou o prazo não é realista, ou falta quem execute — vale rever a periodicidade ou trocar o responsável.'});
+  /* sem responsável */
+  const sem=base.filter(x=>x.status!=='Concluída'&&!String(x.responsavel||'').trim());
+  if(sem.length>=3) av.push({t:'amber',ic:'user',tit:sem.length+' tarefa(s) sem responsável',
+    txt:'Tarefa sem dono costuma virar atraso. Distribua antes do vencimento.',
+    acao:"go('tarefas')",acaoTxt:'Abrir tarefas'});
+  /* carga da semana */
+  const sem7=base.filter(x=>x.status!=='Concluída'&&x.vencimento&&
+    diffDays(x.vencimento,t)>=0&&diffDays(x.vencimento,t)<=7);
+  if(sem7.length>=8) av.push({t:'blue',ic:'calendar',tit:sem7.length+' tarefas vencem em 7 dias',
+    txt:'Semana carregada. Antecipe o que puder hoje para não acumular.',
+    acao:"drill('prox7')",acaoTxt:'Ver a semana'});
+  return av;
+}
+
+/* ---------- ÁGUA E ENERGIA ---------- */
+function iaLeituras(cid){
+  const av=[], c=cid&&cid!=='all'?cid:'c1';
+  const regs=leituras.filter(l=>l.condoId===c&&l.tipo==='agua'&&l.status==='Registrada'&&l.consumo!=null)
+    .sort((a,b)=>a.data.localeCompare(b.data));
+  if(regs.length>=8){
+    const ult=regs.slice(-7), ant=regs.slice(-14,-7);
+    const mu=ult.reduce((s,x)=>s+x.consumo,0)/ult.length;
+    const ma=ant.length?ant.reduce((s,x)=>s+x.consumo,0)/ant.length:0;
+    const var7=_iaPct(mu,ma);
+    if(ma&&var7>=15) av.push({t:'red',ic:'water',tit:'Consumo de água subiu '+var7+'%',
+      txt:'Média dos últimos 7 dias: '+mu.toFixed(1)+' m³/dia, contra '+ma.toFixed(1)+' na semana anterior. '+
+        'Alta desse tamanho sem obra em curso costuma ser vazamento — vale inspecionar reservatório e prumadas.',
+      acao:"go('leituras')",acaoTxt:'Ver leituras'});
+    else if(ma&&var7<=-15) av.push({t:'green',ic:'water',tit:'Consumo de água caiu '+Math.abs(var7)+'%',
+      txt:'Média semanal de '+mu.toFixed(1)+' m³/dia contra '+ma.toFixed(1)+' antes. Se houve reparo recente, o efeito aparece aqui.'});
+    /* dia fora da curva */
+    const pico=ult.slice().sort((a,b)=>b.consumo-a.consumo)[0];
+    if(mu&&pico.consumo>=2*mu) av.push({t:'amber',ic:'alert',tit:'Pico de consumo em '+fmt(pico.data),
+      txt:pico.consumo.toFixed(1)+' m³ num único dia, mais que o dobro da média. Confira se houve lavagem, teste de bomba ou erro de leitura.'});
+    /* projeção de conta */
+    const dia=new Date(today()+'T12:00:00').getDate();
+    const proj=mu*30;
+    av.push({t:'blue',ic:'money',tit:'Projeção do mês: '+Math.round(proj)+' m³',
+      txt:'No ritmo atual a conta de água deve fechar perto de '+_iaBRL(iaContaAgua(proj,c))+
+        '. Restam '+(30-dia)+' dia(s) de medição.'});
+  } else if(regs.length) {
+    av.push({t:'blue',ic:'water',tit:'Histórico ainda curto',
+      txt:'Com '+regs.length+' leitura(s) registrada(s) dá para acompanhar, mas a comparação semanal fica melhor a partir de duas semanas.'});
+  }
+  /* leitura atrasada */
+  const atr=leituras.filter(l=>l.condoId===c&&l.status!=='Registrada'&&diffDays(l.data,today())<0);
+  if(atr.length) av.push({t:'red',ic:'clock',tit:atr.length+' leitura(s) em atraso',
+    txt:'A mais antiga é de '+fmt(atr.sort((a,b)=>a.data.localeCompare(b.data))[0].data)+
+      '. Sem a leitura do dia o consumo do período fica estimado.',acao:"go('leituras')",acaoTxt:'Registrar'});
+  return av;
+}
+/* usa o cálculo oficial de tarifa do app (faixas CAESB + esgoto + fixas) */
+function iaContaAgua(m3,cid){
+  try{ return contaAgua(cid||'c1',m3).total }catch(e){ return 0 }
+}
+
+/* ---------- NOTAS FISCAIS ---------- */
+function iaNotas(cid){
+  const av=[];
+  const ns=notas.filter(n=>!cid||cid==='all'||n.condoId===cid);
+  const venc=ns.filter(n=>nfStatus(n)==='Atrasado');
+  if(venc.length) av.push({t:'red',ic:'invoice',tit:venc.length+' nota(s) fiscal(is) em atraso',
+    txt:'Nota atrasada trava o pagamento e pode gerar multa do prestador. '+
+      venc.slice(0,3).map(n=>n.prestador||n.numero||'sem número').join(', ')+
+      (venc.length>3?' e outras.':'.'),acao:"go('notas')",acaoTxt:'Abrir notas'});
+  let crit=[]; try{ crit=(typeof nfCriticas==='function')?nfCriticas():[] }catch(e){}
+  if(crit.length&&!venc.length) av.push({t:'amber',ic:'invoice',tit:crit.length+' nota(s) perto do prazo',
+    txt:'Entram na janela de aviso. Cobre o prestador antes de virar atraso.',
+    acao:"go('notas')",acaoTxt:'Abrir notas'});
+  /* prestador que sempre atrasa */
+  const atrasos={};
+  ns.forEach(n=>{ if(nfStatus(n)==='Atrasado'&&n.prestador) atrasos[n.prestador]=(atrasos[n.prestador]||0)+1 });
+  const pior=Object.entries(atrasos).filter(([,v])=>v>=2).sort((a,b)=>b[1]-a[1])[0];
+  if(pior) av.push({t:'amber',ic:'user',tit:pior[0]+' acumula '+pior[1]+' nota(s) em atraso',
+    txt:'É o prestador com mais pendências. Vale um combinado sobre a data de envio da nota.'});
+  return av;
+}
+
+/* ---------- ESTOQUE ---------- */
+function iaEstoque(){
+  const av=[];
+  if(!P().estoque) return av;
+  const baixo=estoqueBaixo(), zer=estoque.filter(i=>i.qtd<=0);
+  if(zer.length) av.push({t:'red',ic:'box',tit:zer.length+' item(ns) zerado(s)',
+    txt:zer.slice(0,4).map(i=>i.nome).join(', ')+(zer.length>4?' e outros':'')+
+      '. Sem esses materiais a manutenção para.',acao:"go('estoque')",acaoTxt:'Ver estoque'});
+  else if(baixo.length) av.push({t:'amber',ic:'box',tit:baixo.length+' item(ns) abaixo do mínimo',
+    txt:'Repor agora evita compra de urgência, que sai mais cara.',
+    acao:"go('pedidos')",acaoTxt:'Abrir pedidos'});
+  return av;
+}
+
+/* ---------- MANUTENÇÕES OBRIGATÓRIAS ---------- */
+function iaManutencoes(){
+  const av=[];
+  if(typeof moVencendo!=='function') return av;
+  const v=moVencendo(60);
+  const vencidas=v.filter(m=>m._dias<0);
+  if(vencidas.length) av.push({t:'red',ic:'shieldCheck',tit:vencidas.length+' manutenção(ões) obrigatória(s) vencida(s)',
+    txt:vencidas.slice(0,3).map(m=>m.servico).join('; ')+
+      '. Item de obrigação legal vencido expõe o condomínio em fiscalização e sinistro.',
+    acao:"go('manutobrig')",acaoTxt:'Abrir plano'});
+  else if(v.length) av.push({t:'amber',ic:'shieldCheck',tit:v.length+' manutenção(ões) nos próximos 60 dias',
+    txt:'A mais próxima: '+v[0].servico+' em '+fmt(v[0].proxima)+'. Cote com antecedência.',
+    acao:"go('manutobrig')",acaoTxt:'Abrir plano'});
+  return av;
+}
+
+/* ---------- BRIGADA ---------- */
+function iaBrigada(){
+  const av=[];
+  const r=brigResumoNC('c1',brigMesAtual());
+  const tot=r.reduce((s,x)=>s+x.qtd,0);
+  if(tot) av.push({t:'red',ic:'flame',tit:tot+' peça(s) de incêndio não conforme(s)',
+    txt:r.slice(0,3).map(x=>x.nome+' ('+x.qtd+')').join(', ')+
+      '. Junte numa ordem de serviço única em vez de chamados separados.',
+    acao:"go('brigada')",acaoTxt:'Ver brigada'});
+  const ch=(typeof rondaChamadosAbertos==='function')?rondaChamadosAbertos():[];
+  if(ch.length) av.push({t:ch.some(x=>x.prioridade==='Alta')?'red':'amber',ic:'route',
+    tit:ch.length+' chamado(s) da ronda em aberto',
+    txt:ch.filter(x=>x.prioridade==='Alta').length+' urgente(s). Programe o atendimento com a manutenção.',
+    acao:"abrirPainelChamadosRonda()",acaoTxt:'Ver chamados'});
+  return av;
+}
+
+/* ---------- PAINEL CONSOLIDADO ---------- */
+function iaTudo(cid){
+  const av=[]
+    .concat(iaTarefas(cid)).concat(iaManutencoes()).concat(iaBrigada())
+    .concat(iaNotas(cid)).concat(iaLeituras(cid)).concat(iaEstoque());
+  const ordem={red:0,amber:1,blue:2,green:3};
+  return av.sort((a,b)=>(ordem[a.t]??9)-(ordem[b.t]??9));
+}
+/* HTML reaproveitado em todas as telas */
+function iaCard(titulo,lista,vazio){
+  if(!iaDisponivel()) return '';
+  if(!lista.length) return vazio===false?'':`<div class="card ia-card" style="margin-bottom:14px">
+    <div class="ia-faixa">${ic('sparkles')} ${esc(titulo)}</div>
+    <div style="padding:12px"><div class="muted">${esc(vazio||'Nada que exija atenção agora.')}</div></div></div>`;
+  return `<div class="card ia-card" style="margin-bottom:14px">
+    <div class="ia-faixa">${ic('sparkles')} ${esc(titulo)}</div>
+    <div style="padding:12px">
+      ${lista.map(a=>`<div class="bg-av bg-${a.t}">
+        <div class="bg-ic">${ic(a.ic)}</div>
+        <div style="flex:1">
+          <div class="bg-tit">${esc(a.tit)}</div>
+          <div class="bg-txt">${esc(a.txt)}</div>
+          ${a.acao?`<button class="btn sm" style="margin-top:7px" onclick="${a.acao}">${esc(a.acaoTxt||'Abrir')}</button>`:''}
+        </div></div>`).join('')}
+    </div></div>`;
+}
+
+/* ============ ASSISTENTE — PERGUNTAS EM PORTUGUÊS ============
+   Interpreta a pergunta por palavras-chave e responde com os números
+   reais do sistema. Sem serviço externo: tudo calculado aqui. */
+let iaHist=[];
+function iaAbrir(pergunta){
+  if(!iaDisponivel()) return toast('Assistente disponível para Gestor e Coordenador.');
+  openModal('Assistente','<div id="iaBox" class="ia-chat"></div>'+
+    `<div class="ia-input">
+       <input id="iaQ" placeholder="Pergunte: o que está atrasado?" autocomplete="off"
+         onkeydown="if(event.key==='Enter')iaPerguntar()">
+       <button class="btn primary" onclick="iaPerguntar()">${ic('chevR')}</button>
+     </div>
+     <div class="ia-sug">
+       ${['O que está atrasado?','Consumo de água','Notas fiscais','Resumo da semana',
+          'O que a brigada achou?','O que fazer hoje?']
+         .map(q=>`<button class="ia-chip" onclick="iaPerguntar('${q}')">${q}</button>`).join('')}
+     </div>`,
+    `<button class="btn" onclick="closeModal()">Fechar</button>`);
+  iaPintar();
+  if(pergunta) iaPerguntar(pergunta);
+  else setTimeout(()=>{ const i=$('#iaQ'); if(i) i.focus() },200);
+}
+function iaPintar(){
+  const box=$('#iaBox'); if(!box) return;
+  if(!iaHist.length){
+    box.innerHTML=`<div class="ia-msg bot"><div class="ia-av">${ic('sparkles')}</div>
+      <div class="ia-txt">Olá, ${esc(session.nome.split(' ')[0])}. Pergunte sobre tarefas, água, notas,
+      estoque, manutenções ou a brigada — eu leio os dados do sistema e respondo.</div></div>`;
+    return;
+  }
+  box.innerHTML=iaHist.map(m=>m.q
+    ? `<div class="ia-msg user"><div class="ia-txt">${esc(m.q)}</div></div>`
+    : `<div class="ia-msg bot"><div class="ia-av">${ic('sparkles')}</div>
+       <div class="ia-txt">${m.html}</div></div>`).join('');
+  box.scrollTop=box.scrollHeight;
+}
+function iaPerguntar(texto){
+  const inp=$('#iaQ');
+  const q=(texto||(inp?inp.value:'')||'').trim();
+  if(!q) return;
+  if(inp) inp.value='';
+  iaHist.push({q}); iaPintar();
+  const r=iaResponder(q);
+  iaHist.push({html:r}); iaPintar();
+}
+function _tem(q,...ws){ const s=q.toLowerCase(); return ws.some(w=>s.includes(w)) }
+function _lista(itens){ return '<ul class="ia-ul">'+itens.map(i=>'<li>'+i+'</li>').join('')+'</ul>' }
+function _btn(acao,txt){ return `<button class="btn sm" style="margin-top:8px" onclick="closeModal();${acao}">${esc(txt)}</button>` }
+
+function iaResponder(q){
+  const cid=condoFilter==='all'?null:condoFilter;
+  const t=today();
+
+  /* --- atrasos --- */
+  if(_tem(q,'atras','venc','pendent','abert') && !_tem(q,'nota','nf')){
+    const base=tasks.filter(x=>!x.arquivada&&P().tipos.includes(x.tipo)&&(!cid||x.condoId===cid));
+    const atr=base.filter(x=>x.status==='Atrasada');
+    if(!atr.length) return 'Nenhuma tarefa atrasada agora. '+
+      base.filter(x=>x.vencimento===t&&x.status!=='Concluída').length+' vencem hoje.';
+    const por={}; atr.forEach(x=>{const r=x.responsavel||'sem responsável';por[r]=(por[r]||0)+1});
+    return `<b>${atr.length} tarefa(s) atrasada(s)</b>`+
+      _lista(atr.slice(0,6).map(x=>`${esc(x.titulo)} — venceu ${fmt(x.vencimento)} (${Math.abs(diffDays(x.vencimento,t))} dias)${x.responsavel?' · '+esc(x.responsavel):''}`))+
+      (atr.length>6?`<div class="muted">e mais ${atr.length-6}.</div>`:'')+
+      `<div style="margin-top:6px">Concentração: ${Object.entries(por).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>esc(k)+' ('+v+')').join(', ')}.</div>`+
+      _btn("drill('atrasadas')",'Ver atrasadas');
+  }
+  /* --- hoje / prioridade --- */
+  if(_tem(q,'hoje','agora','prioridade','primeiro','fazer')){
+    const p=iaPrioridades(cid);
+    if(!p.length) return 'Nada crítico para hoje. Bom momento para adiantar o que vence na semana.';
+    return `<b>Prioridades de hoje</b>`+
+      _lista(p.slice(0,7).map((x,i)=>`<b>${i+1}.</b> ${esc(x.txt)} <span class="muted">— ${esc(x.pq)}</span>`))+
+      _btn("go('hoje')",'Abrir tarefas de hoje');
+  }
+  /* --- água --- */
+  if(_tem(q,'água','agua','hidrôm','hidrom','consumo','m³','m3')){
+    const c=cid||'c1';
+    const regs=leituras.filter(l=>l.condoId===c&&l.tipo==='agua'&&l.status==='Registrada'&&l.consumo!=null)
+      .sort((a,b)=>a.data.localeCompare(b.data));
+    if(!regs.length) return 'Ainda não há leituras de água registradas com consumo calculado.';
+    const ult=regs.slice(-7), mu=ult.reduce((s,x)=>s+x.consumo,0)/ult.length;
+    const ant=regs.slice(-14,-7), ma=ant.length?ant.reduce((s,x)=>s+x.consumo,0)/ant.length:0;
+    const mes=regs.filter(x=>x.data.slice(0,7)===t.slice(0,7));
+    const somaMes=mes.reduce((s,x)=>s+x.consumo,0);
+    const v=_iaPct(mu,ma);
+    return `<b>Água — ${esc(condoName(c))}</b>`+
+      _lista([
+        `Última leitura: <b>${fmtLeit(regs[regs.length-1].leitura,'agua')} m³</b> em ${fmt(regs[regs.length-1].data)}`,
+        `Consumo do dia: <b>${regs[regs.length-1].consumo.toFixed(1)} m³</b>`,
+        `Média dos últimos 7 dias: <b>${mu.toFixed(1)} m³/dia</b>${ma?` (${v>0?'+':''}${v}% vs. semana anterior)`:''}`,
+        `Acumulado do mês: <b>${somaMes.toFixed(1)} m³</b> em ${mes.length} dia(s)`,
+        `Projeção da conta: <b>${_iaBRL(iaContaAgua(mu*30,c))}</b> no ritmo atual`])+
+      (v>=15?`<div class="ia-alerta">Alta de ${v}% na semana. Sem obra em curso, suspeite de vazamento.</div>`:'')+
+      _btn("go('leituras')",'Abrir leituras');
+  }
+  /* --- notas fiscais --- */
+  if(_tem(q,'nota','nf','fiscal','prestador')){
+    const ns=notas.filter(n=>!cid||n.condoId===cid);
+    const venc=ns.filter(n=>nfStatus(n)==='Atrasado');
+    let crit=[]; try{ crit=(typeof nfCriticas==='function')?nfCriticas():[] }catch(e){}
+    if(!ns.length) return 'Nenhuma nota fiscal cadastrada.';
+    return `<b>Notas fiscais — ${compAtual()}</b>`+
+      _lista([`Total monitorado: <b>${ns.length}</b>`,
+        `Em atraso: <b style="color:#c2384a">${venc.length}</b>`,
+        `Na janela de aviso: <b>${crit.length}</b>`])+
+      (venc.length?_lista(venc.slice(0,5).map(n=>`${esc(n.prestador||'—')} · ${esc(n.numero||'sem número')}`)):'')+
+      _btn("go('notas')",'Abrir notas fiscais');
+  }
+  /* --- brigada / incêndio --- */
+  if(_tem(q,'brigad','incêndio','incendio','extintor','hidrante','luminár','luminar','ronda')){
+    const r=brigResumoNC('c1',brigMesAtual());
+    const tot=r.reduce((s,x)=>s+x.qtd,0);
+    const pr=brigProgresso('c1',brigMesAtual());
+    const ch=(typeof rondaChamadosAbertos==='function')?rondaChamadosAbertos():[];
+    if(!tot&&!ch.length) return `Brigada sem pendências. Check-lists do mês: ${pr.feitos}/${pr.total} (${pr.pct}%).`;
+    return `<b>Brigada de incêndio — ${mesExtenso(brigMesAtual())}</b>`+
+      _lista([`Check-lists concluídos: <b>${pr.feitos}/${pr.total}</b> (${pr.pct}%)`,
+        `Peças não conformes: <b style="color:#c2384a">${tot}</b>`,
+        `Chamados da ronda em aberto: <b>${ch.length}</b>`].concat(
+        r.slice(0,4).map(x=>`${esc(x.nome)}: <b>${x.qtd}</b> em ${x.andares.length} andar(es)`)))+
+      _btn("go('brigada')",'Abrir brigada');
+  }
+  /* --- estoque --- */
+  if(_tem(q,'estoque','material','comprar','repor','almox')){
+    if(!P().estoque) return 'Você não tem acesso ao estoque.';
+    const b=estoqueBaixo(), z=estoque.filter(i=>i.qtd<=0);
+    if(!b.length) return `Estoque em ordem: ${estoque.length} itens, nenhum abaixo do mínimo.`;
+    return `<b>Estoque</b>`+
+      _lista([`Itens cadastrados: <b>${estoque.length}</b>`,
+        `Abaixo do mínimo: <b>${b.length}</b>`,`Zerados: <b style="color:#c2384a">${z.length}</b>`])+
+      _lista(b.slice(0,6).map(i=>`${esc(i.nome)} — ${i.qtd} ${esc(i.unidade)} (mín. ${i.minimo})`))+
+      _btn("go('pedidos')",'Abrir pedidos');
+  }
+  /* --- manutenções obrigatórias --- */
+  if(_tem(q,'manutenç','obrigat','laudo','avcb','dedetiz','reservatório','reservatorio','legal')){
+    const v=(typeof moVencendo==='function')?moVencendo(90):[];
+    if(!v.length) return 'Nenhuma manutenção obrigatória vencendo nos próximos 90 dias.';
+    return `<b>Manutenções obrigatórias — 90 dias</b>`+
+      _lista(v.slice(0,7).map(m=>`${esc(m.servico)} — ${fmt(m.proxima)} ${m._dias<0?`<b style="color:#c2384a">(${Math.abs(m._dias)} dias em atraso)</b>`:`(em ${m._dias} dias)`}`))+
+      _btn("go('manutobrig')",'Abrir plano');
+  }
+  /* --- resumo / visão geral --- */
+  if(_tem(q,'resumo','semana','panorama','visão geral','visao geral','tudo')){
+    return iaResumoHtml(cid);
+  }
+  /* --- publicidade / elevadores --- */
+  if(_tem(q,'elevador','publicidade','anúncio','anuncio','fila')){
+    let f=[],livres=[];
+    try{ f=(typeof pubFila==='function')?pubFila('c1'):[] }catch(e){}
+    try{ livres=(typeof pubLivres==='function')?pubLivres('c1'):[] }catch(e){}
+    const at=anuncios.filter(a=>a.status==='Ativo');
+    const rec=at.reduce((s,a)=>s+(a.valorMensal||0),0);
+    return `<b>Publicidade nos elevadores</b>`+
+      _lista([`Contratos ativos: <b>${at.length}</b>`,
+        `Receita mensal: <b>${_iaBRL(rec)}</b>`,
+        `Espaços livres: <b>${livres.length}</b>`,
+        `Fila de espera: <b>${f.length}</b>${f.length?' — próximo: '+esc(f[0].empresa):''}`])+
+      (livres.length&&f.length?`<div class="ia-alerta">Há ${livres.length} espaço(s) livre(s) e ${f.length} interessado(s) na fila. Cada mês parado é receita perdida.</div>`:'')+
+      _btn("go('publicidade')",'Abrir publicidade');
+  }
+  /* --- energia --- */
+  if(_tem(q,'energia','luz','kwh')){
+    const c=cid||'c1';
+    const regs=leituras.filter(l=>l.condoId===c&&l.tipo==='energia'&&l.status==='Registrada')
+      .sort((a,b)=>a.data.localeCompare(b.data));
+    if(!regs.length) return 'Nenhuma leitura de energia registrada ainda.';
+    const u=regs[regs.length-1];
+    return `<b>Energia — ${esc(condoName(c))}</b>`+
+      _lista([`Última leitura: <b>${fmtLeit(u.leitura,'energia')} kWh</b> em ${fmt(u.data)}`,
+        u.consumo!=null?`Consumo do período: <b>${fmtLeit(u.consumo,'energia')} kWh</b>`:'Consumo ainda não calculado',
+        `Leituras registradas: <b>${regs.length}</b>`])+
+      _btn("go('leituras')",'Abrir leituras');
+  }
+  /* --- genérico: "como está?", "situação" --- */
+  if(_tem(q,'como est','situação','situacao','geral')) return iaResumoHtml(cid);
+  /* --- não entendeu --- */
+  return `Não consegui entender a pergunta. Tente algo como:`+
+    _lista(['<i>o que está atrasado?</i>','<i>como está o consumo de água?</i>',
+      '<i>tem nota fiscal vencida?</i>','<i>o que a brigada achou?</i>',
+      '<i>o que faço hoje?</i>','<i>resumo da semana</i>']);
+}
+
+/* ---------- priorização do dia ---------- */
+function iaPrioridades(cid){
+  const out=[], t=today();
+  const mo=(typeof moVencendo==='function')?moVencendo(30):[];
+  mo.filter(m=>m._dias<0).forEach(m=>out.push({peso:100,txt:m.servico,
+    pq:'obrigação legal vencida há '+Math.abs(m._dias)+' dias'}));
+  const ch=(typeof rondaChamadosAbertos==='function')?rondaChamadosAbertos():[];
+  ch.filter(x=>x.prioridade==='Alta').forEach(x=>out.push({peso:90,txt:x.titulo,pq:'chamado urgente da brigada'}));
+  const nc=brigResumoNC('c1',brigMesAtual()).filter(r=>['extintores','hidrantes','acionadores'].includes(r.sistema));
+  nc.forEach(r=>out.push({peso:85,txt:r.qtd+' peça(s) de '+r.nome,pq:'sistema crítico de incêndio'}));
+  notas.filter(n=>nfStatus(n)==='Atrasado'&&(!cid||n.condoId===cid)).slice(0,3)
+    .forEach(n=>out.push({peso:70,txt:'NF '+(n.numero||'')+' — '+(n.prestador||''),pq:'nota vencida trava pagamento'}));
+  tasks.filter(x=>!x.arquivada&&x.status==='Atrasada'&&P().tipos.includes(x.tipo)&&(!cid||x.condoId===cid))
+    .sort((a,b)=>String(a.vencimento).localeCompare(String(b.vencimento))).slice(0,5)
+    .forEach(x=>out.push({peso:60+(x.prioridade==='Alta'?10:0),txt:x.titulo,
+      pq:'atrasada há '+Math.abs(diffDays(x.vencimento,t))+' dias'}));
+  estoque.filter(i=>i.qtd<=0).slice(0,2).forEach(i=>out.push({peso:50,txt:'Repor '+i.nome,pq:'estoque zerado'}));
+  tasks.filter(x=>!x.arquivada&&x.vencimento===t&&x.status!=='Concluída'&&P().tipos.includes(x.tipo))
+    .slice(0,5).forEach(x=>out.push({peso:40,txt:x.titulo,pq:'vence hoje'}));
+  return out.sort((a,b)=>b.peso-a.peso);
+}
+
+/* ---------- resumo da semana ---------- */
+function iaResumoHtml(cid){
+  const t=today();
+  const base=tasks.filter(x=>!x.arquivada&&P().tipos.includes(x.tipo)&&(!cid||x.condoId===cid));
+  const d7=new Date(t+'T12:00:00'); d7.setDate(d7.getDate()-7); const ini=iso(d7);
+  const conc=base.filter(x=>x.status==='Concluída'&&x.concluidoEm>=ini);
+  const atr=base.filter(x=>x.status==='Atrasada');
+  const prox=base.filter(x=>x.status!=='Concluída'&&x.vencimento&&
+    diffDays(x.vencimento,t)>=0&&diffDays(x.vencimento,t)<=7);
+  const c=cid||'c1';
+  const regs=leituras.filter(l=>l.condoId===c&&l.tipo==='agua'&&l.status==='Registrada'&&l.consumo!=null)
+    .sort((a,b)=>a.data.localeCompare(b.data));
+  const u7=regs.slice(-7), a7=regs.slice(-14,-7);
+  const mu=u7.length?u7.reduce((s,x)=>s+x.consumo,0)/u7.length:0;
+  const ma=a7.length?a7.reduce((s,x)=>s+x.consumo,0)/a7.length:0;
+  const varA=ma?_iaPct(mu,ma):0;
+  const venc=notas.filter(n=>nfStatus(n)==='Atrasado'&&(!cid||n.condoId===cid));
+  const ncb=brigResumoNC('c1',brigMesAtual()).reduce((s,x)=>s+x.qtd,0);
+  const linhas=[
+    `<b>${conc.length}</b> tarefa(s) concluída(s) nos últimos 7 dias`,
+    atr.length?`<b style="color:#c2384a">${atr.length}</b> atrasada(s)`:'nenhuma atrasada',
+    `<b>${prox.length}</b> vencem nos próximos 7 dias`];
+  if(mu) linhas.push(`água em <b>${mu.toFixed(1)} m³/dia</b>${ma?` (${varA>0?'+':''}${varA}% vs. semana anterior)`:''}`);
+  if(venc.length) linhas.push(`<b style="color:#c2384a">${venc.length}</b> nota(s) fiscal(is) vencida(s)`);
+  if(ncb) linhas.push(`<b style="color:#c2384a">${ncb}</b> peça(s) de incêndio não conforme(s)`);
+  const est=estoqueBaixo();
+  if(est.length) linhas.push(`<b>${est.length}</b> item(ns) de estoque abaixo do mínimo`);
+  let leitura='Semana sem sobressaltos.';
+  if(atr.length>=5||venc.length||ncb>=10) leitura='Semana exige atenção: há pendências acumuladas que crescem se ficarem paradas.';
+  else if(varA>=15) leitura='O consumo de água chama atenção — vale investigar antes de fechar o mês.';
+  else if(!atr.length&&!venc.length) leitura='Operação em dia, sem pendências críticas.';
+  return `<b>Resumo — ${fmt(ini)} a ${fmt(t)}</b>`+_lista(linhas)+
+    `<div style="margin-top:8px">${leitura}</div>`;
+}
+/* resumo semanal automático, uma vez por semana */
+function avisarResumoSemanal(){
+  if(!iaDisponivel()) return false;
+  if(!(CFG.ia&&CFG.ia.resumoSemanal)) return false;
+  const d=new Date(today()+'T12:00:00');
+  if(d.getDay()!==1) return false;            // segunda-feira
+  if(notifState._iaSemana===today()) return false;
+  notifState._iaSemana=today(); save();
+  openModal('Resumo da semana',
+    `<div class="ia-msg bot" style="margin:0"><div class="ia-av">${ic('sparkles')}</div>
+     <div class="ia-txt">${iaResumoHtml(null)}</div></div>`,
+    `<button class="btn" onclick="closeModal()">Fechar</button>
+     <button class="btn primary" onclick="closeModal();iaAbrir()">Perguntar mais</button>`);
+  return true;
+}
+
 const SYNC_COLS=['tasks','notas','cessoes','apontamentos','estoque','movEstoque','pedidos',
-  'leituras','prestadores','anuncios','manutObrig','vcUnidades','vcCiclos','vcVendas','analises'];
+  'leituras','prestadores','anuncios','manutObrig','vcUnidades','vcCiclos','vcVendas','analises','brigInsp','brigRondas'];
 function _colRef(nome){
   switch(nome){
+    case 'brigInsp':return brigInsp; case 'brigRondas':return brigRondas;
     case 'tasks':return tasks; case 'notas':return notas; case 'cessoes':return cessoes;
     case 'apontamentos':return apontamentos; case 'estoque':return estoque;
     case 'movEstoque':return movEstoque; case 'pedidos':return pedidos;
@@ -8245,11 +10412,11 @@ function aplicarSnapshot(d){
   apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
   pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
   prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
-  analises=d.analises||[];
+  analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[];
   if(d.CFG) CFG=Object.assign(CFG,d.CFG);
   creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
   if(!prestadores.length) seedPrestadores();
-  migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig(); migrarVendasCustas();
+  migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig(); migrarVendasCustas(); migrarFilaPub();
   _booting=false;
 }
 function agendarSync(){
@@ -8389,5 +10556,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3cb0edc2a15639c',t:'MTc4OTY3OTAxMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3d14987ab72e2ad',t:'MTc4OTc0NDMyOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
