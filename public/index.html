@@ -413,10 +413,12 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
   margin-bottom:8px;font-size:12px}
 .bar{height:16px;border-radius:4px;background:var(--accent);min-width:2px;transition:width .3s}
 .bulkbar{position:fixed;left:50%;bottom:20px;transform:translate(-50%,150%);z-index:115;
-  background:var(--navy);color:#fff;border-radius:10px;padding:10px 14px;display:flex;gap:9px;
+  background:var(--navy);color:#fff;border-radius:10px;padding:10px 14px;display:none;gap:9px;
   align-items:center;flex-wrap:wrap;box-shadow:0 16px 44px rgba(0,0,0,.34);transition:transform .22s;
-  border:1px solid rgba(255,255,255,.1)}
-.bulkbar.show{transform:translate(-50%,0)}
+  border:1px solid rgba(255,255,255,.1);pointer-events:none}
+/* sem a classe .show ela fica fora do fluxo: antes o fundo escuro aparecia
+   sobre a barra de abas do celular mesmo estando "escondida" */
+.bulkbar.show{display:flex;transform:translate(-50%,0);pointer-events:auto}
 .bulkbar .bn{font-weight:650;margin-right:5px;font-size:12.5px}
 .bulkbar .btn.ghost{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.22)}
 .bulkbar .btn.ghost:hover{background:rgba(255,255,255,.18)}
@@ -610,6 +612,62 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
   .bg-grade{grid-template-columns:repeat(auto-fill,minmax(142px,1fr))}
   .bg-bt{width:100%} .bg-sit{flex:1;text-align:center;padding:9px 6px}
   .bg-aba{flex:1 1 44%;justify-content:center}
+}
+
+/* ============================================================
+   CELULAR — ajustes de uso no dia a dia
+   Alvos maiores, sem zoom involuntário no iOS e menos rolagem
+   lateral: quem usa em pé, no corredor, precisa de toque fácil.
+   ============================================================ */
+@media(max-width:820px){
+  /* iOS dá zoom sozinho em campo com fonte < 16px */
+  input,select,textarea{font-size:16px !important;padding:11px 12px;border-radius:9px}
+  label{font-size:12.5px;margin-bottom:3px}
+  /* alvo mínimo confortável para o dedo */
+  .btn{padding:11px 16px;font-size:13.5px;min-height:44px;border-radius:9px}
+  .btn.sm{padding:9px 13px;font-size:12.5px;min-height:38px}
+  .iconbtn{min-width:42px;min-height:42px}
+  .feed-item{padding:12px 13px;gap:11px}
+  .feed-item .ft{font-size:13.5px;line-height:1.35}
+  .feed-item .fd{font-size:12px}
+  /* cartões numéricos: 2 por linha, com respiro */
+  .metrics{grid-template-columns:1fr 1fr !important;gap:10px}
+  .card.metric{padding:13px 12px}
+  .card.metric .val{font-size:25px}
+  .card.metric .lbl{font-size:10px;letter-spacing:.4px}
+  .card{padding:13px}
+  /* tabelas: deixam de exigir rolagem lateral */
+  table{min-width:0 !important}
+  th:first-child,td:first-child{min-width:0 !important}
+  th,td{padding:9px 8px;font-size:12.5px}
+  .tablewrap{-webkit-overflow-scrolling:touch}
+  /* modal sobe do rodapé, como app nativo, e os botões ficam sempre à mão */
+  .modal{align-items:flex-end}
+  .modal-box{width:100%;max-width:none;max-height:93vh;border-radius:15px 15px 0 0;
+    display:flex;flex-direction:column}
+  .modal-h{padding:13px 15px}
+  .modal-b{padding:15px;max-height:none;flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+  .modal-f{padding:11px 14px calc(11px + env(safe-area-inset-bottom));flex-wrap:wrap}
+  .modal-f .btn{flex:1;justify-content:center;min-width:120px}
+  /* formulários de duas colunas viram uma só */
+  .f2{grid-template-columns:1fr !important}
+  .ap-grid{grid-template-columns:1fr !important}
+  .ap-grid .rot{border-radius:7px 7px 0 0}
+  /* barra de abas: mais alta e com toque cheio */
+  .tabbar{padding:4px 2px calc(4px + env(safe-area-inset-bottom))}
+  .tabbar button{min-height:56px;border-radius:10px}
+  .tabbar button:active{background:var(--panel)}
+  /* espaço para o conteúdo não terminar debaixo das abas */
+  body.has-tabbar .main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  /* linhas de ação empilham em vez de espremer */
+  .rowact{gap:8px}
+  .section-title{gap:7px}
+  .section-title h3{font-size:14px}
+}
+@media(max-width:430px){
+  .metrics{gap:9px}
+  .card.metric .val{font-size:23px}
+  .btn{padding:11px 13px}
 }
 
 @media print{
@@ -10890,6 +10948,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3d38be4fe0f6d6f',t:'MTc4OTc2ODAxOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3fa7c26ae01df4d',t:'MTc5MDE3NjMxOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
