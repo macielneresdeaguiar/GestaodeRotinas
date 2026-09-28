@@ -766,6 +766,12 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 
 .pd-novo{margin-top:9px;padding:11px;background:#f6f8fc;border:1px dashed var(--line);border-radius:9px}
 
+.login-sel{width:100%;padding:12px 13px;font-size:14px;border:1px solid var(--line);
+  border-radius:10px;background:#fff;color:var(--text);cursor:pointer}
+.login-sel:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.login-sel optgroup{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px}
+.login-sel option{font-size:14px;color:var(--text);padding:6px}
+
 .ap-obra{margin-top:12px;padding:12px 13px;background:#f6f8fc;border:1px solid var(--line);border-radius:9px}
 .ap-obra-t{font-weight:700;font-size:12.5px;display:flex;align-items:center;gap:7px;margin-bottom:5px}
 .ap-obra-t svg{width:15px;height:15px}
@@ -977,13 +983,13 @@ body.crit-open{overflow:hidden}
     <div class="login-brand">
       <div class="lb-mark" id="loginBrandBox"><svg class="ico ico-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5.5A1.5 1.5 0 0 1 5.5 4h7A1.5 1.5 0 0 1 14 5.5V21"/><path d="M14 10h4.5A1.5 1.5 0 0 1 20 11.5V21M2.5 21h19M7 8h4M7 12h4M7 16h4"/></svg></div>
       <div>
-        <h1>Gestão de Rotinas Condominiais</h1>
-        <p class="sub">Acesso restrito · E-Business &amp; Taguá Life</p>
+        <h1>E-Business Águas Claras</h1>
+        <p class="sub">Gestão Predial · acesso restrito</p>
       </div>
     </div>
-    <div class="login-lead">Selecione seu perfil de acesso</div>
-    <div class="profiles" id="profiles"></div>
-    <div class="field"><label>Usuário</label>
+    <div class="field"><label>Selecione seu perfil de acesso</label>
+      <select id="loginSel" class="login-sel" onchange="pickUser(this.value)"></select></div>
+    <div class="field">
       <div class="userbox"><div class="avatar" id="loginAvatar">M</div>
         <div><div class="ub-nome" id="loginNome">Maciel</div><div class="ub-role" id="loginRole">Gestor</div></div>
         <input id="loginUser" type="hidden"></div></div>
@@ -1483,18 +1489,33 @@ function visibleMaints(){ return []; }
 let pickedUser='u1';
 const PROFILE_UI={u1:{icon:'briefcase'},u2:{icon:'clipboardCheck'},u3:{icon:'helmet'},u4:{icon:'sparkles'},
   b1:{icon:'flame'},b2:{icon:'flame'},b3:{icon:'flame'},b4:{icon:'flame'}};
+/* Lista suspensa de acesso, agrupada por função — cresce bem conforme a
+   equipe aumenta, sem ocupar a tela toda com cartões. */
 function buildProfiles(){
-  const box=document.querySelector('#profiles'); if(!box)return;
-  box.innerHTML=USERS.map(u=>`<div class="pcard ${pickedUser===u.id?'active':''}" id="pc_${u.id}" onclick="pickUser('${u.id}')">
-    <div class="pic">${ic((PROFILE_UI[u.id]||{}).icon||'user','ico-lg')}</div>
-    <div class="pn">${u.nome}</div>
-    <div class="pr">${u.role.replace('Coordenador Administrativo','Coord. Administrativo').replace('Oficial de Manutenção','Manutenção').replace('Líder de Limpeza e Portaria','Limpeza e Portaria')}</div>
-  </div>`).join('');
+  const box=document.querySelector('#loginSel'); if(!box)return;
+  const grupos=[['Administração',u=>u.perms.tipos&&u.perms.tipos.length],
+                ['Manutenção',u=>u.perms.manutencao&&!(u.perms.tipos||[]).length],
+                ['Limpeza e Portaria',u=>u.perms.leituras||u.perms.ronda&&!u.perms.brigada],
+                ['Brigada de Incêndio',u=>u.role==='Brigadista']];
+  const usados=new Set();
+  let h='';
+  grupos.forEach(([rot,fn])=>{
+    const l=USERS.filter(u=>!usados.has(u.id)&&fn(u));
+    if(!l.length) return;
+    l.forEach(u=>usados.add(u.id));
+    h+=`<optgroup label="${esc(rot)}">`+l.map(u=>
+      `<option value="${u.id}" ${pickedUser===u.id?'selected':''}>${esc(u.nome)} — ${esc(u.role)}</option>`).join('')+`</optgroup>`;
+  });
+  const resto=USERS.filter(u=>!usados.has(u.id));
+  if(resto.length) h+=`<optgroup label="Outros">`+resto.map(u=>
+    `<option value="${u.id}" ${pickedUser===u.id?'selected':''}>${esc(u.nome)} — ${esc(u.role)}</option>`).join('')+`</optgroup>`;
+  box.innerHTML=h;
+  box.value=pickedUser;
 }
 function pickUser(id){
   pickedUser=id;
   const u=USERS.find(x=>x.id===id); if(!u)return;
-  buildProfiles();
+  { const sel=document.querySelector('#loginSel'); if(sel&&sel.value!==id) sel.value=id; }
   const set=(sel,v)=>{const el=document.querySelector(sel); if(el){if('value' in el&&el.tagName==='INPUT')el.value=v; else el.textContent=v}};
   set('#loginUser',u.login); set('#loginNome',u.nome); set('#loginRole',u.role); set('#loginAvatar',u.nome[0]);
   const p=document.querySelector('#loginPass'); if(p){p.value=''; if(p.focus)p.focus()}
@@ -1550,6 +1571,7 @@ function entrar(u){
   },400);
 }
 function logout(){session=null;document.body.classList.remove('has-tabbar');$('#app').style.display='none';$('#login').style.display='flex';
+  buildProfiles();
   const p=$('#loginPass'); if(p){p.value='';if(p.focus)p.focus()}
   const p2=$('#loginPass2'); if(p2)p2.value='';
   if(typeof pickedUser!=='undefined'&&pickedUser)pickUser(pickedUser);}
@@ -4249,10 +4271,15 @@ function migrarMarcaEbiz(){
   return true;
 }
 function migrarRevisoesAp(){
-  if(CFG.apRevUnificado==='v1') return false;
+  /* O marcador sozinho não basta: se ele foi gravado antes das duplicatas
+     existirem, a junção nunca mais rodaria e a mesma sala seguiria repetida.
+     A varredura é barata e idempotente, então roda sempre. */
+  const chave=u=>String(u||'').trim().toLowerCase()
+    .replace(/^sala\s*/,'').replace(/\s+/g,'');
   const grupos={};
   analises.forEach(a=>{
-    const k=a.condoId+'|'+String(a.unidade||'').trim().toLowerCase();
+    const k=a.condoId+'|'+chave(a.unidade);
+    if(!chave(a.unidade)) return;            // sem unidade não agrupa
     (grupos[k]=grupos[k]||[]).push(a);
   });
   let mexeu=false;
@@ -11958,6 +11985,7 @@ function abrirSync(){
 if(!load()) seed();
 _booting=false;
 aplicarMarca();
+buildProfiles();          /* monta a lista de acesso antes de escolher o perfil */
 pickUser('u1');
 /* Conecta ao servidor depois de pintar a tela: o app abre offline-first */
 setTimeout(()=>{ ligarSync().then(ok=>{ if(ok&&session) render(); }); },300);
@@ -11966,5 +11994,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a42358d50b49e012',t:'MTc5MDYwNDc4OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a423bb77be6ada0c',t:'MTc5MDYwODgyOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
