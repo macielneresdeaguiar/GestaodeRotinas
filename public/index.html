@@ -771,6 +771,38 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 .cs-obs svg{width:13px;height:13px}
 .cs-obs p{margin:0;font-size:13px;line-height:1.5;white-space:pre-wrap}
 
+.sala-info{margin-top:4px;min-height:15px}
+.sala-info b{font-weight:700}
+
+.cc-card{border-left:3px solid var(--accent)}
+.cc-datas{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:9px}
+.cc-datas>div{display:flex;flex-direction:column}
+.cc-datas b{font-size:14px;color:var(--navy)}
+.cc-barra{height:6px;background:#e3e7ee;border-radius:4px;overflow:hidden}
+.cc-barra div{height:100%;background:var(--accent);border-radius:4px;transition:width .25s}
+.cc-nums{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}
+.cc-nums>div{display:flex;flex-direction:column}
+.cc-nums b{font-size:15px;color:var(--navy)}
+.cc-nums .t-sub{font-size:10.5px}
+.cc-total b{font-size:19px;color:#1d7a4c}
+.cc-aviso{margin:10px 0 0;padding:9px 11px;background:#fdf8ef;border-left:3px solid #a8690b;
+  border-radius:0 7px 7px 0;font-size:12px;color:var(--text-2);display:flex;gap:7px;align-items:flex-start}
+.cc-aviso svg{width:14px;height:14px;flex:none;margin-top:1px;stroke:#a8690b}
+
+.cc-prev{margin-top:8px;padding:9px 11px;background:#eef4ff;border-radius:7px;font-size:12.5px}
+
+.pm-grupo{font-size:10.5px;font-weight:700;color:var(--text-3);text-transform:uppercase;
+  letter-spacing:.5px;margin:14px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+.pm-grupo:first-child{margin-top:0}
+.pm-item{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border:1px solid var(--line);
+  border-radius:8px;margin-bottom:6px;cursor:pointer;background:#fff}
+.pm-item:hover{border-color:#cfd8e4}
+.pm-item.on{background:#f2f7ff;border-color:var(--accent)}
+.pm-item input{width:17px;height:17px;flex:none;margin-top:1px}
+.pm-t{display:flex;flex-direction:column}
+.pm-t b{font-size:13px;line-height:1.3}
+.pm-t em{font-style:normal;font-size:11.5px;color:var(--text-2);margin-top:1px}
+
 /* gráfico de ocupação por andar */
 .og-leg{display:flex;gap:14px;align-items:center;font-size:11.5px;color:var(--text-2);margin-bottom:10px;flex-wrap:wrap}
 .og-leg i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:-1px}
@@ -1640,8 +1672,8 @@ function load(){
     migrarPrestadoresEB();
     if(d.CFG) CFG=Object.assign(CFG,d.CFG);
     creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
-  aplicarNomesUsuarios();
-    aplicarNomesUsuarios();
+  aplicarNomesUsuarios(); aplicarPermsUsuarios();
+    aplicarNomesUsuarios(); aplicarPermsUsuarios();
     let mig=migrarLeiturasAgua(); if(migrarTarifaCaesb()) mig=true; migrarManutObrig(); migrarVendasCustas();
     if(migrarFilaPub()) mig=true; if(migrarRevisoesAp()) mig=true; if(migrarMarcaEbiz()) mig=true; if(migrarSalas()) mig=true; if(mig) save();
     return true;
@@ -1716,6 +1748,138 @@ function aplicarNomesUsuarios(){
   const m=CFG.nomesUsuarios||{};
   USERS.forEach(u=>{ if(m[u.id]) u.nome=m[u.id] });
 }
+/* ============================================================
+   PERMISSÕES POR USUÁRIO
+   O Gestor libera ou bloqueia cada função. O que for alterado
+   fica em CFG.permsUsuarios e é reaplicado a cada carga, já que
+   USERS é definido no código.
+   ============================================================ */
+const PERM_CATALOGO=[
+  {g:'Módulos',itens:[
+    {k:'tipos:Administrativo',rot:'Tarefas Administrativas',d:'Ver e tratar a rotina administrativa'},
+    {k:'tipos:Gestor',rot:'Tarefas do Gestor',d:'Ver e tratar as demandas de gestão'},
+    {k:'manutencao',rot:'Apontamentos e Manutenções',d:'Apontamentos de campo e plano de manutenções obrigatórias'},
+    {k:'estoque',rot:'Estoque e Pedidos',d:'Consultar o estoque e pedir material'},
+    {k:'estoqueTotal',rot:'Movimentar estoque',d:'Dar entrada e baixa — não só consultar'},
+    {k:'leituras',rot:'Leituras de água e energia',d:'Registrar as leituras diárias'},
+    {k:'brigada',rot:'Brigada de incêndio',d:'Check-list por andar e ronda da brigada'},
+    {k:'ronda',rot:'Ronda diária',d:'Percorrer os andares e abrir chamados'},
+    {k:'ia',rot:'Assistente de IA',d:'Perguntas, análises e resumo semanal'}]},
+  {g:'O que pode fazer',itens:[
+    {k:'create',rot:'Criar registros',d:'Cadastrar novos lançamentos'},
+    {k:'edit',rot:'Editar registros',d:'Alterar o que já existe'},
+    {k:'complete',rot:'Concluir tarefas',d:'Marcar demandas como concluídas'},
+    {k:'delete',rot:'Excluir registros',d:'Apagar lançamentos — inclui decidir pedidos'}]}
+];
+function permLer(u,k){
+  if(k.startsWith('tipos:')) return (u.perms.tipos||[]).includes(k.slice(6));
+  return !!u.perms[k];
+}
+function permEscrever(u,k,v){
+  if(k.startsWith('tipos:')){
+    const t=k.slice(6); const l=u.perms.tipos||[];
+    u.perms.tipos = v ? (l.includes(t)?l:l.concat([t])) : l.filter(x=>x!==t);
+    return;
+  }
+  u.perms[k]=!!v;
+}
+/* Guarda só o que foi mexido, para o padrão do código seguir valendo. */
+function permSalvar(uid){
+  const u=USERS.find(x=>x.id===uid); if(!u) return;
+  CFG.permsUsuarios=CFG.permsUsuarios||{};
+  const m={};
+  PERM_CATALOGO.forEach(g=>g.itens.forEach(i=>{ m[i.k]=permLer(u,i.k) }));
+  m.condos=(u.perms.condos||[]).slice();
+  CFG.permsUsuarios[uid]=m;
+  save();
+}
+function aplicarPermsUsuarios(){
+  const m=CFG.permsUsuarios||{};
+  USERS.forEach(u=>{
+    const p=m[u.id]; if(!p) return;
+    Object.keys(p).forEach(k=>{
+      if(k==='condos'){ if(Array.isArray(p.condos)&&p.condos.length) u.perms.condos=p.condos.slice(); return }
+      permEscrever(u,k,p[k]);
+    });
+  });
+}
+/* ---- tela ---- */
+let permEdit=null;
+function abrirPermissoes(uid){
+  if(session.role!=='Gestor') return toast('Somente o Gestor altera permissões.');
+  const u=USERS.find(x=>x.id===uid); if(!u) return;
+  permEdit=uid;
+  const corpo=PERM_CATALOGO.map(g=>`
+    <div class="pm-grupo">${esc(g.g)}</div>
+    ${g.itens.map(i=>{
+      const on=permLer(u,i.k);
+      return `<label class="pm-item ${on?'on':''}" id="pmi_${i.k.replace(':','_')}">
+        <input type="checkbox" ${on?'checked':''} onchange="permMarcar('${i.k}',this.checked)">
+        <span class="pm-t"><b>${esc(i.rot)}</b><em>${esc(i.d)}</em></span>
+      </label>`;
+    }).join('')}`).join('');
+  const cds=CONDOS.map(c=>{
+    const on=(u.perms.condos||[]).includes(c.id);
+    return `<label class="pm-item ${on?'on':''}">
+      <input type="checkbox" ${on?'checked':''} onchange="permCondo('${c.id}',this.checked)">
+      <span class="pm-t"><b>${esc(c.nome)}</b><em>${esc(c.operacao)}</em></span></label>`;
+  }).join('');
+  openModal('Permissões de '+u.nome,
+    `<div class="t-sub" style="margin-bottom:12px">
+       ${esc(u.nome)} · ${esc(u.role)} · acesso <b>${esc(u.login)}</b>.
+       Marque o que essa pessoa pode usar. Vale no próximo acesso dela.</div>
+     ${corpo}
+     <div class="pm-grupo">Condomínios</div>
+     ${cds}
+     <div class="t-sub" style="margin-top:10px">
+       O Taguá Life participa apenas do módulo de Notas Fiscais.</div>`,
+    `<button class="btn ghost" onclick="closeModal()">Fechar</button>
+     <button class="btn ghost" onclick="permRestaurar('${uid}')">${ic('refresh')}Voltar ao padrão</button>
+     <button class="btn" onclick="permConcluir('${uid}')">${ic('check')}Salvar permissões</button>`);
+}
+function permMarcar(k,v){
+  const u=USERS.find(x=>x.id===permEdit); if(!u) return;
+  permEscrever(u,k,v);
+  const el=document.querySelector('#pmi_'+k.replace(':','_'));
+  if(el&&el.classList){
+    v?el.classList.add('on'):el.classList.remove('on');
+    const cx=el.querySelector&&el.querySelector('input');   // caixa e destaque juntos
+    if(cx&&cx.checked!==!!v) cx.checked=!!v;
+  }
+}
+function permCondo(cid,v){
+  const u=USERS.find(x=>x.id===permEdit); if(!u) return;
+  const l=u.perms.condos||[];
+  u.perms.condos = v ? (l.includes(cid)?l:l.concat([cid])) : l.filter(x=>x!==cid);
+}
+function permConcluir(uid){
+  const u=USERS.find(x=>x.id===uid); if(!u) return;
+  if(!(u.perms.condos||[]).length) return toast('Deixe ao menos um condomínio marcado.');
+  permSalvar(uid);
+  const libs=PERM_CATALOGO.flatMap(g=>g.itens).filter(i=>permLer(u,i.k)).map(i=>i.rot);
+  audit('Permissões alteradas',u.nome,libs.join(', ')||'nenhuma função','','Configurações');
+  if(session.id===uid){ session=u; buildNav(); buildTabbar(); }
+  closeModal(); render();
+  toast('Permissões de '+u.nome+' atualizadas.');
+}
+function permRestaurar(uid){
+  const u=USERS.find(x=>x.id===uid); if(!u) return;
+  if(!confirm('Voltar as permissões de '+u.nome+' ao padrão do cargo?')) return;
+  CFG.permsUsuarios=CFG.permsUsuarios||{};
+  delete CFG.permsUsuarios[uid];
+  save();
+  audit('Permissões restauradas',u.nome,'padrão do cargo','','Configurações');
+  toast('Permissões de '+u.nome+' voltarão ao padrão ao recarregar o app.');
+  closeModal(); render();
+}
+/* resumo curto para a lista de usuários */
+function permResumo(u){
+  const l=PERM_CATALOGO.flatMap(g=>g.itens).filter(i=>permLer(u,i.k));
+  const mods=l.filter(i=>PERM_CATALOGO[0].itens.includes(i)).map(i=>i.rot);
+  if(!mods.length) return 'sem módulos liberados';
+  return mods.length+' módulo(s): '+mods.slice(0,3).join(', ')+(mods.length>3?'…':'');
+}
+
 function podeResetarSenha(){ return session && session.role==='Gestor' }
 function resetarSenha(uid){
   if(!podeResetarSenha()) return toast('Somente o Gestor pode redefinir senhas.');
@@ -2272,7 +2436,10 @@ function viewConfig(){
             <div style="flex:1">
               <div class="ft">${esc(u.nome)} <span class="badge b-tag">${esc(u.role)}</span></div>
               <div class="fd">${temSenha(u.id)?('senha definida'+(creds[u.id]&&creds[u.id].trocadaEm?' em '+String(creds[u.id].trocadaEm).slice(0,10).split('-').reverse().join('/'):'')):'aguardando primeiro acesso'}</div>
+              <div class="fd">${esc(permResumo(u))}</div>
             </div>
+            ${session.role==='Gestor'
+              ? `<button class="btn ghost sm" onclick="abrirPermissoes('${u.id}')" title="Liberar ou bloquear funções">${ic('lock')}Permissões</button>`:''}
             ${u.role==='Brigadista'&&session.role==='Gestor'
               ? `<button class="btn ghost sm" onclick="renomearUsuario('${u.id}')">${ic('edit')}Renomear</button>`:''}
             ${u.id===session.id
@@ -3796,7 +3963,8 @@ function editCess(id){
   $('#modalBody').innerHTML=`
     <div class="f2">
       <div class="field"><label>Condomínio</label><select id="csCondo">${condosDo('cessoes').map(x=>`<option value="${x.id}" ${c?.condoId===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
-      <div class="field"><label>Sala / Unidade</label><input id="csUni" value="${esc(c?.unidade||'')}" placeholder="ex.: Sala 208"></div>
+      <div class="field"><label>Sala / Unidade</label>
+        ${campoSala('csUni',c?.unidade||'',c?.condoId||'c1')}</div>
       <div class="field"><label>Tipo</label><select id="csTipo">${CESS_TIPOS.map(t=>`<option ${c?.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="field"><label>Status</label><select id="csStatus">${CESS_STATUS.map(t=>`<option ${c?.status===t?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="field"><label>Nome / Razão Social</label><input id="csNome" value="${esc(c?.nome||'')}"></div>
@@ -4494,7 +4662,7 @@ function apRender(aReg){
       <div class="val"><select id="apSetor">${AP_SETORES.map(x=>
         `<option ${a.setor===x?'selected':''}>${x}</option>`).join('')}</select></div>
       <div class="rot">Unidade / Sala</div>
-      <div class="val"><input id="apUnidade" value="${esc(a.unidade||'')}" placeholder="ex.: 501"></div>
+      <div class="val">${campoSala('apUnidade',a.unidade||'',a.condoId||'c1')}</div>
       <div class="rot">Proprietário / Locatário</div>
       <div class="val"><input id="apProp" value="${esc(a.proprietario||'')}" placeholder="nome da empresa ou pessoa"></div>
       <div class="rot">E-mail do proprietário</div>
@@ -5241,7 +5409,8 @@ function vcFormUnidade(id){
         <option value="energia" ${(u?u.servico:vcTab)==='energia'?'selected':''}>Energia</option></select></div>
       <div class="field"><label>Condomínio</label><select id="vuCondo">${condosDo('vendascustas').map(x=>`<option value="${x.id}" ${u?.condoId===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
       <div class="field"><label>Nome UAU</label><input id="vuNome" value="${esc(u?.nome||'')}" placeholder="CAPITAL ESPRESSO LTDA"></div>
-      <div class="field"><label>Unidade</label><input id="vuUni" value="${esc(u?.unidade||'')}" placeholder="LOJA M01"></div>
+      <div class="field"><label>Unidade</label>
+        ${campoSala('vuUni',u?.unidade||'',u?.condoId||'c1')}</div>
       <div class="field"><label>CNPJ / CPF</label><input id="vuCnpj" value="${esc(u?.cnpj||'')}" placeholder="00.000.000/0001-00"></div>
       <div class="field"><label>Tipo</label><select id="vuTipo">${VC_TIPOS.map(t=>`<option ${u?.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="field"><label>Ordem na planilha</label><input id="vuOrdem" type="number" value="${u?.ordem||0}"></div>
@@ -7105,6 +7274,7 @@ function viewLeituras(){
       return ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][d.getMonth()]+'/'+d.getFullYear()})()}</h3>
       <div class="spacer no-print"><button class="btn ghost sm" onclick="go('config')">${ic('settings')}Ajustar tarifas</button></div></div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(330px,1fr));margin-bottom:6px">
+      ${condosProj.map(c=>cicloCard(c.id,leitTab)).join('')}
       ${condosProj.map(c=>cardProjecao(leitTab,c.id)).join('')}
     </div>
     <div class="toolbar no-print" style="margin-top:16px">
@@ -8897,6 +9067,130 @@ function contaAgua(cid,m3){
   return {varAgua,varEsg,fixAgua,fixEsg,total:arred2(varAgua+varEsg+fixAgua+fixEsg),
           medio:m3>0?arred2((varAgua+varEsg+fixAgua+fixEsg)/m3):0};
 }
+/* ============================================================
+   CICLO DE FATURAMENTO
+   A conta não fecha no dia 1º: ela fecha entre duas medições da
+   concessionária. Registrando a data medida e a previsão da
+   próxima, a projeção passa a valer para o período real da fatura.
+   ============================================================ */
+function cicloDe(cid,tipo){
+  CFG.ciclos=CFG.ciclos||{};
+  CFG.ciclos[cid]=CFG.ciclos[cid]||{};
+  return CFG.ciclos[cid][tipo]||{medicao:null,proxima:null};
+}
+function cicloSalvar(cid,tipo,medicao,proxima){
+  CFG.ciclos=CFG.ciclos||{};
+  CFG.ciclos[cid]=CFG.ciclos[cid]||{};
+  CFG.ciclos[cid][tipo]={medicao:medicao||null,proxima:proxima||null};
+  save();
+}
+/* Consumo acumulado desde a medição da concessionária até hoje,
+   e a projeção até a próxima leitura dela. */
+function cicloResumo(cid,tipo){
+  const c=cicloDe(cid,tipo);
+  if(!c.medicao) return null;
+  const hoje=today();
+  const todas=leituras.filter(l=>l.tipo===tipo&&l.condoId===cid&&l.status==='Registrada'&&l.consumo!=null)
+    .sort((a,b)=>a.data.localeCompare(b.data));
+  const doCiclo=todas.filter(l=>l.data>c.medicao&&l.data<=hoje);
+  /* dias justificados ficam fora da média, mas contam no acumulado real */
+  const limpas=doCiclo.filter(l=>!leitAtipico(l));
+  const acum=doCiclo.reduce((s,l)=>s+l.consumo,0);
+  const diasCorridos=Math.max(1,diffDays(hoje,c.medicao));
+  const mediaDia=limpas.length?limpas.reduce((s,l)=>s+l.consumo,0)/limpas.length:(acum/diasCorridos);
+  let diasTotais=null, faltam=null, projetado=null;
+  if(c.proxima){
+    diasTotais=Math.max(1,diffDays(c.proxima,c.medicao));
+    faltam=Math.max(0,diffDays(c.proxima,hoje));
+    projetado=acum+mediaDia*faltam;
+  }
+  /* água usa as faixas da CAESB; energia é tarifa x consumo + taxa fixa */
+  const t=tarifaDe(cid);
+  const custo=q => tipo==='agua' ? contaAgua(cid,q).total
+                                 : arred2(q*(t.energia||0)+(t.fixaEnergia||0));
+  const valor = projetado!=null?custo(projetado):null;
+  const valorAte = custo(acum);
+  return {medicao:c.medicao,proxima:c.proxima,acum,mediaDia,diasCorridos,diasTotais,faltam,
+          projetado,valor,valorAte,lidos:doCiclo.length,ignorados:doCiclo.length-limpas.length};
+}
+function cicloForm(cid,tipo){
+  const c=cicloDe(cid,tipo);
+  const rot=tipo==='agua'?'Água':'Energia';
+  openModal('Ciclo de faturamento — '+rot+' · '+condoName(cid),
+    `<div class="t-sub" style="margin-bottom:12px">
+       Informe quando a concessionária mediu e quando deve medir de novo.
+       A projeção da conta passa a considerar esse período, e não o mês do calendário.</div>
+     <div class="f2">
+       <div class="field"><label>Data da última medição</label>
+         <input type="date" id="ccMed" value="${c.medicao||''}" onchange="cicloPrever()"></div>
+       <div class="field"><label>Previsão da próxima medição</label>
+         <input type="date" id="ccProx" value="${c.proxima||''}" onchange="cicloPrever()"></div>
+     </div>
+     <div id="ccBox"></div>
+     <div class="t-sub" style="margin-top:8px">
+       Está na fatura, como "período de consumo". Ao registrar a próxima medição,
+       a data anterior avança sozinha.</div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn" onclick="cicloGravar('${cid}','${tipo}')">${ic('check')}Salvar</button>`);
+  cicloPrever();
+}
+function cicloPrever(){
+  const box=$('#ccBox'); if(!box) return;
+  const m=($('#ccMed')&&$('#ccMed').value)||'', p=($('#ccProx')&&$('#ccProx').value)||'';
+  if(!m){ box.innerHTML=''; return }
+  const dias=p?diffDays(p,m):null;
+  box.innerHTML=`<div class="cc-prev">
+    ${dias!=null?`Período de <b>${dias} dia(s)</b>, de ${fmt(m)} a ${fmt(p)}.`
+      :`Medição em <b>${fmt(m)}</b>. Informe a previsão para calcular o período.`}
+    ${dias!=null&&(dias<20||dias>40)?`<div class="t-sub" style="margin-top:4px;color:#a8690b">
+      Período fora do usual (20 a 40 dias) — confira as datas.</div>`:''}
+  </div>`;
+}
+function cicloGravar(cid,tipo){
+  const m=($('#ccMed')&&$('#ccMed').value)||'', p=($('#ccProx')&&$('#ccProx').value)||'';
+  if(!m) return toast('Informe a data da última medição.');
+  if(p&&p<=m) return toast('A próxima medição precisa ser depois da última.');
+  cicloSalvar(cid,tipo,m,p);
+  audit('Ciclo de faturamento',(tipo==='agua'?'Água':'Energia')+' · '+condoName(cid),
+    fmt(m)+(p?' → '+fmt(p):''),cid);
+  closeModal(); render();
+  toast('Ciclo registrado. A projeção agora usa o período da fatura.');
+}
+/* cartão do ciclo na tela de leituras */
+function cicloCard(cid,tipo){
+  const r=cicloResumo(cid,tipo);
+  const rot=tipo==='agua'?'Água':'Energia', un=unid(tipo);
+  if(!r) return `<div class="card cc-card">
+    <div class="section-title" style="margin-top:0"><h3>${ic('calendar')}Ciclo da conta — ${rot}</h3></div>
+    <div class="t-sub" style="margin-bottom:10px">Informe as datas de medição da concessionária
+      para projetar o valor da fatura pelo período real.</div>
+    <button class="btn ghost sm" onclick="cicloForm('${cid}','${tipo}')">${ic('calendar')}Informar datas</button></div>`;
+  const pct=r.diasTotais?Math.min(100,Math.round((r.diasTotais-r.faltam)*100/r.diasTotais)):null;
+  return `<div class="card cc-card">
+    <div class="section-title" style="margin-top:0"><h3>${ic('calendar')}Ciclo da conta — ${rot}</h3>
+      <div class="spacer no-print"><button class="btn ghost sm" onclick="cicloForm('${cid}','${tipo}')">${ic('edit')}Datas</button></div></div>
+    <div class="cc-datas">
+      <div><span class="t-sub">medido em</span><b>${fmt(r.medicao)}</b></div>
+      <div><span class="t-sub">próxima medição</span><b>${r.proxima?fmt(r.proxima):'—'}</b></div>
+      ${r.faltam!=null?`<div><span class="t-sub">faltam</span><b>${r.faltam} dia(s)</b></div>`:''}
+    </div>
+    ${pct!=null?`<div class="cc-barra"><div style="width:${pct}%"></div></div>
+      <div class="t-sub" style="margin-top:3px">${r.diasTotais-r.faltam} de ${r.diasTotais} dias do período</div>`:''}
+    ${!r.lidos?`<div class="cc-aviso">${ic('alert')} Nenhuma leitura registrada depois de ${fmt(r.medicao)}.
+      A projeção começa a valer assim que a primeira leitura do período for lançada.</div>`:''}
+    <div class="cc-nums">
+      <div><span class="t-sub">consumo até agora</span><b>${fmtLeit(r.acum,tipo)} ${un}</b>
+        <span class="t-sub">${r.lidos} leitura(s)${r.ignorados?' · '+r.ignorados+' justificada(s)':''}</span></div>
+      <div><span class="t-sub">valor até agora</span><b>${brl(r.valorAte)}</b></div>
+      ${r.projetado!=null?`<div><span class="t-sub">projeção do período</span>
+        <b>${fmtLeit(r.projetado,tipo)} ${un}</b></div>
+      <div class="cc-total"><span class="t-sub">conta prevista</span><b>${brl(r.valor)}</b></div>`:''}
+    </div>
+    ${r.projetado!=null?`<div class="t-sub" style="margin-top:8px">
+      Média de ${fmtLeit(r.mediaDia,tipo)} ${un}/dia aplicada aos ${r.faltam} dia(s) restantes.</div>`:''}
+  </div>`;
+}
+
 function projecaoConta(tipo,cid,mes){
   mes=mes||today().slice(0,7);
   const [y,m]=mes.split('-').map(Number);
@@ -11577,7 +11871,7 @@ function ocuFormSala(id){
     `<div class="f2">
       <div class="field"><label>Condomínio</label><select id="slCondo">
         ${condosDo('ocupacao').map(c=>`<option value="${c.id}" ${s&&s.condoId===c.id?'selected':''}>${c.nome}</option>`).join('')}</select></div>
-      <div class="field"><label>Sala / Unidade</label><input id="slNum" value="${esc(s?.numero||'')}" placeholder="ex.: 305"></div>
+      <div class="field"><label>Sala / Unidade</label><input id="slNum" value="${esc(s?.numero||'')}" placeholder="ex.: 305" autocomplete="off"></div>
       <div class="field"><label>Andar</label><input id="slAndar" value="${esc(s?.andar||'')}" placeholder="ex.: 3"></div>
       <div class="field"><label>Área (m²)</label><input type="number" step="0.01" id="slArea" value="${s?.area??''}" placeholder="ex.: 38,50"></div>
       <div class="field"><label>Ocupante atual</label><input id="slOcup" value="${esc(s?.ocupante||'')}" placeholder="nome ou razão social"></div>
@@ -11964,6 +12258,48 @@ function ocuGrafico(cid){
       </div>
       <div class="og-wrap">${barras}</div>
     </div></div>`;
+}
+
+/* ============================================================
+   SELETOR DE UNIDADE
+   Todo campo de sala do app puxa a relação real do prédio.
+   É um campo com lista: dá para digitar "30" e filtrar, ou
+   escolher na lista — e aceita texto livre para casos fora do padrão.
+   ============================================================ */
+function salasDoCondo(cid){
+  const l=salas.filter(s=>s.condoId===(cid||'c1'));
+  if(l.length) return l;
+  /* base ainda não carregada: usa a relação de origem */
+  return (typeof SALAS_SEED!=='undefined'?SALAS_SEED:[]).map(([n,a,o])=>({numero:n,andar:a,ocupante:o}));
+}
+/* <datalist> compartilhado — montado uma vez por condomínio */
+function salaDatalist(cid){
+  const l=salasDoCondo(cid);
+  return `<datalist id="dlSalas">${l.map(s=>{
+    const oc=s.ocupante?(' — '+s.ocupante):' — vaga';
+    return `<option value="${esc(s.numero)}">${esc(String(s.numero)+oc)}</option>`;
+  }).join('')}</datalist>`;
+}
+/* campo pronto: input com lista + resumo de quem ocupa */
+function campoSala(id,valor,cid,onchange){
+  return `<input id="${id}" list="dlSalas" value="${esc(valor||'')}" autocomplete="off"
+     placeholder="digite ou escolha a sala" oninput="salaInfo('${id}')"
+     ${onchange?`onchange="${onchange}"`:''}>
+   ${salaDatalist(cid)}
+   <div class="sala-info" id="${id}_info"></div>`;
+}
+/* mostra quem está na sala digitada — confere na hora se é a unidade certa */
+function salaInfo(id){
+  const el=$('#'+id), box=$('#'+id+'_info');
+  if(!el||!box) return;
+  const v=String(el.value||'').trim();
+  if(!v){ box.innerHTML=''; return }
+  const s=salasDoCondo('c1').find(x=>ocuMesmaSala(x.numero,v));
+  if(!s){ box.innerHTML='<span class="t-sub">Unidade fora da relação do prédio — será usada assim mesmo.</span>'; return }
+  const st=s.id?ocuStatus(s):(s.ocupante?'Ocupada':'Vaga');
+  const cor=st==='Vaga'?'#c2384a':(st==='Em obra'?'#a8690b':'#1d7a4c');
+  box.innerHTML=`<span class="t-sub">${esc(s.andar||'')} · <b style="color:${cor}">${esc(st)}</b>${
+    s.ocupante?' · '+esc(s.ocupante):''}</span>`;
 }
 
 /* ---- Tela: taxa de ocupação ---- */
@@ -12399,5 +12735,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a42532a48ff2785e',t:'MTc5MDYyNDE5NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a42575cb1980e2ae',t:'MTc5MDYyNjk0NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
