@@ -11887,6 +11887,27 @@ function ocuFormSala(id){
      ${s&&P().delete?`<button class="btn danger ghost" onclick="ocuExcluirSala('${s.id}')">${ic('trash')}Excluir</button>`:''}
      <button class="btn" onclick="ocuSalvarSala('${id||''}')">${ic('check')}Salvar</button>`);
 }
+/* Esvaziar o mapa é uma decisão do usuário — registra para não voltar sozinho. */
+function ocuLimparTudo(){
+  if(session.role!=='Gestor') return toast('Somente o Gestor pode limpar o mapa.');
+  const n=salas.filter(s=>s.condoId==='c1').length;
+  if(!n) return toast('O mapa já está vazio.');
+  if(!confirm('Apagar as '+n+' salas do mapa de ocupação?\n\n'+
+    'Para recarregar a relação original depois, use "Restaurar relação".')) return;
+  salas=salas.filter(s=>s.condoId!=='c1');
+  CFG.salasLimpas=true;
+  audit('Mapa de ocupação esvaziado','Salas',n+' sala(s)','c1','');
+  save(); render(); toast('Mapa esvaziado.');
+}
+function ocuRestaurar(){
+  if(!confirm('Recarregar a relação de salas do prédio?\n\n'+
+    'As '+SALAS_SEED.length+' unidades voltam com os ocupantes originais.')) return;
+  salas=salas.filter(s=>s.condoId!=='c1');
+  CFG.salasLimpas=false; CFG.salasSeed=null;
+  migrarSalas();
+  audit('Relação de salas restaurada','Salas',SALAS_SEED.length+' unidades','c1','');
+  save(); render(); toast(SALAS_SEED.length+' salas recarregadas.');
+}
 function ocuExcluirSala(id){
   const s=salas.find(x=>x.id===id); if(!s) return;
   if(!confirm('Excluir a sala '+s.numero+' do mapa de ocupação?')) return;
@@ -12164,9 +12185,12 @@ const OCU_ANDARES=["Térreo", "Mezanino", "2º", "3º", "4º", "5º", "6º", "7�
 /* Carrega o mapa uma única vez; depois a manutenção é pela tela. */
 function migrarSalas(){
   const jaTem=salas.some(s=>s.condoId==='c1');
-  if(CFG.salasSeed==='v1'&&jaTem) return false;
-  if(CFG.salasSeed==='v1'&&!jaTem) return false;   /* esvaziado de propósito */
-  if(!jaTem){
+  if(jaTem) { CFG.salasSeed='v1'; return false; }
+  /* O marcador sozinho não basta — se ele ficou gravado sem os registros,
+     o mapa nunca mais se preencheria. Só um esvaziamento explícito do
+     usuário (CFG.salasLimpas) impede a recarga. */
+  if(CFG.salasLimpas) return false;
+  {
     SALAS_SEED.forEach(([num,andar,ocup])=>{
       salas.push({id:uid('sl'),condoId:'c1',numero:num,andar,area:null,
         ocupante:ocup||'',tipo:ocup?'Locatário':'Vago',
@@ -12319,8 +12343,9 @@ function viewOcupacao(){
         Cadastre as salas do prédio para acompanhar a taxa de ocupação. A situação de cada uma
         passa a se atualizar sozinha conforme as obras aprovadas e as cessões de direitos.</div>
       <div class="rowact" style="justify-content:center">
-        ${P().create?`<button class="btn" onclick="ocuFormSala()">${ic('plus')}Cadastrar sala</button>`:''}
+        ${P().create?`<button class="btn" onclick="ocuRestaurar()">${ic('refresh')}Carregar as ${SALAS_SEED.length} salas do prédio</button>`:''}
         ${P().create?`<button class="btn ghost" onclick="ocuImportar()">${ic('upload')}Importar lista</button>`:''}
+        ${P().create?`<button class="btn ghost" onclick="ocuFormSala()">${ic('plus')}Cadastrar uma</button>`:''}
       </div></div>`;
     return;
   }
@@ -12375,6 +12400,7 @@ function viewOcupacao(){
       <div class="spacer"></div>
       <button class="btn ghost" onclick="ocuExportar()">${ic('download')}Exportar Excel</button>
       ${P().create?`<button class="btn ghost" onclick="ocuImportar()">${ic('upload')}Importar lista</button>`:''}
+      ${session.role==='Gestor'?`<button class="btn ghost" onclick="ocuRestaurar()" title="Recarregar a relação original do prédio">${ic('refresh')}Restaurar relação</button>`:''}
       ${P().create?`<button class="btn" onclick="ocuFormSala()">+ Nova sala</button>`:''}
     </div>
     <div class="card" style="padding:0;overflow:hidden">
@@ -12735,6 +12761,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a42575cb1980e2ae',t:'MTc5MDYyNjk0NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4259d7b2d8ae132',t:'MTc5MDYyODU3MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+</body>
 </html>
