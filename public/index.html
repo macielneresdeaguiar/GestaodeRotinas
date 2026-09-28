@@ -766,6 +766,11 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 
 .pd-novo{margin-top:9px;padding:11px;background:#f6f8fc;border:1px dashed var(--line);border-radius:9px}
 
+.cs-obs{margin-top:12px;padding:10px 12px;background:#f6f8fc;border-left:3px solid var(--accent);border-radius:0 8px 8px 0}
+.cs-obs .t-sub{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.cs-obs svg{width:13px;height:13px}
+.cs-obs p{margin:0;font-size:13px;line-height:1.5;white-space:pre-wrap}
+
 /* gráfico de ocupação por andar */
 .og-leg{display:flex;gap:14px;align-items:center;font-size:11.5px;color:var(--text-2);margin-bottom:10px;flex-wrap:wrap}
 .og-leg i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:-1px}
@@ -3772,7 +3777,7 @@ function viewCessoes(){
           <span class="badge ${c.contratoEmail?'b-conc':'b-pend'}">${c.contratoEmail?'':''} E-mail</span></div></td>
         <td>${fmt(c.vencimento)}<div class="t-sub">${st==='Concluída'?'finalizada':st==='Atrasada'?`'+ic('alert')+' há ${-d} dia(s)`:d===0?'vence hoje':`em ${d} dia(s)`}</div></td>
         <td>${c.anexo?`<span class="badge b-tag">${ic('paperclip')} ${esc(c.anexo)}</span>`:'<span class="t-sub">—</span>'}</td>
-        <td>${badgeCess(st)}</td>
+        <td>${badgeCess(st)}${c.obs?`<div class="t-sub" title="${esc(c.obs)}">${ic('edit')} com observação</div>`:''}</td>
         <td><div class="rowact no-print">
           ${P().complete&&st!=='Concluída'&&st!=='Cancelada'?`<button class="btn green sm" onclick="quickComplete('cessao','${c.id}')">Concluir</button>`:''}
           ${P().edit?`<button class="btn ghost sm" onclick="editCess('${c.id}')">Editar</button>`:''}
@@ -3805,6 +3810,10 @@ function editCess(id){
     <div class="check" style="margin-bottom:10px"><input type="checkbox" id="csMail" ${c?.contratoEmail?'checked':''}>
       <div style="flex:1"><div class="ct">Contrato E-mail</div><div class="t-sub">Via digital enviada/recebida por e-mail</div></div></div>
     <div class="field"><label>Anexo</label><input id="csAnexo" value="${esc(c?.anexo||'')}" placeholder="ex.: contrato_sala208.pdf"></div>
+    <div class="field"><label>Observações</label>
+      <textarea id="csObs" rows="3"
+        placeholder="ex.: transferência da sala de pessoa física para pessoa jurídica (mesmo titular, CNPJ novo)">${esc(c?.obs||'')}</textarea>
+      <div class="t-sub">Use para registrar o contexto da cessão — troca de titularidade, transferência de PF para PJ, condição negociada.</div></div>
     <div id="csVencBox"></div>`;
   $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
     <button class="btn" onclick="saveCess('${id||''}')">Salvar</button>`;
@@ -3836,15 +3845,18 @@ function saveCess(id,dados){
     status:$('#csStatus').value,nome:$('#csNome').value.trim(),doc:$('#csDoc').value.trim(),
     contato:$('#csCont').value.trim(),email:($('#csEmail')?$('#csEmail').value:'').trim(),cadastro:$('#csCad').value,
     contratoFisico:$('#csFis').checked,contratoEmail:$('#csMail').checked,anexo:$('#csAnexo').value.trim(),
+    obs:($('#csObs')?$('#csObs').value:'').trim(),
     vencimento:csVencEscolha||vencCessao($('#csCad').value).data};
   if(!o.unidade||!o.nome) return toast('Informe a unidade e o nome/razão social.');
   if(o.email&&!emailValido(o.email)) return toast('E-mail inválido. Confira o endereço digitado.');
   if(id){
     const c=cessoes.find(x=>x.id===id); const antes=c.vencimento;
-    const mailAntes=c.email||'';
+    const mailAntes=c.email||'', obsAntes=c.obs||'';
     Object.assign(c,o);
     c.historico.push({q:session.nome,w:nowStamp(),t:'Registro editado'+(antes!==c.vencimento?` · vencimento ${fmt(antes)} → ${fmt(c.vencimento)}`:'')
-      +(mailAntes!==o.email?` · e-mail ${mailAntes||'—'} → ${o.email||'—'}`:'')});
+      +(mailAntes!==o.email?` · e-mail ${mailAntes||'—'} → ${o.email||'—'}`:'')
+      +(obsAntes!==(o.obs||'')?' · observação atualizada':''),
+      obs:(obsAntes!==(o.obs||''))?o.obs:''});
     toast('Cessão atualizada.');
   }else{
     cessoes.push(Object.assign({id:uid('cs'),concluidoEm:null,concluidoPor:null,obsConclusao:'',criadoPor:session.nome,
@@ -3873,6 +3885,7 @@ function openCess(id){
     <div class="chip-list" style="margin-top:12px">
       <span class="badge ${c.contratoFisico?'b-conc':'b-pend'}">${c.contratoFisico?'':''} Contrato Físico</span>
       <span class="badge ${c.contratoEmail?'b-conc':'b-pend'}">${c.contratoEmail?'':''} Contrato E-mail</span></div>
+    ${c.obs?`<div class="cs-obs"><div class="t-sub">${ic('edit')} Observações</div><p>${esc(c.obs)}</p></div>`:''}
     ${c.obsConclusao?`<div style="margin-top:12px"><div class="t-sub">Observações da conclusão</div><p>${esc(c.obsConclusao)}</p></div>`:''}
     ${histHtml(c.historico)}`;
   $('#modalFoot').innerHTML=`
@@ -12386,5 +12399,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a42526fedab734bf',t:'MTc5MDYyMzcxOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a42532a48ff2785e',t:'MTc5MDYyNDE5NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
