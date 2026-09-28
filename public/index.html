@@ -766,6 +766,19 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 
 .pd-novo{margin-top:9px;padding:11px;background:#f6f8fc;border:1px dashed var(--line);border-radius:9px}
 
+.ap-obra{margin-top:12px;padding:12px 13px;background:#f6f8fc;border:1px solid var(--line);border-radius:9px}
+.ap-obra-t{font-weight:700;font-size:12.5px;display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.ap-obra-t svg{width:15px;height:15px}
+.ap-obra-bt{display:flex;gap:7px;flex-wrap:wrap}
+.ap-obrasel{padding:5px 7px;font-size:11.5px;border:1px solid var(--line);border-radius:6px;background:#fff}
+tr.ocu-vaga td{background:#fdecee} tr.ocu-obra td{background:#fff8e6}
+tr.ocu-res td{background:#f4f1fb}
+
+.pm-elev{display:flex;flex-direction:column;gap:5px;max-height:150px;overflow:auto;
+  border:1px solid var(--line);border-radius:8px;padding:9px}
+.pm-chk{display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer}
+.pm-txt{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.55;white-space:pre-wrap}
+
 .mo-obs{display:flex;flex-direction:column;gap:7px}
 .mo-obs-i{border-left:3px solid var(--line);padding:8px 11px;background:#fafbfd;border-radius:0 7px 7px 0}
 .mo-obs-i.laudo{border-left-color:var(--accent);background:#eef4ff}
@@ -1142,7 +1155,7 @@ const USERS=[
 ];
 let session=null, condoFilter='all', taskView='lista', calRef=new Date(), tipoLock=null;
 let CFG={retroativas:false,coordPodeExcluirPrestador:false,
-  logo:'', nomeEmpresa:'Rotinas Condominiais', slogan:'Gestão integrada',
+  logo:'', nomeEmpresa:'E-Business', slogan:'Águas Claras · Gestão Predial',
   /* Tarifas CAESB — Resolução ADASA nº 702026/2026, categoria COMERCIAL.
      Conferido com a fatura 06/2026 (venc. 21/07/2026): 519 m³ = R$ 20.919,02 */
   tarifaFaixas:[{ate:4,preco:8.67},{ate:7,preco:10.84},{ate:10,preco:13.98},
@@ -1551,7 +1564,7 @@ let _saveTimer=null, _booting=true;
 function store(){ try{ return window.localStorage }catch(e){ return null } }
 function dbSnapshot(){
   return {v:DB_VER, savedAt:new Date().toISOString(),
-    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,brigInsp,brigRondas,
+    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,brigInsp,brigRondas,salas,
     auditLog, CFG, creds, notifs, notifState};
 }
 function salvarLocal(){
@@ -1579,7 +1592,7 @@ function load(){
     apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
     pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
     prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
-    analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[];
+    analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[];
     if(!prestadores.length) seedPrestadores();
     migrarPrestadoresEB();
     if(d.CFG) CFG=Object.assign(CFG,d.CFG);
@@ -1587,7 +1600,7 @@ function load(){
   aplicarNomesUsuarios();
     aplicarNomesUsuarios();
     let mig=migrarLeiturasAgua(); if(migrarTarifaCaesb()) mig=true; migrarManutObrig(); migrarVendasCustas();
-    if(migrarFilaPub()) mig=true; if(migrarRevisoesAp()) mig=true; if(mig) save();
+    if(migrarFilaPub()) mig=true; if(migrarRevisoesAp()) mig=true; if(migrarMarcaEbiz()) mig=true; if(mig) save();
     return true;
   }catch(e){ console.warn('Base corrompida:',e); return false }
 }
@@ -1691,7 +1704,7 @@ function toggleSidebar(){
 /* Módulo que cada página usa para decidir quais condomínios oferecer.
    Sem isso, páginas financeiras herdavam a lista de 'tarefas' e o Taguá Life
    (regime Somente Financeiro) sumia do seletor do topo. */
-const MODULO_DA_PAGINA={brigada:'brigada','brigada-inicio':'brigada','brigada-ronda':'brigada','brigada-form':'brigada',notas:'notas',cessoes:'cessoes',vendascustas:'vendascustas',publicidade:'publicidade',manutobrig:'manutobrig',analises:'analises',
+const MODULO_DA_PAGINA={ocupacao:'ocupacao',brigada:'brigada','brigada-inicio':'brigada','brigada-ronda':'brigada','brigada-form':'brigada',notas:'notas',cessoes:'cessoes',vendascustas:'vendascustas',publicidade:'publicidade',manutobrig:'manutobrig',analises:'analises',
   leituras:'leituras',estoque:'estoque',pedidos:'pedidos',apontamentos:'apontamentos'};
 function moduloDaPagina(){ return MODULO_DA_PAGINA[page]||'tarefas' }
 function buildCondoFilter(){
@@ -1790,6 +1803,7 @@ const ICONS={
  flag:'<path d="M5 21V4.5M5 4.5h11l-1.6 3.4L16 11.3H5"/>',
  door:'<path d="M4 21h16M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"/><circle cx="14.5" cy="12" r="1"/>',
  play:'<path d="M7 4.8v14.4l11.5-7.2Z"/>',
+ copy:'<rect x="9" y="9" width="11.5" height="11.5" rx="2"/><path d="M5.5 15H4.5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1H14a1 1 0 0 1 1 1v1"/>',
  camera:'<path d="M3 8.5h3.2l1.5-2.2h8.6l1.5 2.2H21v11H3Z"/><circle cx="12" cy="13.5" r="3.4"/>',
  arrowLeft:'<path d="M20 12H4.5M10.5 5.5 4 12l6.5 6.5"/>',
  clipboardCheck:'<path d="M9 4.5h6M8 4.5H6.5a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V5.5a1 1 0 0 0-1-1H16"/><path d="m9 13 2.2 2.2L15.5 11"/>'
@@ -1813,6 +1827,7 @@ function buildNav(){
     items.push(['#','','Predial']);
     items.push(['leituras','water','Leituras — Água e Energia']);
     items.push(['analises','helmet','Análise de Projetos']);
+    items.push(['ocupacao','building','Taxa de Ocupação']);
   }
   /* Perfis operacionais (sem tarefas) que registram leitura */
   if(!P().tipos.length&&P().leituras){
@@ -1854,9 +1869,10 @@ function render(){
     'tarefas-adm':'Tarefas Administrativas','tarefas-gestor':'Tarefas do Gestor',calendario:'Calendário',rotina:'Minha Rotina',
     hoje:'Tarefas de Hoje — Planejamento Diário',leituras:'Leituras / Água e Energia',notas:'Controle de Notas Fiscais',
     estoque:'Controle de Estoque',pedidos:'Pedidos de Material',relmensal:'Relatório Mensal de Gestão',
-    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',analises:'Análise de Projetos — Check-list de Aprovação','brigada-inicio':'Brigada — Iniciar Check-list',brigada:'Brigada de Incêndio — Check-list por Andar','brigada-ronda':(session&&!P().brigada&&P().ronda)?'Ronda Diária e Chamados':'Brigada — Ronda Diária','brigada-form':'Brigada — Check-list',relatorios:'Relatórios',config:'Configurações'};
+    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',analises:'Análise de Projetos — Check-list de Aprovação',ocupacao:'Taxa de Ocupação — Mapa de Salas','brigada-inicio':'Brigada — Iniciar Check-list',brigada:'Brigada de Incêndio — Check-list por Andar','brigada-ronda':(session&&!P().brigada&&P().ronda)?'Ronda Diária e Chamados':'Brigada — Ronda Diária','brigada-form':'Brigada — Check-list',relatorios:'Relatórios',config:'Configurações'};
   $('#pageTitle').textContent=titles[page];
   if(page==='analises'){ return (apAtual&&apEditId!==null)?apRender(apAtual):viewAnalises() }
+  if(page==='ocupacao'){ return viewOcupacao() }
   if(page==='brigada-inicio'){ return viewBrigInicio() }
   if(page==='brigada-form'){ return viewBrigForm() }
   if(page==='brigada'){ return viewBrigada() }
@@ -2090,7 +2106,7 @@ function viewConfig(){
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
           <div id="logoPrev" style="width:64px;height:64px;border:1px solid var(--line);border-radius:10px;
             display:grid;place-items:center;background:var(--panel);overflow:hidden;flex:none">
-            ${CFG.logo?`<img src="${CFG.logo}" style="max-width:100%;max-height:100%;object-fit:contain">`:ic('building','ico-lg')}</div>
+            <img src="${marcaLogo()}" style="max-width:100%;max-height:100%;object-fit:contain"></div>
           <div style="flex:1">
             <input type="file" id="logoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp"
               onchange="subirLogo(this)" style="font-size:12px">
@@ -2247,6 +2263,26 @@ function viewConfig(){
         ${CONDOS.filter(c=>soFinanceiro(c.id)&&P().condos.includes(c.id)).map(c=>
           `<button class="btn danger" style="margin-top:8px" onclick="limparPassivos('${c.id}')">${ic('broom')} Remover Tarefas Indevidas do ${c.nome}</button>`).join('')}
       </div>
+      ${session.role==='Gestor'?`
+      <div class="card">
+        <div class="section-title" style="margin-top:0"><h3>${ic('trash')}Excluir Tarefas em Massa</h3></div>
+        <div class="t-sub" style="margin-bottom:12px">Apaga as tarefas do sistema de forma definitiva —
+          de todos os meses, não só do atual. Use para limpar a base antes de um novo ciclo.</div>
+        <div class="feed-item" style="margin-bottom:8px">
+          <div class="fi-ic">${ic('clipboardCheck')}</div>
+          <div style="flex:1"><div class="ft">Tarefas Administrativas</div>
+            <div class="fd">${cfgContarTarefas('Administrativo')} registro(s) no sistema</div></div>
+          <button class="btn danger ghost sm" onclick="cfgExcluirTarefas('Administrativo')">Excluir todas</button>
+        </div>
+        <div class="feed-item" style="margin-bottom:8px">
+          <div class="fi-ic">${ic('briefcase')}</div>
+          <div style="flex:1"><div class="ft">Tarefas do Gestor</div>
+            <div class="fd">${cfgContarTarefas('Gestor')} registro(s) no sistema</div></div>
+          <button class="btn danger ghost sm" onclick="cfgExcluirTarefas('Gestor')">Excluir todas</button>
+        </div>
+        <div class="t-sub" style="margin-top:6px">Pede confirmação por digitação e fica registrado na auditoria.</div>
+      </div>`:''}
+
       <div class="card" style="grid-column:1/-1">
         <div class="section-title" style="margin-top:0"><h3>Log de Auditoria</h3>
           <span class="spacer badge b-pend">${auditLog.length} evento(s)</span></div>
@@ -2263,6 +2299,48 @@ function viewConfig(){
         <div style="margin-top:10px"><button class="btn ghost" onclick="go('notas')">Abrir módulo</button></div>
       </div>`}
     </div>`;
+}
+
+/* ============ EXCLUSÃO EM MASSA DE TAREFAS ============
+   Limpeza definitiva: apaga do sistema todas as tarefas de um tipo,
+   não apenas as do mês. Só o Gestor, com confirmação por digitação. */
+function cfgContarTarefas(tipo){
+  return tasks.filter(t=>!tipo||t.tipo===tipo).length;
+}
+function cfgExcluirTarefas(tipo){
+  if(session.role!=='Gestor') return toast('Somente o Gestor pode excluir em massa.');
+  const alvo=tasks.filter(t=>!tipo||t.tipo===tipo);
+  if(!alvo.length) return toast('Não há tarefas '+(tipo?('de '+tipo):'')+' para excluir.');
+  const rot=tipo==='Administrativo'?'Administrativas':(tipo==='Gestor'?'do Gestor':'de todos os tipos');
+  openModal('Excluir tarefas '+rot,
+    `<div class="feed-item red" style="margin-bottom:12px">
+       <div class="fi-ic">${ic('alert')}</div>
+       <div style="flex:1"><div class="ft">Isso apaga ${alvo.length} tarefa(s) de vez</div>
+       <div class="fd">Some do site, de todos os meses, incluindo as concluídas e as recorrentes.
+         Não dá para desfazer.</div></div></div>
+     <div class="t-sub" style="margin-bottom:10px">
+       ${alvo.filter(t=>t.status==='Concluída').length} concluída(s) ·
+       ${alvo.filter(t=>t.status==='Atrasada').length} atrasada(s) ·
+       ${alvo.filter(t=>t.status==='Pendente').length} pendente(s) ·
+       ${alvo.filter(t=>t.repetitiva).length} recorrente(s)</div>
+     <div class="field"><label>Para confirmar, digite <b>EXCLUIR</b></label>
+       <input id="cfgDelConf" placeholder="EXCLUIR" autocomplete="off"></div>
+     <div class="field"><label>Motivo (fica na auditoria)</label>
+       <input id="cfgDelMot" placeholder="ex.: limpeza da base antes do novo ciclo"></div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn danger" onclick="cfgExcluirTarefasConf('${tipo||''}')">${ic('trash')}Excluir ${alvo.length}</button>`);
+}
+function cfgExcluirTarefasConf(tipo){
+  const conf=($('#cfgDelConf')&&$('#cfgDelConf').value||'').trim().toUpperCase();
+  if(conf!=='EXCLUIR') return toast('Digite EXCLUIR para confirmar.');
+  const mot=($('#cfgDelMot')&&$('#cfgDelMot').value||'').trim()||'—';
+  const antes=tasks.length;
+  tasks=tasks.filter(t=>tipo?t.tipo!==tipo:false);
+  const n=antes-tasks.length;
+  const rot=tipo||'todos os tipos';
+  audit('Exclusão em massa de tarefas',rot,n+' tarefa(s) apagada(s)','',mot);
+  save(); closeModal(); render();
+  toast(n+' tarefa(s) excluída(s) definitivamente.');
 }
 
 /* ============ TAREFAS ============ */
@@ -4161,6 +4239,15 @@ function apNovaRevisao(id){
   apAbrir(a.id);
 }
 /* Junta o que já existe: registros separados da mesma unidade viram um só. */
+/* A marca do app passou a ser a do E-Business; bases antigas guardavam
+   o nome genérico em CFG e continuariam exibindo o texto anterior. */
+function migrarMarcaEbiz(){
+  if(CFG.marcaEbiz==='v1') return false;
+  if(!CFG.nomeEmpresa||CFG.nomeEmpresa==='Rotinas Condominiais') CFG.nomeEmpresa='E-Business';
+  if(!CFG.slogan||CFG.slogan==='Gestão integrada') CFG.slogan='Águas Claras · Gestão Predial';
+  CFG.marcaEbiz='v1';
+  return true;
+}
 function migrarRevisoesAp(){
   if(CFG.apRevUnificado==='v1') return false;
   const grupos={};
@@ -4184,6 +4271,38 @@ function migrarRevisoesAp(){
   });
   CFG.apRevUnificado='v1';
   return mexeu;
+}
+
+/* ============ ACOMPANHAMENTO DA OBRA ============
+   Aprovar o projeto é o começo: depois a sala precisa iniciar a obra,
+   executar e ser finalizada. Esse ciclo alimenta a taxa de ocupação. */
+const AP_OBRA=['Não iniciada','Em obra','Finalizada'];
+function apObra(a){
+  if(!a) return '';
+  if(!/^APROVADO/.test(a.resultado||'')) return '';   // só após aprovação
+  return a.obraStatus||'Não iniciada';
+}
+function apObraBadge(a){
+  const st=apObra(a);
+  if(!st) return '';
+  const m={'Não iniciada':'b-pend','Em obra':'b-and','Finalizada':'b-conc'};
+  return `<span class="badge ${m[st]||'b-tag'}">${st}</span>`;
+}
+function apSetObra(id,st){
+  const a=apDo(id); if(!a) return;
+  if(!/^APROVADO/.test(a.resultado||'')) return toast('A obra só é acompanhada após a aprovação do projeto.');
+  const antes=apObra(a);
+  a.obraStatus=st;
+  if(st==='Em obra'&&!a.obraInicio) a.obraInicio=today();
+  if(st==='Finalizada'&&!a.obraFim) a.obraFim=today();
+  if(st==='Não iniciada'){ a.obraInicio=null; a.obraFim=null }
+  (a.historico=a.historico||[]).push({q:session.nome,w:nowStamp(),
+    t:'Obra: '+antes+' → '+st});
+  audit('Andamento de obra',apTitulo(a),antes+' → '+st,a.condoId);
+  save(); render();
+  toast(st==='Em obra'?'Obra iniciada na unidade '+(a.unidade||'')+'.'
+       :st==='Finalizada'?'Obra finalizada na unidade '+(a.unidade||'')+'.'
+       :'Obra marcada como não iniciada.');
 }
 
 /* ---- Tela: lista de análises ---- */
@@ -4215,7 +4334,7 @@ function viewAnalises(){
   </div>`;
   h+=`<div class="card" style="padding:0;overflow:hidden"><div class="tablewrap"><table>
     <thead><tr><th>Unidade</th><th>Proprietário / Locatário</th><th>Empresa do projeto</th>
-    <th style="text-align:center">Rev.</th><th>Análise</th><th>Pendências</th><th>Resultado</th><th style="text-align:right">Ações</th></tr></thead><tbody>`;
+    <th style="text-align:center">Rev.</th><th>Análise</th><th>Pendências</th><th>Resultado</th><th>Obra</th><th style="text-align:right">Ações</th></tr></thead><tbody>`;
   l.forEach(a=>{
     const r=apResumo(a), al=apAlerta(a);
     const cor=al.tipo==='bom'?'b-conc':(al.tipo==='ruim'?'b-atr':'b-avencer');
@@ -4234,6 +4353,9 @@ function viewAnalises(){
       <td>${a.analise?fmt(a.analise):'—'}</td>
       <td><span class="badge ${cor}">${r.semResp?r.semResp+' sem resposta':(r.faltando+r.naoConf?(r.faltando+r.naoConf)+' pendência(s)':'sem pendência')}</span></td>
       <td>${res}</td>
+      <td>${apObra(a)?`<select class="ap-obrasel" onchange="apSetObra('${a.id}',this.value)">
+          ${AP_OBRA.map(o=>`<option ${apObra(a)===o?'selected':''}>${o}</option>`).join('')}
+        </select>`:'<span class="t-sub">—</span>'}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn sm ghost" onclick="apAbrir('${a.id}')">Abrir</button>
         <button class="btn sm ghost" onclick="apExportar('${a.id}')" title="Baixar em Excel">Excel</button>
@@ -4389,6 +4511,18 @@ function apRender(aReg){
         <input id="apDataAprov" type="date" value="${a.dataAprov||''}"></div>
       <div class="field"><label>Assinatura</label><input id="apAssin" value="${esc(a.assinatura||'')}"></div>
     </div>
+    ${/^APROVADO/.test(a.resultado||'')?`
+      <div class="ap-obra">
+        <div class="ap-obra-t">${ic('helmet')} Andamento da obra</div>
+        <div class="t-sub" style="margin-bottom:9px">Projeto aprovado. O próximo passo é iniciar a obra —
+          marque aqui o andamento. Enquanto estiver em obra, a sala aparece assim na Taxa de Ocupação.</div>
+        <div class="ap-obra-bt">
+          ${AP_OBRA.map(o=>`<button type="button" class="btn ${apObra(aReg)===o?'':'ghost'} sm"
+            onclick="apSetObra('${aReg.id}','${o}')">${o}</button>`).join('')}
+        </div>
+        ${aReg.obraInicio?`<div class="t-sub" style="margin-top:8px">Início: <b>${fmt(aReg.obraInicio)}</b>${
+          aReg.obraFim?` · Conclusão: <b>${fmt(aReg.obraFim)}</b>`:''}</div>`:''}
+      </div>`:''}
     ${a.historico&&a.historico.length?`<div style="margin-top:12px">${histHtml(a.historico)}</div>`:''}
     </div></div>`;
   $('#content').innerHTML=soLeitura?('<fieldset disabled style="border:0;padding:0;margin:0;min-width:0">'+h+'</fieldset>'):h; $('#pageTitle').textContent=apEditId?('Análise de Projetos — Unidade '+(a.unidade||'—')):'Análise de Projetos — Nova análise';
@@ -6147,6 +6281,8 @@ function viewPublicidade(){
       ${pubFStatus||pubBusca?`<button class="btn ghost sm" onclick="pubFStatus='';pubBusca='';render()">${ic('close')}Limpar filtro</button>`:''}
       <div class="spacer"></div>
       <button class="btn ghost" onclick="csvPublicidade()">${ic('download')}Exportar Excel</button>
+      <button class="btn ghost" onclick="pubMsgOferta()">${ic('megaphone')} Mensagem de oferta</button>
+      <button class="btn ghost" onclick="pubMsgFim('')">${ic('clock')} Aviso de fim de prazo</button>
       <button class="btn ghost" onclick="pubConfig()">${ic('settings')} Dados do Contrato</button>
       ${P().create?`<button class="btn" onclick="editPub()">+ Novo Interessado</button>`:''}
     </div>
@@ -6164,6 +6300,7 @@ function viewPublicidade(){
         <td><span class="badge ${a.status==='Ativo'?'b-conc':a.status==='Encerrado'?'b-pend':'b-and'}">${a.status}</span></td>
         <td><div class="rowact no-print">
           <button class="btn sm" onclick="gerarContratoPub('${a.id}')">${ic('contract')} Contrato PDF</button>
+          ${a.status==='Ativo'?`<button class="btn ghost sm" onclick="pubMsgFim('${a.id}')" title="Avisar o fim do prazo">${ic('clock')}Fim de prazo</button>`:''}
           ${P().edit?`<button class="btn ghost sm" onclick="editPub('${a.id}')">Editar</button>`:''}
           ${canDelete(a)?`<button class="btn danger sm" onclick="delPub('${a.id}')">Excluir</button>`:''}
         </div></td></tr>`).join('')}</tbody></table></div>`
@@ -6284,6 +6421,146 @@ function delPubElev(cid,idx){
   list.splice(idx,1); save(); render(); toast('Elevador removido.');
 }
 /* ---- texto do contrato (puro, testável) ---- */
+/* ============ MENSAGENS PRONTAS — PUBLICIDADE NOS ELEVADORES ============
+   Textos padronizados para oferta de espaço e para o fim do prazo.
+   O gestor revisa, ajusta o que quiser e copia para WhatsApp ou e-mail. */
+const PUB_REGRAS={prazoMin:3,prazoMax:12};
+
+function pubMsgOferta(){
+  const livres=(typeof pubLivres==='function')?pubLivres('c1'):[];
+  openModal('Mensagem de oferta — espaço nos elevadores',
+    `<div class="t-sub" style="margin-bottom:10px">
+       Escolha os elevadores que vai oferecer. O texto se ajusta sozinho e você copia pronto.</div>
+     <div class="field"><label>Elevadores disponíveis (marque os que quer oferecer)</label>
+       <div class="pm-elev">${livres.length?livres.map((e,i)=>
+         `<label class="pm-chk"><input type="checkbox" value="${esc(e)}" checked onchange="pubMsgAtualiza()">
+            <span>${esc(e)}</span></label>`).join('')
+         :'<span class="t-sub">Nenhum espaço livre no momento — marque abaixo manualmente.</span>'}</div>
+       <input id="pmExtra" placeholder="ou digite os elevadores à mão" oninput="pubMsgAtualiza()"
+         style="margin-top:8px"></div>
+     <div class="f2">
+       <div class="field"><label>Valor mensal (opcional)</label>
+         <input id="pmValor" placeholder="ex.: 200,00" oninput="pubMsgAtualiza()"></div>
+       <div class="field"><label>Destinatário (opcional)</label>
+         <input id="pmNome" placeholder="ex.: Sr. João" oninput="pubMsgAtualiza()"></div>
+     </div>
+     <div class="field"><label>Mensagem</label>
+       <textarea id="pmTexto" rows="14" class="pm-txt"></textarea></div>`,
+    `<button class="btn ghost" onclick="closeModal()">Fechar</button>
+     <button class="btn ghost" onclick="pubMsgRestaurar('oferta')">${ic('refresh')}Restaurar texto</button>
+     <button class="btn" onclick="pubMsgCopiar()">${ic('copy')}Copiar mensagem</button>`);
+  pubMsgAtualiza();
+}
+function _pmElevs(){
+  const marc=[...document.querySelectorAll('.pm-elev input:checked')].map(i=>i.value);
+  const extra=($('#pmExtra')&&$('#pmExtra').value.trim())||'';
+  if(extra) extra.split(/[;,]/).map(x=>x.trim()).filter(Boolean).forEach(x=>marc.push(x));
+  return marc;
+}
+function pubMsgAtualiza(){
+  const t=$('#pmTexto'); if(!t) return;
+  t.value=pubTextoOferta(_pmElevs(),
+    ($('#pmValor')&&$('#pmValor').value.trim())||'',
+    ($('#pmNome')&&$('#pmNome').value.trim())||'');
+}
+function pubMsgRestaurar(tipo){
+  if(tipo==='oferta') pubMsgAtualiza(); else pubMsgFimAtualiza();
+  toast('Texto restaurado.');
+}
+function pubTextoOferta(elevs,valor,nome){
+  const lista=elevs.length
+    ? elevs.map(e=>'• '+e).join('\n')
+    : '• (informe aqui os elevadores disponíveis)';
+  const saud=nome?('Olá, '+nome+'!'):'Olá!';
+  const val=valor?('\nValor: R$ '+valor+' por mês, por elevador.\n'):'';
+  return `${saud}
+
+Somos da administração do *E-Business Águas Claras* e temos *espaço publicitário disponível nos elevadores* do edifício.
+
+É uma mídia de alta visibilidade: todos os dias, moradores, clientes e visitantes circulam por esses elevadores — sua marca fica à vista de quem já está no prédio.
+
+*Espaços disponíveis no momento:*
+${lista}
+${val}
+*Como funciona:*
+• Prazo mínimo de locação: *${PUB_REGRAS.prazoMin} meses*
+• Prazo máximo de locação: *${PUB_REGRAS.prazoMax} meses (1 ano)*
+• A *instalação e a retirada do adesivo são por conta do locatário*, assim como o custo de produção do material
+• A arte fica a critério do anunciante, respeitando as normas do condomínio
+• Ao final do contrato, o espaço deve ser devolvido limpo e sem resíduo de cola
+
+Se tiver interesse, me retorne esta mensagem que eu reservo o espaço e envio o contrato para assinatura.
+
+Atenciosamente,
+*Administração — E-Business Águas Claras*`;
+}
+
+/* ---- fim de prazo: chamar a fila de espera ---- */
+function pubMsgFim(id){
+  const a=anuncios.find(x=>x.id===id);
+  const fila=(typeof pubFila==='function')?pubFila('c1'):[];
+  openModal('Mensagem de encerramento — fim do prazo',
+    `<div class="t-sub" style="margin-bottom:10px">
+       Comunica o fim do contrato e a necessidade de liberar o espaço para a fila de espera.</div>
+     <div class="f2">
+       <div class="field"><label>Anunciante</label>
+         <select id="pmAnun" onchange="pubMsgFimAtualiza()">
+           ${anuncios.filter(x=>x.status==='Ativo').map(x=>
+             `<option value="${x.id}" ${a&&a.id===x.id?'selected':''}>${esc(x.empresa)} — ${esc(x.elevador||'')}</option>`).join('')
+             ||'<option value="">— nenhum contrato ativo —</option>'}</select></div>
+       <div class="field"><label>Prazo para retirada</label>
+         <input id="pmPrazo" value="10" type="number" min="1" oninput="pubMsgFimAtualiza()"></div>
+     </div>
+     <div class="t-sub" style="margin-bottom:8px">${fila.length
+       ? fila.length+' interessado(s) na fila de espera — o próximo é '+esc(fila[0].empresa)+'.'
+       : 'Fila de espera vazia no momento.'}</div>
+     <div class="field"><label>Mensagem</label>
+       <textarea id="pmTexto" rows="14" class="pm-txt"></textarea></div>`,
+    `<button class="btn ghost" onclick="closeModal()">Fechar</button>
+     <button class="btn ghost" onclick="pubMsgRestaurar('fim')">${ic('refresh')}Restaurar texto</button>
+     <button class="btn" onclick="pubMsgCopiar()">${ic('copy')}Copiar mensagem</button>`);
+  pubMsgFimAtualiza();
+}
+function pubMsgFimAtualiza(){
+  const t=$('#pmTexto'); if(!t) return;
+  const id=($('#pmAnun')&&$('#pmAnun').value)||'';
+  const a=anuncios.find(x=>x.id===id);
+  const dias=parseInt(($('#pmPrazo')&&$('#pmPrazo').value)||10,10)||10;
+  t.value=pubTextoFim(a,dias);
+}
+function pubTextoFim(a,dias){
+  const emp=a?a.empresa:'(anunciante)';
+  const elev=a&&a.elevador?a.elevador:'(elevador)';
+  const fim=a&&a.fim?fmt(a.fim):'(data de término)';
+  const fila=(typeof pubFila==='function')?pubFila('c1'):[];
+  const qt=fila.length;
+  return `Prezados, ${emp},
+
+Passo para informar que o *contrato de locação do espaço publicitário* no elevador *${elev}* do E-Business Águas Claras *se encerrou em ${fim}*, tendo cumprido o prazo máximo de ${PUB_REGRAS.prazoMax} meses previsto em contrato.
+
+${qt?`Temos atualmente *${qt} empresa(s) na fila de espera* aguardando a liberação do espaço, e por isso precisamos dar andamento a essa fila, garantindo a mesma oportunidade a todos os interessados.`
+    :`Precisamos agora liberar o espaço para dar andamento à fila de interessados.`}
+
+*Providências necessárias:*
+• Retirada do adesivo em até *${dias} dias corridos* a partir desta comunicação
+• A retirada é *por conta do anunciante*, conforme previsto no contrato
+• O espaço deve ser devolvido limpo, sem resíduo de cola ou marcas no revestimento
+• Favor agendar a retirada com a administração, para acompanharmos o serviço
+
+Agradecemos muito a parceria durante esse período. Caso tenha interesse em concorrer a um novo espaço no futuro, podemos incluí-lo novamente na fila de espera — é só nos avisar.
+
+Atenciosamente,
+*Administração — E-Business Águas Claras*`;
+}
+function pubMsgCopiar(){
+  const t=$('#pmTexto'); if(!t) return;
+  t.select(); t.setSelectionRange(0,999999);
+  let ok=false;
+  try{ ok=document.execCommand('copy') }catch(e){}
+  if(!ok&&navigator.clipboard){ navigator.clipboard.writeText(t.value); ok=true }
+  toast(ok?'Mensagem copiada — é só colar no WhatsApp ou no e-mail.':'Selecione o texto e copie com Ctrl+C.');
+}
+
 function pubContratoLinhas(a){
   /* Texto espelhado no modelo "Termo de Cessão de Uso de Espaço" (E-Business). */
   const p=pubCfg(), condo=condoName(a.condoId);
@@ -7985,17 +8262,14 @@ function subirLogo(input){
   r.readAsDataURL(f);
 }
 function removerLogo(){ CFG.logo=''; aplicarMarca(); save(); render(); toast('Logo removida.') }
+/* A marca do app é o E-Business. Sem logo enviada, usa a oficial embutida. */
+function marcaLogo(){ return CFG.logo||LOGO_EBIZ }
 function aplicarMarca(){
-  const b=$('#brandBox');
-  if(b) b.innerHTML = CFG.logo
-    ? `<img src="${CFG.logo}" alt="logo" style="max-width:100%;max-height:100%;object-fit:contain">`
-    : ic('building');
+  const img=`<img src="${marcaLogo()}" alt="E-Business" style="max-width:100%;max-height:100%;object-fit:contain">`;
+  const b=$('#brandBox');   if(b)  b.innerHTML=img;
+  const lb=$('#loginBrandBox'); if(lb) lb.innerHTML=img;
   const t=$('#brandTxt');
   if(t) t.innerHTML=`${esc(CFG.nomeEmpresa)}<small>${esc(CFG.slogan)}</small>`;
-  const lb=$('#loginBrandBox');
-  if(lb) lb.innerHTML = CFG.logo
-    ? `<img src="${CFG.logo}" alt="logo" style="max-width:100%;max-height:100%;object-fit:contain">`
-    : ic('building','ico-lg');
 }
 function setTarifa(cid,campo,v){
   CFG.tarifas=CFG.tarifas||{}; CFG.tarifas[cid]=CFG.tarifas[cid]||{};
@@ -11143,11 +11417,280 @@ function avisarResumoSemanal(){
   return true;
 }
 
+/* ============================================================
+   TAXA DE OCUPAÇÃO
+   Espelho das salas do prédio. O status se atualiza sozinho a
+   partir de dois módulos: Análise de Projetos (sala em obra) e
+   Cessão de Direitos (entrada e saída de ocupante).
+   ============================================================ */
+let salas=[];                       // {id,condoId,numero,andar,area,ocupante,tipo,status,obs,manual,historico[]}
+let ocuFiltro='', ocuBusca='';
+const OCU_STATUS=['Ocupada','Vaga','Em obra','Reservada'];
+
+function ocuSalas(cid){
+  const c=cid&&cid!=='all'?cid:'c1';
+  return salas.filter(s=>s.condoId===c)
+    .sort((a,b)=>String(a.numero).localeCompare(String(b.numero),'pt-BR',{numeric:true}));
+}
+function ocuSalaPorNumero(cid,num){
+  const n=String(num||'').trim().toLowerCase().replace(/^sala\s*/,'');
+  return salas.find(s=>s.condoId===cid&&
+    String(s.numero).trim().toLowerCase().replace(/^sala\s*/,'')===n);
+}
+/* O status é calculado; o cadastro manual só entra quando nada o contradiz. */
+function ocuStatus(s){
+  if(!s) return 'Vaga';
+  /* 1. obra em andamento manda — vem da Análise de Projetos */
+  const an=analises.find(a=>a.condoId===s.condoId&&
+    ocuMesmaSala(a.unidade,s.numero)&&apObra(a)==='Em obra');
+  if(an) return 'Em obra';
+  /* 2. saída registrada na Cessão de Direitos deixa a sala vaga */
+  const saiu=cessoes.filter(c=>c.condoId===s.condoId&&ocuMesmaSala(c.unidade,s.numero)&&
+    c.tipo==='Volta p/ Proprietário'&&c.status==='Concluída')
+    .sort((a,b)=>String(b.cadastro).localeCompare(String(a.cadastro)))[0];
+  /* 3. entrada posterior reocupa */
+  const entrou=cessoes.filter(c=>c.condoId===s.condoId&&ocuMesmaSala(c.unidade,s.numero)&&
+    c.tipo!=='Volta p/ Proprietário'&&c.status==='Concluída')
+    .sort((a,b)=>String(b.cadastro).localeCompare(String(a.cadastro)))[0];
+  if(saiu&&(!entrou||String(entrou.cadastro)<String(saiu.cadastro))) return 'Vaga';
+  if(entrou) return 'Ocupada';
+  return s.status||'Vaga';
+}
+function ocuMesmaSala(a,b){
+  const n=x=>String(x||'').trim().toLowerCase().replace(/^sala\s*/,'').replace(/\s+/g,'');
+  return n(a)&&n(a)===n(b);
+}
+/* quem ocupa hoje, preferindo a cessão mais recente */
+function ocuOcupante(s){
+  const entrou=cessoes.filter(c=>c.condoId===s.condoId&&ocuMesmaSala(c.unidade,s.numero)&&
+    c.tipo!=='Volta p/ Proprietário'&&c.status==='Concluída')
+    .sort((a,b)=>String(b.cadastro).localeCompare(String(a.cadastro)))[0];
+  if(ocuStatus(s)==='Vaga') return '';
+  return (entrou&&entrou.nome)||s.ocupante||'';
+}
+function ocuResumo(cid){
+  const l=ocuSalas(cid);
+  const por={Ocupada:0,Vaga:0,'Em obra':0,Reservada:0};
+  l.forEach(s=>{ const st=ocuStatus(s); por[st]=(por[st]||0)+1 });
+  const total=l.length;
+  const areaTot=l.reduce((t,s)=>t+(Number(s.area)||0),0);
+  const areaOcu=l.filter(s=>ocuStatus(s)==='Ocupada').reduce((t,s)=>t+(Number(s.area)||0),0);
+  /* obra conta como ocupada para efeito de disponibilidade comercial */
+  const indisp=por.Ocupada+por['Em obra']+por.Reservada;
+  return {total,...por,
+    taxa: total?Math.round(indisp*1000/total)/10 : 0,
+    taxaOcupada: total?Math.round(por.Ocupada*1000/total)/10 : 0,
+    areaTot, areaOcu,
+    taxaArea: areaTot?Math.round(areaOcu*1000/areaTot)/10 : 0};
+}
+/* ---- cadastro ---- */
+function ocuSalvarSala(id){
+  const o={condoId:($('#slCondo')&&$('#slCondo').value)||'c1',
+    numero:($('#slNum')&&$('#slNum').value.trim())||'',
+    andar:($('#slAndar')&&$('#slAndar').value.trim())||'',
+    area:parseFloat(($('#slArea')&&$('#slArea').value)||'')||null,
+    ocupante:($('#slOcup')&&$('#slOcup').value.trim())||'',
+    tipo:($('#slTipo')&&$('#slTipo').value)||'Locatário',
+    status:($('#slStatus')&&$('#slStatus').value)||'Vaga',
+    obs:($('#slObs')&&$('#slObs').value.trim())||''};
+  if(!o.numero) return toast('Informe o número da sala.');
+  const dup=salas.find(s=>s.id!==id&&s.condoId===o.condoId&&ocuMesmaSala(s.numero,o.numero));
+  if(dup) return toast('A sala '+o.numero+' já está cadastrada.');
+  if(id){
+    const s=salas.find(x=>x.id===id); if(!s) return;
+    Object.assign(s,o); s.manual=true;
+    (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),t:'Cadastro editado'});
+    toast('Sala atualizada.');
+  }else{
+    salas.push({id:uid('sl'),...o,manual:true,
+      historico:[{q:session.nome,w:nowStamp(),t:'Sala cadastrada'}]});
+    toast('Sala '+o.numero+' cadastrada.');
+  }
+  audit(id?'Sala editada':'Sala cadastrada',o.numero,o.ocupante||'',o.condoId);
+  save(); closeModal(); render();
+}
+function ocuFormSala(id){
+  if(!(id?P().edit:P().create)) return toast('Sem permissão.');
+  const s=id?salas.find(x=>x.id===id):null;
+  openModal(s?('Sala '+s.numero):'Nova sala',
+    `<div class="f2">
+      <div class="field"><label>Condomínio</label><select id="slCondo">
+        ${condosDo('ocupacao').map(c=>`<option value="${c.id}" ${s&&s.condoId===c.id?'selected':''}>${c.nome}</option>`).join('')}</select></div>
+      <div class="field"><label>Sala / Unidade</label><input id="slNum" value="${esc(s?.numero||'')}" placeholder="ex.: 305"></div>
+      <div class="field"><label>Andar</label><input id="slAndar" value="${esc(s?.andar||'')}" placeholder="ex.: 3"></div>
+      <div class="field"><label>Área (m²)</label><input type="number" step="0.01" id="slArea" value="${s?.area??''}" placeholder="ex.: 38,50"></div>
+      <div class="field"><label>Ocupante atual</label><input id="slOcup" value="${esc(s?.ocupante||'')}" placeholder="nome ou razão social"></div>
+      <div class="field"><label>Vínculo</label><select id="slTipo">
+        ${['Proprietário','Locatário','Vago'].map(t=>`<option ${s?.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label>Situação inicial</label><select id="slStatus">
+        ${OCU_STATUS.map(t=>`<option ${s?.status===t?'selected':''}>${t}</option>`).join('')}</select></div>
+     </div>
+     <div class="field"><label>Observação</label><input id="slObs" value="${esc(s?.obs||'')}"></div>
+     <div class="t-sub">A situação muda sozinha quando houver obra aprovada (Análise de Projetos)
+       ou entrada/saída registrada (Cessão de Direitos).</div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     ${s&&P().delete?`<button class="btn danger ghost" onclick="ocuExcluirSala('${s.id}')">${ic('trash')}Excluir</button>`:''}
+     <button class="btn" onclick="ocuSalvarSala('${id||''}')">${ic('check')}Salvar</button>`);
+}
+function ocuExcluirSala(id){
+  const s=salas.find(x=>x.id===id); if(!s) return;
+  if(!confirm('Excluir a sala '+s.numero+' do mapa de ocupação?')) return;
+  salas=salas.filter(x=>x.id!==id);
+  audit('Sala excluída',s.numero,'',s.condoId);
+  save(); closeModal(); render(); toast('Sala excluída.');
+}
+
+/* ---- Tela: taxa de ocupação ---- */
+function viewOcupacao(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const r=ocuResumo(cid);
+  let l=ocuSalas(cid);
+  if(ocuFiltro) l=l.filter(s=>ocuStatus(s)===ocuFiltro);
+  if(ocuBusca){ const q=ocuBusca.toLowerCase();
+    l=l.filter(s=>(String(s.numero)+' '+(ocuOcupante(s)||'')+' '+(s.andar||'')).toLowerCase().includes(q)); }
+
+  if(!salas.filter(s=>s.condoId===cid).length){
+    $('#content').innerHTML=`<div class="card" style="text-align:center;padding:40px">
+      <div class="t-title" style="margin-bottom:6px">Mapa de ocupação vazio</div>
+      <div class="t-sub" style="margin-bottom:16px;max-width:520px;margin-left:auto;margin-right:auto">
+        Cadastre as salas do prédio para acompanhar a taxa de ocupação. A situação de cada uma
+        passa a se atualizar sozinha conforme as obras aprovadas e as cessões de direitos.</div>
+      <div class="rowact" style="justify-content:center">
+        ${P().create?`<button class="btn" onclick="ocuFormSala()">${ic('plus')}Cadastrar sala</button>`:''}
+        ${P().create?`<button class="btn ghost" onclick="ocuImportar()">${ic('upload')}Importar lista</button>`:''}
+      </div></div>`;
+    return;
+  }
+
+  const cards=`<div class="grid metrics" style="margin-bottom:14px">
+    <div class="card metric ${r.taxa>=85?'green':(r.taxa>=60?'amber':'red')}">
+      <div class="lbl">${ic('building')}Taxa de ocupação</div>
+      <div class="val">${r.taxa}%</div>
+      <div class="sub">${r.Ocupada+r['Em obra']+r.Reservada} de ${r.total} salas</div></div>
+    <div class="card metric green" onclick="ocuFiltro='Ocupada';render()">
+      <div class="lbl">${ic('checkCircle')}Ocupadas</div>
+      <div class="val">${r.Ocupada}</div><div class="sub">com ocupante ativo</div></div>
+    <div class="card metric ${r.Vaga?'red':''}" onclick="ocuFiltro='Vaga';render()">
+      <div class="lbl">${ic('empty')}Vagas</div>
+      <div class="val">${r.Vaga}</div><div class="sub">disponíveis para locação</div></div>
+    <div class="card metric amber" onclick="ocuFiltro='Em obra';render()">
+      <div class="lbl">${ic('helmet')}Em obra</div>
+      <div class="val">${r['Em obra']}</div><div class="sub">reforma em andamento</div></div>
+  </div>`;
+
+  const ia=iaCard('Leitura da ocupação',iaOcupacao(cid),false);
+
+  const linhas=l.map(s=>{
+    const st=ocuStatus(s), oc=ocuOcupante(s);
+    const cls={'Ocupada':'ocu-ok','Vaga':'ocu-vaga','Em obra':'ocu-obra','Reservada':'ocu-res'}[st]||'';
+    const bd={'Ocupada':'b-conc','Vaga':'b-atr','Em obra':'b-and','Reservada':'b-pend'}[st]||'b-tag';
+    const auto=st!==(s.status||'Vaga');
+    return `<tr class="${cls}">
+      <td><b>${esc(s.numero)}</b>${s.andar?`<div class="t-sub">${esc(s.andar)}º andar</div>`:''}</td>
+      <td>${esc(oc||'—')}${oc?`<div class="t-sub">${esc(s.tipo||'')}</div>`:''}</td>
+      <td>${s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}</td>
+      <td><span class="badge ${bd}">${st}</span>
+        ${auto?`<div class="t-sub" title="Situação vinda de outro módulo">automático</div>`:''}</td>
+      <td class="t-sub">${esc(s.obs||'')}</td>
+      <td style="text-align:right;white-space:nowrap">
+        ${P().edit?`<button class="btn ghost sm" onclick="ocuFormSala('${s.id}')">Editar</button>`:''}
+      </td></tr>`;
+  }).join('');
+
+  $('#content').innerHTML=cards+ia+`
+    <div class="toolbar no-print">
+      <input placeholder="Buscar sala ou ocupante" value="${esc(ocuBusca)}"
+        oninput="ocuBusca=this.value;render()" style="min-width:190px">
+      <select onchange="ocuFiltro=this.value;render()">
+        ${opt([''].concat(OCU_STATUS),ocuFiltro,'Situação')}</select>
+      ${ocuFiltro||ocuBusca?`<button class="btn ghost sm" onclick="ocuFiltro='';ocuBusca='';render()">${ic('close')}Limpar</button>`:''}
+      <div class="spacer"></div>
+      <button class="btn ghost" onclick="ocuExportar()">${ic('download')}Exportar Excel</button>
+      ${P().create?`<button class="btn ghost" onclick="ocuImportar()">${ic('upload')}Importar lista</button>`:''}
+      ${P().create?`<button class="btn" onclick="ocuFormSala()">+ Nova sala</button>`:''}
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="tablewrap"><table><thead><tr>
+        <th>Sala</th><th>Ocupante</th><th>Área</th><th>Situação</th><th>Observação</th>
+        <th style="text-align:right">Ações</th></tr></thead>
+      <tbody>${linhas||'<tr><td colspan="6" class="t-sub">Nenhuma sala nesse filtro.</td></tr>'}</tbody>
+      </table></div></div>
+    <div class="legend">
+      <span><b>Automático:</b> a sala entra em obra pela Análise de Projetos e muda de ocupante pela Cessão de Direitos.</span>
+      <span><b>Taxa de ocupação:</b> considera ocupadas, em obra e reservadas sobre o total de salas.</span>
+    </div>`;
+}
+/* análise da ocupação para o painel de IA */
+function iaOcupacao(cid){
+  const av=[], r=ocuResumo(cid);
+  if(!r.total) return av;
+  if(r.Vaga){
+    const vagas=ocuSalas(cid).filter(s=>ocuStatus(s)==='Vaga');
+    av.push({t:r.taxa<80?'red':'amber',ic:'building',
+      tit:r.Vaga+' sala(s) vaga(s) — ocupação em '+r.taxa+'%',
+      txt:'Disponíveis: '+vagas.slice(0,6).map(s=>s.numero).join(', ')+
+        (vagas.length>6?' e outras.':'.')+' Cada mês vago é receita de condomínio que não entra.'});
+  } else {
+    av.push({t:'green',ic:'checkCircle',tit:'Prédio 100% ocupado',
+      txt:'Todas as '+r.total+' salas estão ocupadas, em obra ou reservadas.'});
+  }
+  if(r['Em obra']) av.push({t:'blue',ic:'helmet',tit:r['Em obra']+' sala(s) em obra',
+    txt:'Acompanhe o prazo pela Análise de Projetos — ao finalizar, a sala entra como ocupada.',
+    acao:"go('analises')",acaoTxt:'Ver análises'});
+  return av;
+}
+/* ---- exportar / importar ---- */
+function ocuExportar(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const l=ocuSalas(cid);
+  if(!l.length) return toast('Nada para exportar.');
+  const linhas=[['Sala','Andar','Área (m²)','Ocupante','Vínculo','Situação','Observação']]
+    .concat(l.map(s=>[s.numero,s.andar||'',s.area||'',ocuOcupante(s)||'',s.tipo||'',ocuStatus(s),s.obs||'']));
+  baixarCsv('ocupacao_'+cid+'_'+today()+'.csv',linhas);
+  audit('Exportou o mapa de ocupação',condoName(cid),l.length+' sala(s)',cid);
+}
+function ocuImportar(){
+  openModal('Importar lista de salas',
+    `<div class="t-sub" style="margin-bottom:10px">
+       Cole a lista no formato <b>sala; ocupante</b> — uma por linha.
+       Pode incluir andar e área: <b>sala; ocupante; andar; área</b>.</div>
+     <div class="field"><textarea id="ocuTxt" rows="12" class="pm-txt"
+       placeholder="305; Kanno Arquitetura; 3; 38,50&#10;306; ; 3; 40&#10;1109; Elizandra Gonçalves"></textarea></div>
+     <div class="t-sub">Salas em branco no ocupante entram como <b>Vagas</b>. Quem já existe é atualizado.</div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn" onclick="ocuImportarConf()">${ic('check')}Importar</button>`);
+}
+function ocuImportarConf(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const txt=($('#ocuTxt')&&$('#ocuTxt').value)||'';
+  const linhas=txt.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(!linhas.length) return toast('Cole ao menos uma linha.');
+  let novas=0,atu=0;
+  linhas.forEach(ln=>{
+    const p=ln.split(/[;\t]/).map(x=>x.trim());
+    const num=p[0]; if(!num) return;
+    const ocup=p[1]||'', andar=p[2]||'', area=parseFloat(String(p[3]||'').replace(',','.'))||null;
+    const ja=ocuSalaPorNumero(cid,num);
+    const st=ocup?'Ocupada':'Vaga';
+    if(ja){ ja.ocupante=ocup; if(andar)ja.andar=andar; if(area)ja.area=area;
+      ja.status=st; ja.tipo=ocup?(ja.tipo||'Locatário'):'Vago';
+      (ja.historico=ja.historico||[]).push({q:session.nome,w:nowStamp(),t:'Atualizada pela importação'});
+      atu++; }
+    else { salas.push({id:uid('sl'),condoId:cid,numero:num,andar,area,ocupante:ocup,
+      tipo:ocup?'Locatário':'Vago',status:st,obs:'',manual:true,
+      historico:[{q:session.nome,w:nowStamp(),t:'Cadastrada pela importação'}]}); novas++; }
+  });
+  audit('Importou salas',condoName(cid),novas+' nova(s), '+atu+' atualizada(s)',cid);
+  save(); closeModal(); render();
+  toast(novas+' sala(s) cadastrada(s)'+(atu?' e '+atu+' atualizada(s)':'')+'.');
+}
+
 const SYNC_COLS=['tasks','notas','cessoes','apontamentos','estoque','movEstoque','pedidos',
-  'leituras','prestadores','anuncios','manutObrig','vcUnidades','vcCiclos','vcVendas','analises','brigInsp','brigRondas'];
+  'leituras','prestadores','anuncios','manutObrig','vcUnidades','vcCiclos','vcVendas','analises','brigInsp','brigRondas','salas'];
 function _colRef(nome){
   switch(nome){
     case 'brigInsp':return brigInsp; case 'brigRondas':return brigRondas;
+    case 'salas':return salas;
     case 'tasks':return tasks; case 'notas':return notas; case 'cessoes':return cessoes;
     case 'apontamentos':return apontamentos; case 'estoque':return estoque;
     case 'movEstoque':return movEstoque; case 'pedidos':return pedidos;
@@ -11279,11 +11822,11 @@ function aplicarSnapshot(d){
   apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
   pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
   prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
-  analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[];
+  analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[];
   if(d.CFG) CFG=Object.assign(CFG,d.CFG);
   creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
   if(!prestadores.length) seedPrestadores();
-  migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig(); migrarVendasCustas(); migrarFilaPub(); migrarRevisoesAp();
+  migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig(); migrarVendasCustas(); migrarFilaPub(); migrarRevisoesAp(); migrarMarcaEbiz();
   _booting=false;
 }
 function agendarSync(){
@@ -11423,5 +11966,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3fc17dbfc68daa8',t:'MTc5MDE5MzE4Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a42358d50b49e012',t:'MTc5MDYwNDc4OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
