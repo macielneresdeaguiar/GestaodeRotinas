@@ -766,6 +766,22 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 
 .pd-novo{margin-top:9px;padding:11px;background:#f6f8fc;border:1px dashed var(--line);border-radius:9px}
 
+/* gráfico de ocupação por andar */
+.og-leg{display:flex;gap:14px;align-items:center;font-size:11.5px;color:var(--text-2);margin-bottom:10px;flex-wrap:wrap}
+.og-leg i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:-1px}
+.og-wrap{display:flex;gap:4px;align-items:flex-end;overflow-x:auto;padding-bottom:4px}
+.og-col{flex:1 0 34px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.og-col:hover .og-bar{outline:2px solid var(--accent);outline-offset:1px;border-radius:3px}
+.og-bar{width:100%;height:96px;display:flex;flex-direction:column;justify-content:flex-end;
+  background:#eef1f6;border-radius:3px;overflow:hidden}
+.og-c,i.og-c{background:#1d7a4c}
+.og-o,i.og-o{background:#a8690b}
+.og-v,i.og-v{background:#c2384a}
+.og-pct{font-size:10px;font-weight:700;color:#1d7a4c}
+.og-pct.low{color:#c2384a} .og-pct.full{color:#1d7a4c}
+.og-lb{font-size:9.5px;color:var(--text-3);white-space:nowrap}
+@media(max-width:820px){ .og-col{flex:0 0 38px} .og-bar{height:80px} }
+
 .login-sel{width:100%;padding:12px 13px;font-size:14px;border:1px solid var(--line);
   border-radius:10px;background:#fff;color:var(--text);cursor:pointer}
 .login-sel:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
@@ -1622,7 +1638,7 @@ function load(){
   aplicarNomesUsuarios();
     aplicarNomesUsuarios();
     let mig=migrarLeiturasAgua(); if(migrarTarifaCaesb()) mig=true; migrarManutObrig(); migrarVendasCustas();
-    if(migrarFilaPub()) mig=true; if(migrarRevisoesAp()) mig=true; if(migrarMarcaEbiz()) mig=true; if(mig) save();
+    if(migrarFilaPub()) mig=true; if(migrarRevisoesAp()) mig=true; if(migrarMarcaEbiz()) mig=true; if(migrarSalas()) mig=true; if(mig) save();
     return true;
   }catch(e){ console.warn('Base corrompida:',e); return false }
 }
@@ -11451,7 +11467,7 @@ function avisarResumoSemanal(){
    Cessão de Direitos (entrada e saída de ocupante).
    ============================================================ */
 let salas=[];                       // {id,condoId,numero,andar,area,ocupante,tipo,status,obs,manual,historico[]}
-let ocuFiltro='', ocuBusca='';
+let ocuFiltro='', ocuBusca='', ocuAndar='';
 const OCU_STATUS=['Ocupada','Vaga','Em obra','Reservada'];
 
 function ocuSalas(cid){
@@ -11482,6 +11498,11 @@ function ocuStatus(s){
   if(saiu&&(!entrou||String(entrou.cadastro)<String(saiu.cadastro))) return 'Vaga';
   if(entrou) return 'Ocupada';
   return s.status||'Vaga';
+}
+/* "3º" vira "3º andar"; Térreo e Mezanino não levam sufixo */
+function ocuAndarRot(a){
+  a=String(a||'').trim();
+  return /^\d+º$/.test(a) ? a+' andar' : a;
 }
 function ocuMesmaSala(a,b){
   const n=x=>String(x||'').trim().toLowerCase().replace(/^sala\s*/,'').replace(/\s+/g,'');
@@ -11567,12 +11588,378 @@ function ocuExcluirSala(id){
   save(); closeModal(); render(); toast('Sala excluída.');
 }
 
+/* Relação real das salas do E-Business (261 unidades), conforme a planilha
+   da administração. Formato: [sala, andar, ocupante] — ocupante vazio = vaga. */
+const SALAS_SEED=[
+ ["Loja 01","Térreo","Subway"],
+ ["Loja 02","Térreo","Odontoclinic"],
+ ["Loja 03","Térreo",""],
+ ["Loja 04","Térreo","Aredda"],
+ ["Loja 05","Térreo","Barbearia & Pub Al Capone"],
+ ["Loja 06","Térreo","Mana Poke"],
+ ["Loja 07","Térreo","Park Idiomas"],
+ ["Loja 08","Térreo","Açai do Ninja"],
+ ["Loja 09","Térreo","Instituto Ninar"],
+ ["Loja Mez. 01","Mezanino","Study Box"],
+ ["Loja Mez. 02","Mezanino","JK Exclusive"],
+ ["Loja Mez. 03","Mezanino",""],
+ ["Loja Mez. 04","Mezanino",""],
+ ["Loja Mez. 05","Mezanino","Café Urbana Imóveis"],
+ ["201","2º",""],
+ ["202","2º","Divertidamente Clinicas Integradas"],
+ ["203","2º","Julio Gulyas Kenosis. PSI"],
+ ["204","2º","Comtemplare Psicologia"],
+ ["205","2º","IF Estetica"],
+ ["206","2º","Bio Estetic"],
+ ["207","2º",""],
+ ["208","2º",""],
+ ["209","2º",""],
+ ["210","2º","Estudio 3 Estetica e Micropigmentação"],
+ ["211","2º","Canaã Telecomunicações"],
+ ["212","2º",""],
+ ["301","3º","VS Beauty Hair"],
+ ["302","3º","Clinica Evelyn Antunes"],
+ ["303","3º","Beauty Derm Saúde e Estética"],
+ ["304","3º","Mep Odontologia Integrada"],
+ ["305","3º","Dente In Foco"],
+ ["306","3º","Moa Massoterapia e Estetica"],
+ ["307","3º","Carollina Odontologia"],
+ ["308","3º","Seja Bank"],
+ ["309","3º","Clinica Caminhar"],
+ ["310","3º","Clinica Caminhar"],
+ ["311","3º","Raquel Ciseski Fonoaudiologia"],
+ ["312","3º","Clinic Harmo by Dra. Samanta Souza"],
+ ["401","4º","Bahia Brita Mineração"],
+ ["402","4º","ESSENCE PERSONALIZADOS"],
+ ["403","4º","DW VIAGENS"],
+ ["404","4º","DRS Advocacia"],
+ ["405","4º","Espaço Insight"],
+ ["406","4º",""],
+ ["407","4º","Coworking Center"],
+ ["408","4º","Coworking Center"],
+ ["409","4º","Coworking Center"],
+ ["410","4º","ACP & LP - Advogados"],
+ ["411","4º","Coworking Center"],
+ ["412","4º","Coworking Center"],
+ ["501","5º",""],
+ ["502","5º","NEURO APRENDIZAGEM"],
+ ["503","5º",""],
+ ["504","5º","Amma Contabilidade"],
+ ["505","5º","Zulene Imoveis"],
+ ["506","5º","Instituo Favero"],
+ ["507","5º","Recriar Estetica"],
+ ["508","5º","Recriar Estetica"],
+ ["509","5º","ICN CONCPT"],
+ ["510","5º","ICN CONCPT"],
+ ["511","5º","Conecte Engenharia"],
+ ["512","5º","Conecte Engenharia"],
+ ["601","6º","Intech Soluções em Tecnologia da Informática LTDA"],
+ ["602","6º","Intech Soluções em Tecnologia da Informática LTDA"],
+ ["603","6º","Intech Soluções em Tecnologia da Informática LTDA"],
+ ["604","6º","Casa Espaço Terapeutico"],
+ ["605","6º",""],
+ ["606","6º","JULIANA CANABRAVA ODONTOLOGIA ESPECIALIZADA"],
+ ["607","6º","Clinica Reabilitar"],
+ ["608","6º","Clinica Reabilitar"],
+ ["609","6º","Evolutiva Clinica de Fisioterapia"],
+ ["610","6º","Clinica Reabilitar - Fisioterapia Infantil"],
+ ["611","6º",""],
+ ["612","6º",""],
+ ["701","7º","Nelio Carlos Nutritional Consulting"],
+ ["702","7º","Dow Capital"],
+ ["703","7º","Inovazul"],
+ ["704","7º","Inovazul"],
+ ["705","7º","UNIASSELVI"],
+ ["706","7º","CAMARIM / RAPHAELLA GOMES"],
+ ["707","7º","MR2 Serviços Administrativos"],
+ ["708","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia"],
+ ["709","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia"],
+ ["710","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia"],
+ ["711","7º","Siemens LTDA"],
+ ["712","7º","Siemens LTDA"],
+ ["801","8º","HARMONIE SAUDE"],
+ ["802","8º","Cinge Ginecologia e dermatologia"],
+ ["803","8º","GROWTH"],
+ ["804","8º",""],
+ ["805","8º","STUDIO THEA SAMPAIO"],
+ ["806","8º","Consultorio de Psicologia Nathalia Miranda"],
+ ["807","8º","Adriana Neris"],
+ ["808","8º","Nucleo Evolutiva"],
+ ["809","8º","Nucleo Evolutiva"],
+ ["810","8º",""],
+ ["811","8º",""],
+ ["812","8º","HARMONIE SAUDE"],
+ ["901","9º","FS ALISAMENTO E SAUDE CAPILAR"],
+ ["902","9º","Simetri Odontologia Estética"],
+ ["903","9º","Clinica Rafa Duarte"],
+ ["904","9º","Clinica Rafa Duarte"],
+ ["905","9º",""],
+ ["906","9º","Grande Muralha"],
+ ["907","9º",""],
+ ["908","9º","Roseane Barreto Castro - Advocacia"],
+ ["909","9º","Cef Espaço Lobato Engenharia"],
+ ["910","9º","Instituto Ana Alves"],
+ ["911","9º","LIFLEG LTDA"],
+ ["912","9º","Recupera Glosas / Yesc"],
+ ["1001","10º","Instituto Misson Paulin"],
+ ["1002","10º","Instituto Misson Paulin"],
+ ["1003","10º","DEAXE"],
+ ["1004","10º","Anny Fernandes Clinic"],
+ ["1005","10º","Ana Claudia de Oliveira Grossi"],
+ ["1006","10º","Maison Lashes"],
+ ["1007","10º","SAKURA CONSOLIDADORA"],
+ ["1008","10º","Dez DB Instituto de Música"],
+ ["1009","10º","Care Reabilitação Oral Integrada"],
+ ["1010","10º","Dez DB Instituto de Música"],
+ ["1011","10º","Instituto Misson Paulin"],
+ ["1012","10º","Instituto Misson Paulin"],
+ ["1101","11º",""],
+ ["1102","11º","Bio Ortho Odontologia e Estetica"],
+ ["1103","11º","Bio Ortho Odontologia e Estetica"],
+ ["1104","11º","ROCHA BANDEIRA ADVOCACIA"],
+ ["1105","11º","Cobeauty"],
+ ["1106","11º","Martins Odontologia e Harmonização Facial"],
+ ["1107","11º","Integra Odontologia Especializada LTDA EPP"],
+ ["1108","11º","Integra Odontologia Especializada LTDA EPP"],
+ ["1109","11º","Investimmob"],
+ ["1110","11º","PRESTAMO BSB IMOBILIÁRIA"],
+ ["1111","11º","Esplendor Feminino"],
+ ["1112","11º","LUMINI CLINIC (ENDOCRINOLOGIA E NUTRIÇÃO)"],
+ ["1201","12º","Noa"],
+ ["1202","12º","Tavora Odontologia"],
+ ["1203","12º","4Quality Tecnologia"],
+ ["1204","12º","Brasilia Capital Soluções Imobiliarias"],
+ ["1205","12º","Mind Clínica Médica LTDA-ME"],
+ ["1206","12º","Mind Clínica Médica LTDA-ME"],
+ ["1207","12º","Global JR Representações e Transportes LTDA-ME"],
+ ["1208","12º","JR Representação Global LTDA-ME"],
+ ["1209","12º","Mind Clínica Médica LTDA-ME"],
+ ["1210","12º","Coelho e Arruda Advogados Associados"],
+ ["1211","12º","Mind Clínica Médica LTDA-ME"],
+ ["1212","12º","Mind Clínica Médica LTDA-ME"],
+ ["1301","13º","IBEC - INSTITUTO BRASILEIRO DE EDUCAÇÃO E CULTURA"],
+ ["1302","13º","Enjoy Odontologia"],
+ ["1303","13º","CANUTO HOLDIING"],
+ ["1304","13º","GRUPO HELA"],
+ ["1305","13º","Sobrinho Advogados"],
+ ["1306","13º","Intense Odontologia"],
+ ["1307","13º","Concremat Engenharia e Tecnologia S/A"],
+ ["1308","13º","Concremat Engenharia e Tecnologia S/A"],
+ ["1309","13º","Concremat Engenharia e Tecnologia S/A"],
+ ["1310","13º","Concremat Engenharia e Tecnologia S/A"],
+ ["1311","13º","Sinapsi Clinica de Psicologia"],
+ ["1312","13º","JK Exclusive"],
+ ["1401","14º","Espaço Ink Tatu Art"],
+ ["1402","14º",""],
+ ["1403","14º","NUCLEO BRASIL"],
+ ["1404","14º","Dra. Marília Rafaela Estética Avançada"],
+ ["1405","14º","Venâncio Advocacia"],
+ ["1406","14º",""],
+ ["1407","14º",""],
+ ["1408","14º",""],
+ ["1409","14º",""],
+ ["1410","14º",""],
+ ["1411","14º","Clinica de Psicologia Luize Bonaparte"],
+ ["1412","14º","Clinica Caminhar"],
+ ["1501","15º","Escritório de Advocacia Elisângela e Omar"],
+ ["1502","15º","DR. BRUNO BRUNELLI ODONTOLOGIA"],
+ ["1503","15º",""],
+ ["1504","15º","Baroli Imoveis"],
+ ["1505","15º",""],
+ ["1506","15º","Plena Psicologia"],
+ ["1507","15º","CLINICA INOVAR"],
+ ["1508","15º",""],
+ ["1509","15º","Adriana Diniz Odontologia"],
+ ["1510","15º","SOUD HORIZON ESTUDIO"],
+ ["1511","15º","Clinica Ella"],
+ ["1512","15º","Clinica Ella"],
+ ["1601","16º","JPIB Negócios Imobiliários Eireli"],
+ ["1602","16º","Kézia P. Galdino / Karina Barbosa Dorneles (Psicologia)"],
+ ["1603","16º","Fisio 3"],
+ ["1604","16º","UROFLUX"],
+ ["1605","16º","ALIVE TURISMO"],
+ ["1606","16º","ZS3 INVESTIMENTOS"],
+ ["1607","16º","Roma Engenharia"],
+ ["1608","16º","GARRA CERTIFICAÇÃO"],
+ ["1609","16º","Amaro Tattoo"],
+ ["1610","16º","Luminnus Pscicologia"],
+ ["1611","16º","Atelie Judy Alves"],
+ ["1612","16º","Lucas Neris Odonto"],
+ ["1701","17º","CURUMIN CLINICA DE PEDIATRIA"],
+ ["1702","17º","AMJ Auto Locadora"],
+ ["1703","17º","Trendbuild"],
+ ["1704","17º","Trendbuild"],
+ ["1705","17º","Hello Baby Fotografia"],
+ ["1706","17º","Vanessa Rodrigues Psicologia"],
+ ["1707","17º","Lounge Odontologia"],
+ ["1708","17º","Lounge Odontologia"],
+ ["1709","17º",""],
+ ["1710","17º","JL Odontologia"],
+ ["1711","17º","Consultorio de Psicologia Nathalia Miranda"],
+ ["1712","17º","Helenio Andrade Odontologia / Ortopedia Funcional Dos Maxilares / Ortondontia"],
+ ["1801","18º",""],
+ ["1802","18º","G4 REPRESENTAÇÕES E CONSULTORIA"],
+ ["1803","18º",""],
+ ["1804","18º","SUPLE TECNOLOGIA DA INFORMAÇÃO"],
+ ["1805","18º","Studio Karol Nails"],
+ ["1806","18º","ALEX BARROS"],
+ ["1807","18º","Clever System"],
+ ["1808","18º","CAROL BRESSANE / FOUR FOUND OFFICE"],
+ ["1809","18º","Nossa Psicologia Aplicada"],
+ ["1810","18º","Nossa Psicologia Aplicada"],
+ ["1811","18º","ESPAÇO EVOLVE PSICOLOGIA INFANTO JUVENIL"],
+ ["1812","18º",""],
+ ["1901","19º","Aline Mota - Biomedica Estetica"],
+ ["1902","19º","Intense Sallon"],
+ ["1903","19º",""],
+ ["1904","19º","LAILA FEITOSA"],
+ ["1905","19º","Via Vitae Clinica de Psicologia"],
+ ["1906","19º","THAISA PEREIRA PSICOLOGIA"],
+ ["1907","19º",""],
+ ["1908","19º","Espaço Saúde"],
+ ["1909","19º",""],
+ ["1910","19º","VERITÁ"],
+ ["1911","19º","Intense Sallon"],
+ ["1912","19º","BCP EMPRESARIAL"],
+ ["2001","20º",""],
+ ["2002","20º","AZZZ SMART CITIES INNOVATIONS"],
+ ["2003","20º",""],
+ ["2004","20º",""],
+ ["2005","20º","AURUN"],
+ ["2006","20º","Elite Gestão Condominial"],
+ ["2007","20º",""],
+ ["2008","20º","Corazi Imóveis"],
+ ["2009","20º","Corazi Imóveis"],
+ ["2010","20º","Bridge & Insight Comunicação"],
+ ["2011","20º",""],
+ ["2201","22º","We Concept"],
+ ["2202","22º","Prospectare"],
+ ["2203","22º","Sindmetrô DF"],
+ ["2204","22º","Barinject Clinica de Cirurgia Bariatrica e Soroterapia"],
+ ["2205","22º","RS Semi Joias"],
+ ["2206","22º","Grupo Contato Contabilidade"],
+ ["2207","22º","EPTEL"],
+ ["2208","22º","Clinica La Femme"],
+ ["2209","22º","RS Semi Joias"],
+ ["2210","22º","PHYSIO MASTER"],
+ ["2211","22º","B4you"],
+ ["2401","24º","Schon Studio de Arquitetura"],
+ ["2402","24º",""],
+ ["2403","24º","UT2"],
+ ["2404","24º","Playgig"],
+ ["2405","24º","Lab Sharp"],
+ ["2406","24º","BMF ASSESSORIA EMPRESARIAL"],
+ ["2407","24º","Engeteles"],
+ ["2408","24º","INF Contabilidade"],
+ ["2409","24º","Schon Studio de Arquitetura"]
+];
+const OCU_ANDARES=["Térreo", "Mezanino", "2º", "3º", "4º", "5º", "6º", "7º", "8º", "9º", "10º", "11º", "12º", "13º", "14º", "15º", "16º", "17º", "18º", "19º", "20º", "22º", "24º"];
+/* Carrega o mapa uma única vez; depois a manutenção é pela tela. */
+function migrarSalas(){
+  const jaTem=salas.some(s=>s.condoId==='c1');
+  if(CFG.salasSeed==='v1'&&jaTem) return false;
+  if(CFG.salasSeed==='v1'&&!jaTem) return false;   /* esvaziado de propósito */
+  if(!jaTem){
+    SALAS_SEED.forEach(([num,andar,ocup])=>{
+      salas.push({id:uid('sl'),condoId:'c1',numero:num,andar,area:null,
+        ocupante:ocup||'',tipo:ocup?'Locatário':'Vago',
+        status:ocup?'Ocupada':'Vaga',obs:'',manual:false,
+        historico:[{q:'Sistema',w:nowStamp(),t:'Importada da relação de salas'}]});
+    });
+  }
+  CFG.salasSeed='v1';
+  return true;
+}
+
+/* ---- alternar ocupação num clique ---- */
+function ocuAlternar(id){
+  const s=salas.find(x=>x.id===id); if(!s) return;
+  if(!P().edit) return toast('Sem permissão.');
+  const atual=ocuStatus(s);
+  /* quando o estado vem de outro módulo, avisa em vez de sobrescrever calado */
+  const an=analises.find(a=>a.condoId===s.condoId&&ocuMesmaSala(a.unidade,s.numero)&&apObra(a)==='Em obra');
+  if(an) return toast('A sala '+s.numero+' está em obra pela Análise de Projetos. Finalize a obra por lá.');
+  if(atual==='Ocupada'){
+    s.status='Vaga'; s.ocupante=''; s.tipo='Vago';
+    (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),t:'Marcada como vaga'});
+    audit('Sala liberada',s.numero,'',s.condoId);
+    save(); render(); toast('Sala '+s.numero+' está vaga.');
+  } else {
+    ocuPreencher(id);
+  }
+}
+/* pede o nome ao ocupar — sem nome não faz sentido marcar como ocupada */
+function ocuPreencher(id){
+  const s=salas.find(x=>x.id===id); if(!s) return;
+  openModal('Ocupar a sala '+s.numero,
+    `<div class="field"><label>Quem vai ocupar</label>
+       <input id="ocuNome" value="${esc(s.ocupante||'')}" placeholder="nome ou razão social"
+         onkeydown="if(event.key==='Enter')ocuPreencherConf('${id}')"></div>
+     <div class="field"><label>Vínculo</label><select id="ocuTipo">
+       ${['Locatário','Proprietário'].map(t=>`<option ${s.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+     <div class="t-sub">Se a entrada foi formalizada, registre também na Cessão de Direitos —
+       a partir daí a sala se atualiza sozinha.</div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn" onclick="ocuPreencherConf('${id}')">${ic('check')}Ocupar</button>`);
+  setTimeout(()=>{const i=$('#ocuNome'); if(i&&i.focus)i.focus()},80);
+}
+function ocuPreencherConf(id){
+  const s=salas.find(x=>x.id===id); if(!s) return;
+  const n=($('#ocuNome')&&$('#ocuNome').value.trim())||'';
+  if(!n) return toast('Informe quem vai ocupar a sala.');
+  s.ocupante=n; s.tipo=($('#ocuTipo')&&$('#ocuTipo').value)||'Locatário'; s.status='Ocupada';
+  (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),t:'Ocupada por '+n});
+  audit('Sala ocupada',s.numero,n,s.condoId);
+  save(); closeModal(); render(); toast('Sala '+s.numero+' ocupada por '+n+'.');
+}
+/* ---- gráfico de ocupação por andar ---- */
+function ocuGrafico(cid){
+  const l=ocuSalas(cid);
+  if(!l.length) return '';
+  const ordem=(typeof OCU_ANDARES!=='undefined'&&OCU_ANDARES.length)?OCU_ANDARES:[];
+  const mapa={};
+  l.forEach(s=>{ const a=s.andar||'—';
+    if(!mapa[a]) mapa[a]={tot:0,ocu:0,vag:0,obra:0};
+    mapa[a].tot++;
+    const st=ocuStatus(s);
+    if(st==='Vaga') mapa[a].vag++; else if(st==='Em obra') mapa[a].obra++; else mapa[a].ocu++;
+  });
+  const chaves=ordem.filter(a=>mapa[a]).concat(Object.keys(mapa).filter(a=>!ordem.includes(a)));
+  const maxTot=Math.max(...chaves.map(a=>mapa[a].tot),1);
+  const barras=chaves.map(a=>{
+    const m=mapa[a], pct=Math.round(m.ocu*100/m.tot);
+    const h=x=>Math.round(x*100/maxTot);
+    return `<div class="og-col" title="${esc(a)}: ${m.ocu} ocupada(s), ${m.vag} vaga(s)${m.obra?', '+m.obra+' em obra':''}"
+        onclick="ocuBusca='';ocuAndar='${esc(a)}';render()">
+      <div class="og-bar">
+        ${m.vag?`<div class="og-v" style="height:${h(m.vag)}%"></div>`:''}
+        ${m.obra?`<div class="og-o" style="height:${h(m.obra)}%"></div>`:''}
+        ${m.ocu?`<div class="og-c" style="height:${h(m.ocu)}%"></div>`:''}
+      </div>
+      <div class="og-pct ${pct===100?'full':(pct<70?'low':'')}">${pct}%</div>
+      <div class="og-lb">${esc(a).replace(' andar','')}</div>
+    </div>`;
+  }).join('');
+  return `<div class="card" style="margin-bottom:14px">
+    <div class="ap-faixa">${ic('chart')} OCUPAÇÃO POR ANDAR</div>
+    <div style="padding:14px 12px 10px">
+      <div class="og-leg">
+        <span><i class="og-c"></i>Ocupada</span>
+        <span><i class="og-o"></i>Em obra</span>
+        <span><i class="og-v"></i>Vaga</span>
+        <span class="t-sub" style="margin-left:auto">clique no andar para filtrar</span>
+      </div>
+      <div class="og-wrap">${barras}</div>
+    </div></div>`;
+}
+
 /* ---- Tela: taxa de ocupação ---- */
 function viewOcupacao(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const r=ocuResumo(cid);
   let l=ocuSalas(cid);
   if(ocuFiltro) l=l.filter(s=>ocuStatus(s)===ocuFiltro);
+  if(ocuAndar) l=l.filter(s=>(s.andar||'—')===ocuAndar);
   if(ocuBusca){ const q=ocuBusca.toLowerCase();
     l=l.filter(s=>(String(s.numero)+' '+(ocuOcupante(s)||'')+' '+(s.andar||'')).toLowerCase().includes(q)); }
 
@@ -11605,7 +11992,7 @@ function viewOcupacao(){
       <div class="val">${r['Em obra']}</div><div class="sub">reforma em andamento</div></div>
   </div>`;
 
-  const ia=iaCard('Leitura da ocupação',iaOcupacao(cid),false);
+  const ia=iaCard('Leitura da ocupação',iaOcupacao(cid),false)+ocuGrafico(cid);
 
   const linhas=l.map(s=>{
     const st=ocuStatus(s), oc=ocuOcupante(s);
@@ -11613,14 +12000,17 @@ function viewOcupacao(){
     const bd={'Ocupada':'b-conc','Vaga':'b-atr','Em obra':'b-and','Reservada':'b-pend'}[st]||'b-tag';
     const auto=st!==(s.status||'Vaga');
     return `<tr class="${cls}">
-      <td><b>${esc(s.numero)}</b>${s.andar?`<div class="t-sub">${esc(s.andar)}º andar</div>`:''}</td>
+      <td><b>${esc(s.numero)}</b>${s.andar?`<div class="t-sub">${esc(ocuAndarRot(s.andar))}</div>`:''}</td>
       <td>${esc(oc||'—')}${oc?`<div class="t-sub">${esc(s.tipo||'')}</div>`:''}</td>
       <td>${s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}</td>
       <td><span class="badge ${bd}">${st}</span>
         ${auto?`<div class="t-sub" title="Situação vinda de outro módulo">automático</div>`:''}</td>
       <td class="t-sub">${esc(s.obs||'')}</td>
       <td style="text-align:right;white-space:nowrap">
-        ${P().edit?`<button class="btn ghost sm" onclick="ocuFormSala('${s.id}')">Editar</button>`:''}
+        ${P().edit?`<button class="btn ${st==='Ocupada'?'ghost':''} sm" onclick="ocuAlternar('${s.id}')"
+          title="${st==='Ocupada'?'Marcar como vaga':'Registrar quem ocupou'}">${
+          st==='Ocupada'?'Liberar':'Ocupar'}</button>`:''}
+        ${P().edit?`<button class="btn ghost sm" onclick="ocuFormSala('${s.id}')">${ic('settings')}</button>`:''}
       </td></tr>`;
   }).join('');
 
@@ -11630,7 +12020,9 @@ function viewOcupacao(){
         oninput="ocuBusca=this.value;render()" style="min-width:190px">
       <select onchange="ocuFiltro=this.value;render()">
         ${opt([''].concat(OCU_STATUS),ocuFiltro,'Situação')}</select>
-      ${ocuFiltro||ocuBusca?`<button class="btn ghost sm" onclick="ocuFiltro='';ocuBusca='';render()">${ic('close')}Limpar</button>`:''}
+      <select onchange="ocuAndar=this.value;render()">
+        ${opt([''].concat([...new Set(ocuSalas(cid).map(x=>x.andar||'—'))]),ocuAndar,'Andar')}</select>
+      ${ocuFiltro||ocuBusca||ocuAndar?`<button class="btn ghost sm" onclick="ocuFiltro='';ocuBusca='';ocuAndar='';render()">${ic('close')}Limpar</button>`:''}
       <div class="spacer"></div>
       <button class="btn ghost" onclick="ocuExportar()">${ic('download')}Exportar Excel</button>
       ${P().create?`<button class="btn ghost" onclick="ocuImportar()">${ic('upload')}Importar lista</button>`:''}
@@ -11853,7 +12245,7 @@ function aplicarSnapshot(d){
   if(d.CFG) CFG=Object.assign(CFG,d.CFG);
   creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
   if(!prestadores.length) seedPrestadores();
-  migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig(); migrarVendasCustas(); migrarFilaPub(); migrarRevisoesAp(); migrarMarcaEbiz();
+  migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig(); migrarVendasCustas(); migrarFilaPub(); migrarRevisoesAp(); migrarMarcaEbiz(); migrarSalas();
   _booting=false;
 }
 function agendarSync(){
@@ -11994,5 +12386,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a423bb77be6ada0c',t:'MTc5MDYwODgyOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a42526fedab734bf',t:'MTc5MDYyMzcxOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
