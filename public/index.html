@@ -804,6 +804,30 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 .pm-t em{font-style:normal;font-size:11.5px;color:var(--text-2);margin-top:1px}
 
 /* gráfico de ocupação por andar */
+.conv-tr{margin-top:8px;padding:10px 12px;background:#f6f8fc;border-left:3px solid var(--navy);
+  border-radius:0 7px 7px 0;font-size:12.5px;line-height:1.55;text-align:justify}
+
+.pz-wrap{display:flex;gap:26px;align-items:center;padding:16px;flex-wrap:wrap}
+.pz-graf{position:relative;width:180px;height:180px;flex:none}
+.pz-torta{width:100%;height:100%;border-radius:50%}
+.pz-centro{position:absolute;inset:26%;background:#fff;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center}
+.pz-centro b{font-size:24px;color:var(--navy);line-height:1}
+.pz-centro em{font-style:normal;font-size:10.5px;color:var(--text-3);margin-top:2px}
+.pz-leg{flex:1;min-width:250px}
+.pz-li{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:7px;cursor:pointer}
+.pz-li:hover{background:var(--panel)}
+.pz-li i{width:12px;height:12px;border-radius:3px;flex:none}
+.pz-n{font-weight:700;font-size:15px;min-width:34px;color:var(--navy)}
+.pz-r{flex:1;font-size:13px}
+.pz-p{font-size:12px;color:var(--text-2)}
+.pz-tot{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px;padding-top:11px;
+  border-top:1px solid var(--line)}
+.pz-tot>div{display:flex;flex-direction:column}
+.pz-tot b{font-size:14px;color:var(--navy)}
+.pz-acoes{display:flex;align-items:center;gap:12px;padding:0 16px 13px;flex-wrap:wrap}
+@media(max-width:820px){ .pz-wrap{gap:16px;justify-content:center} .pz-tot{grid-template-columns:1fr 1fr} }
+
 .og-leg{display:flex;gap:14px;align-items:center;font-size:11.5px;color:var(--text-2);margin-bottom:10px;flex-wrap:wrap}
 .og-leg i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:-1px}
 .og-wrap{display:flex;gap:4px;align-items:flex-end;overflow-x:auto;padding-bottom:4px}
@@ -11513,6 +11537,99 @@ function iaCard(titulo,lista,vazio){
     </div></div>`;
 }
 
+/* ============================================================
+   CONVENÇÃO DO CONDOMÍNIO
+   Minuta aprovada em 2018, texto integral indexado para consulta.
+   Pergunte em linguagem normal — ele localiza o trecho e cita.
+   ============================================================ */
+const CONVENCAO=[
+ "CONVENÇÃO DE CONDOMÍNIO E-BUSINESS ÁGUAS CLARAS AV. PAU BRASIL, Lt. 06 – ÁGUAS CLARAS – DF O CONDOMÍNIO COMERCIAL E-BUSINESS ÁGUAS CLARAS, doravante denominado, simplesmente, por \"CONDOMÍNIO\", localizado na Avenida Pau Brasil, Lt. 06, Cep.: 71916-500, Águas Claras (Norte) - DF, rege- se pelas disposições contidas na Lei 10.406/2002 (Código Civil), na Lei Federal nº 4.591/64 e legislação complementar aplicável, pelas cláusulas e condições desta convenção. CONDIÇÕES GERAIS: a) - o empreendimento tem destinação não residencial; a.1) - 285 (duzentas e oitenta e cinco) vagas de garagem com direito de uso permanente à cada unidade e sem destinação indicativa e individualizada de unidade (loja ou sala), garantido o direito de uso de vagas pelos condôminos, conforme estabelecido nas cláusulas 2.3 e 2.4.1 desta Convenção, sendo que sua utilização será sempre feita por meio de ordem de chegada e demanda dos condôminos ou usuários, devendo ser respeitado o direito de uso indicado nas cláusulas 2.3 e 2.4.1 da Convenção. a.2) - As vagas de garagem são de uso privativo dos condôminos, no limite de seu direito de uso. Porém, havendo aprovação em Assembleia Geral Extraordinária convocada com pauta específica para tratar sobre a forma de utilização das vagas de gara gem, poderá ser contratada empresa administradora de estacionamento rotativo aberto ao público. Apenas poderá ser deliberada a proposta de alteração de uso das vagas de garagem, após a aprovação em assembleia e implementação de sistema de segurança interna do CONDOMÍNIO que garanta o acesso seguro e identificado de terceiros não condôminos nas dependências do CONDOMÍNIO. b) - sempre que nesta convenção se fizer menção a “condômino” ou “condôminos”: b.1) - no que se referir ao uso e utilização de unidade autônoma e partes de propriedade e uso comuns, as regras se estenderão e serão obedecidas pelo usuário, a qualquer título, seus familiares e empregados; b.2) - no que se referir ao direito de propriedade, as regras se aplicarão ao titular de domínio e se estenderão e serão obedecidas pelo titular de direito de compra de unidade autônoma; c) - não obstante o estabelecido na letra \"b.1\", acima, o usuário da unidade autônoma, que dela não seja proprietário ou titular do respectivo direito de compra, não terá qualquer representação perante o CONDOMÍNIO, ficando o proprietário ou titular desse direito de compra responsável pelas infrações e danos por aquele cometido e eventual débito por aquele assumido; c.1) - fica ressalvado, no entanto, o direito de o locatário votar nas decisões de assembleia geral, que envolvam despesas ordinárias do condomínio, na hipótese de o condômino-locador a ela não comparecer, consoante o disposto no art. 24, § 4º, da lei n.º 4.591/64; d) - o CONDOMÍNIO é constituído de duas partes distintas, a saber: d.1) - uma, composta de propriedade e uso comuns, inalienável e indivisível, indissoluvelmente vinculada às partes de propriedade e uso exclusivos, observado o disposto no item 1.2, abaixo; d.2) - outra, composta de propriedade e uso exclusivos; 2 e) - a modificação das condições gerais, supra descritas, também somente poderá ser promovida com obediência aos requisitos adiante referidos.",
+ "1.1 As partes de propriedade e uso comuns do CONDOMÍNIO, além das estabelecidas em lei, são as abaixo discriminadas e têm, especialmente, a seguinte localização: - Subsolo 04: 74 (setenta e quatro) vagas de garagem , em locais individuais e indeterminados, circulação de veículos e pedestres, rampa de acesso ao subsolo 03, depósitos, antecâmara, DG adicional, 02 (dois) elevadores, reservatório inferior e 02 (duas) escadas de acesso até o pavimento Mezanino. - Subsolo 03: 72 (setenta e duas) vagas de garagem, em locais individuais e ind eterminados, circulação de veículos e pedestres, rampa de acesso ao subsolo 04 e 02, depósitos, ante câmara, DG adicional, 02 (dois) elevadores, reservatório inferior e 02 (duas) escadas de acesso até o pavimento Mezanino. - Subsolo 02: 72 (setenta e du as) vagas de garagem, em locais individuais e indeterminados, circulação de veículos e pedestres, rampa de acesso ao subsolo 03 e 01, depósitos, ante câmara, DG adicional, 02 (dois) elevadores, reservatório inferior e 02 (duas) escadas de acesso até o pavimento Mezanino. - Subsolo 01: 67 (sessenta e sete ) vagas de garagem , em locais individuais e indeterminados, circulação de veículos e pedestres, rampas de acesso ao subsolo 02, entrada e saída de veículos, oficina / depósito de manutenção, ante câmara, correios, WC, controle de estacionamento, dml, espera do estacionamento, gerador, lixo, 02 (dois) elevadores e 02 (duas) escadas de acesso até o pavimento Mezanino. - Pavimento Térreo: jardins, escada de acesso, galeria, lobby, recepção, hall de elevadores, 06 (seis) elevadores, sala de bombeiros, WC feminino, WC masculino, vestiário feminino e masculino, controle de funcionários, refeitório, grupo motoventilador, ante câmara, escada enclausurada e 02 (duas) escadas de acesso até o pavimento Mezanino. - Mezanino / 1º Pav.: circulação, instalações, segurança int. predial, WC pulmão, WC, administração, lajes técnicas, lixo, lixo orgânico, dml, WC público feminino e masculino, caixa eletrônico/foyer, terraço descoberto, auditó rio, 02 (duas) salas d e reuniões, 06 (seis) elevadores, escada enclausurada e 02 (duas) escadas de acesso ao pavimento subsolo 04. - 2º Pavimento: circulação, laje técnica, WC PNE’s, instalações elétricas, lixo, área de refúgio, escada enclausurada e 05 (cinco) elevadores. - 3º ao 6º Pavimentos: circulação, laje técnica, WC PNE’s, instalações elétricas, lixo, área de refúgio, escada enclausurada e 05 (cinco) elevadores. - 7º ao 19º Pavimentos: circulação, laje técnica, WC PNE’s, instalações elétricas, lixo, área de refúgio, escada enclausurada e 05 (cinco) elevadores. - 20º e 22º Pavimentos: circulação, laje técnica, WC PNE’s, instalações elétricas, lixo, área de refúgio, escada enclausurada e 05 (cinco) elevadores. - 21º e 23º Pavimentos: escada enclausurada. - 24º Pavimento: circulação, lajes técnicas, WC PNE’s, instalações elétricas, lixo, área de refúgio, escada enclausurada e 05 (cinco) elevadores. - Cobertura: casa de máquinas, mesa de motores, barrilete e reservatório superior. 3",
+ "1.2 As partes de propriedade e uso comuns não são suscetíveis de divisão ou alienação destacada de cada unidade autônoma, ou de utilização exclusiva por qualquer condômino, salvo o disposto no Capítulo III, adiante, e somente podem ser alteradas, suprimidas ou substituídas, na forma prev ista nesta convenção ou consentimento dos condôminos, na forma da lei. 2.1 As partes de propriedade e uso exclusivo de cada condômino são de domínio individual e se constituem nas unidades autônomas do empreendimento. 2.2 Referidas unidades autônomas são conjuntos de uso comercial e de serviços, neste caso as 09 (nove) lojas localizadas no térreo, as 05 (cinco) lojas localizadas no Mezanino / 1º Pav. e as 247 (duzentas e quarenta e sete) salas comerciais localizadas nos 2º ao 24º pavimentos tipo. Os 24 (vinte quatro) depósitos localizados nos subsolos 02, 03 e 04 serão vinculados às 14 (quatorze) lojas, e a algumas salas comerciais conforme tabelas abaixo.",
+ "2.3 As 0 9 (nove) lojas unidades autônomas , localizadas no pavimento térreo , as 05 (cinco) lojas localizadas no Mezanino / 1º Pav., têm as seguintes áreas e fração ideal no terreno e nas coisas comuns: RELAÇÃO DAS UNIDADES DEPÓSITOS Nº ÁREA COEFICIENTE DE PROPORCIONALIDADE Nº DE VAGAS PRIVATIVA COMUM TOTAL TÉRREO MEZANINO/1º PAVIMENTO TOTAL 15 2.114,49000 2.018,09255 4.132,58255 0,16323 34 Dos conjuntos comerciais – unidades autônomas",
+ "2.4 O CONDOMÍNIO conterá 247 (duzentas e quarenta e sete) unidades autônomas conjuntos comerciais, assim distribuídos: 2º pavimento: Salas 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211 e 212; 3º pavimento: Salas 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311 e 312; 4º pavimento: Salas 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411 e 412; 5º pavimento: Salas 501, 502, 503, 504, 505, 506, 507, 508, 509, 510, 511 e 512; 6º pavimento: Salas 601, 602, 603, 604, 605, 606, 607, 608, 609, 610, 611 e 612; 7º pavimento: Salas 701, 702, 703, 704, 705, 706, 707, 708, 709, 710, 711 e 712; 8º pavimento: Salas 801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811 e 812; 9º pavimento: Salas 901, 902, 903, 904, 905, 906, 907, 908, 909, 910, 911 e 912; 10º pavimento: Salas 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011 e 1012; 4 11º pavimento: Salas 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1110, 1111 e 1112; 12º pavimento: Salas 1201, 1202, 1203, 1204, 1205, 1206, 1207, 1208, 1209, 1210, 1211 e 1212; 13º pavimento: Salas 1301, 1302, 1303, 1304, 1305, 1306, 1307, 1308, 1309, 1310, 1311 e 1312; 14º pavimento: Salas 1401, 1402, 1403, 1404, 1405, 1406, 1407, 1408, 1409, 1410, 1411 e 1412; 15º pavimento: Salas 1501, 1502, 1503, 1504, 1505, 1506, 1507, 1508, 1509, 1510, 1511 e 1512; 16º pavimento: Salas 1601, 1602, 1603, 1604, 1605, 1606, 1607, 1608, 1609, 1610, 1611 e 1612. 17º pavimento: Salas 1701, 1702, 1703, 1704, 1705, 1706, 1707, 1708, 1709, 1710, 1711 e 1712; 18º pavimento: Salas 1801, 1802, 1803, 1804, 1805, 1806, 1807, 1808, 1809, 1810, 1811 e 1812; 19º pavimento: Salas 1901, 1902, 1903, 1904, 1905, 1906, 1907, 1908, 1909, 1910, 1911 e 1912; 20º pavimento: Salas 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 e 2011; 21º pavimento: mezanino das salas 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 e 2011; 22º pavimento: Salas 2201, 2202, 2203, 2204, 2205, 2206, 2207, 2208, 2209, 2210 e 2211; 23º pavimento: mezanino das salas 2201, 2202, 2203, 2204, 2205, 2206, 2207, 2208, 2209, 2210 e 2211; 24º pavimento: Salas 2401, 2402, 2403, 2404, 2405, 2406, 2407, 2408 e 2409;",
+ "2.4.1 Cada uma destas unidades autônomas conjuntos comerciais, tem as seguintes áreas e fração ideal no terreno e nas coisas comuns: RELAÇÃO DAS UNIDADES DEPÓSITOS Nº ÁREA COEFICIENTE DE PROPORCIONALIDADE Nº DE VAGAS PRIVATIVA COMUM TOTAL 2º PAVIMENTO 3º PAVIMENTO 4º ao 6º PAVIMENTO 7º PAVIMENTO 5 8º PAVIMENTO 9º PAVIMENTO 10º PAVIMENTO 11º PAVIMENTO 12º PAVIMENTO 6 13º PAVIMENTO 14º PAVIMENTO 15º PAVIMENTO 16º PAVIMENTO 17º PAVIMENTO 7 18º PAVIMENTO 19º PAVIMENTO 20ºe 21º PAVIMENTOS 22ºe 23º PAVIMENTOS 24º PAVIMENTO 8 TOTAL 9 9.501,69000 10.345,30745 19.846,99745 0,83677 251",
+ "2.4.2 O Empreendimento edificado em único bloco de lojas e salas comerciais possui os seguintes extremos das unidades LOJAS DO PAVIMENTO TÉRREO: LOJA 01 Limita-se pela frente com a Av. Pau Brasil, pela esquerda com a Loja 02, a direita com o lote 04, e pelos fundos com área comum. LOJAS DO PAVIMENTO TÉRREO: LOJA 02 Limita-se pela frente com a Av. Pau Brasil, pela esquerda com a Loja 03, a direita com a Loja 01, e pelos fundos com área comum (sala de bombeiros) LOJAS DO PAVIMENTO TÉRREO: LOJA 03 Limita-se pela frente com a Av. Pau Brasil, pela esquerda com a Loja 04 e 05, a direita com a Loja 02, e pelos fundos com área comum (escada). LOJAS DO PAVIMENTO TÉRREO: LOJA 04 Limita-se pela frente com a Rua Boulevard Águas Claras, pela esquerda com a Loja 05, a direita com a Av. Pau Brasil, e pelos fundos com a Loja 03. LOJAS DO PAVIMENTO TÉRREO: LOJA 05 Limita-se pela frente com a Rua Boulevard Águas Claras, pela esquerda com a Loja 06, a direita com a Loja 04, e pelos fundos com a Loja 03. LOJAS DO PAVIMENTO TÉRREO: LOJA 06 Limita-se pela frente com a Rua Boulevard Águas Claras, pela esquerda com o Lobby, a direita com a Loja 05, e pelos fundos com a Loja 03 e área comum. LOJAS DO PAVIMENTO TÉRREO: LOJA 07 Limita-se pela frente com a Rua Boulevard Águas Claras, pela esquerda com a Loja 08, a direita com a Lobby, e pelos fundos com a área comum. LOJAS DO PAVIMENTO TÉRREO: LOJA 08 Limita-se pela frente com a Rua Boulevard Águas Claras, pela esquerda com a Loja 09, a direita com a Loja 07, e pelos fundos com a Loja 09. LOJAS DO PAVIMENTO TÉRREO: LOJA 09 Limita-se pela frente com a Rua 22 Norte, pela esquerda com o Lote 04, a direita com a Rua Boulevard Água s Claras, e pelos fundos com a Loja 08 e área comum. LOJAS DO PAVIMENTO MEZANINO: LOJA M01 Limita-se pela frente com a área comum (circulação), pela esquerda com a área comum, a direita com a Loja M02, e pelos fundos com o Lote 04. LOJAS DO PAVIMENTO MEZANINO: LOJA M02 Limita-se pela frente com a área comum (circulação), pela esquerda com o Lote 04, a direita com a Loja M03, e pelos fundos com a Av. Pau Brasil. LOJAS DO PAVIMENTO MEZANINO: LOJA M03 Limita-se pela frente com a área comum (circulação), pela esquerda com a Loja M02, a direita com a Rua Boulevard Águas Claras, e pelos fundos com a Av. Pau Brasil LOJAS DO PAVIMENTO MEZANINO: LOJA M04 Limita-se pela frente com a área comum (circulação), pela esquerda com a Loja M03, a direita com a área comum, e pelos fundos com a Rua Boulevard Águas Claras. LOJAS DO PAVIMENTO MEZANINO: LOJA M05 Limita-se pela frente com o Foyer, pela esquerda com o Auditório e a Rua 22 Norte, a direita com a área comum, e pelos fundos com o Lote 04. 9 Salas 201 / 301 / 401/ 501/ 601/ 701/ 801/ 901/ 1001/ 1101/ 1201/ 1301/ 1401/ 1501/ 1601/ 1701/ 1801/ 1901 Limitam-se pela frente com a circulação, pelos fundos com a Av. Pau Brasil, pela esquerda com as salas com final 12 e pela direita com a Rua Boulevard Águas Claras Salas 202/ 302/ 402/ 502/ 602/ 702/ 802/ 902/ 1002/ 1102/ 1202/ 1302/ 1402/ 1502/ 1602/ 1702/ 1802/ 1902 Limitam-se pela frente com a circulação, pelos fundos com a Rua Boulevard Águas Claras, pela esquerda com as salas com final 01 e pela direita com as salas final 03. Salas 203/ 303/ 403/ 503/ 603/ 703/ 803/ 903/ 1003/ 1103/ 1203/ 1303/ 1403/ 1503/ 1603/ 1703/ 1803/ 1903 Limitam-se pela frente com a circulação, pelos fundos com a Rua Boulevard Águas Claras, pela esquerda com as salas com final 02 e pela direita com as salas final 04. Salas 204/ 304/ 404/ 504/ 604/ 704/ 804/ 904/ 1004/ 1104/ 1204/ 1304/ 1404/ 1504/ 1604/ 1704/ 1804/ 1904 Limitam-se pela frente com a circulação, pelos fundos com a Rua Boulevard Águas Claras, pela esquerda com as salas com final 03 e pela direita com as salas final 05. Salas 205/ 305/ 405/ 505/ 605/ 705/ 805/ 905/ 1005/ 1105/ 1205/ 1305/ 1405/ 1505/ 1605/ 1705/ 1805/ 1905 Limitam-se pela frente com a circulação, pelos fundos com a Rua Boulevard Águas Claras, pela esquerda com a s salas com final 04 e pela direita com as salas final 06. Salas 206/ 306/ 406/ 506/ 606/ 706/ 806/ 906/ 1006/ 1106/ 1206/ 1306/ 1406/ 1506/ 1606/ 1706/ 1806/ 1906 Limitam-se pela frente com a circulação, pelos fundos com a Rua Boulevard Águas Claras, pel a esquerda com as salas com final 05 e pela direita com as salas final 07. Salas 207/ 307/ 407/ 507/ 607/ 707/ 807/ 907/ 1007/ 1107/ 1207/ 1307/ 1407/ 1507/ 1607/ 1707/ 1807/ 1907 Limitam-se pela frente com a circulação, pelos fundos com a Rua Boulevard Águas Claras, pela esquerda com as salas com final 07 e pela direita com as salas final 07. Salas 208/ 308/ 408/ 508/ 608/ 708/ 808/ 908/ 1008/ 1108/ 1208/ 1308/ 1408/ 1508/ 1608/ 1708/ 1808/ 1908 Limitam-se pela frente com a circulação, pelos fundos com a Rua 22 Norte, pela esquerda com a Rua Boulevard Águas Claras e pela direita com as salas final 09. Salas 209/ 309/ 409/ 509/ 609/ 709/ 809/ 909/ 1009/ 1109/ 1209/ 1309/ 1409/ 1509/ 1609/ 1709/ 1809/ 1909 Limitam-se pela frente com a circulação, pelos fundos com a Rua 22 Norte, pela esquerda com as salas com final 08 e pela direita com o Lote 04. Salas 210/ 310/ 410/ 510/ 610/ 710/ 810/ 910/ 1010/ 1110/ 1210/ 1310/ 1410/ 1510/ 1610/ 1710/ 1810/ 1910 Limitam-se pela frente com a circulação, pelos fundos com o Lote 04, pela esquerda com as salas com final 09 e pela direita com área comum. Salas 211/ 311/ 411/ 511/ 611/ 711/ 811/ 911/ 1011/ 1111/ 1211/ 1311/ 1411/ 1511/ 1611/ 1711/ 1811/ 1911 Limitam-se pela frente com a circulação, pelos fundos com o Lote 04, pela esquerda com a área comum e pela direita com as salas final 12. Salas 212/ 312/ 412/ 512/ 612/ 712/ 812/ 912/ 1012/ 1112/ 1212/ 1312/ 1412/ 1512/ 1612/ 1712/ 1812/ 1912 Limitam-se pela frente com a circulação, pelos fundos com Av. Pau Brasil, pe la esquerda com o Lote 04 e pela direita com as salas final 01 Salas 2001/ 2201 Limitam-se pela frente com a circulação, pelos fundos com Av. Pau Brasil, pela esquerda com as salas final 11 e pela direita com Rua Boulevard Águas Claras. Salas 2002/ 2202 Limitam-se pela frente com a circulação, pelos fundos com Rua Boulevard Águas Claras, pela esquerda com as salas final 01 e pela direita com as salas final 03. Salas 2003/ 2203 Limitam-se pela frente com a circulação, pelos fundos com Rua Boulevard Águas Claras, pela esquerda com as salas final 02 e pela direita com as salas final 04. Salas 2004/ 2204 Limitam-se pela frente com a circulação, pelos fundos com Rua Boulevard Águas Claras, pela esquerda com as salas final 03 e pela direita com as salas final 05. Salas 2005/ 2205 10 Limitam-se pela frente com a circulação, pelos fundos com Rua Boulevard Águas Claras, pela esquerda com as salas final 04 e pela direita com as salas final 06. Salas 2006/ 2206 Limitam-se pela frente com a circulação, pel os fundos com Rua Boulevard Águas Claras, pela esquerda com as salas final 05 e pela direita com as salas final 07. Salas 2007/ 2207 Limitam-se pela frente com a circulação, pelos fundos com Rua Boulevard Águas Claras, pela esquerda com as salas final 06 e pela direita com as salas final 08. Salas 2008/ 2208 Limitam-se pela frente com a circulação, pelos fundos com Rua 22 Norte, pela esquerda com Rua Boulevard Águas Claras e pela direita com Lote 04. Salas 2009/ 2209 Limitam-se pela frente com a cir culação, pelos fundos com Lote 04, pela esquerda com as salas final 08 e pela direita com área comum. Salas 2010/ 2210 Limitam-se pela frente com a circulação, pelos fundos com Lote 04, pela esquerda com área comum e pela direita com salas final 11. Salas 2011/ 2211 Limitam-se pela frente com a circulação, pelos fundos com Av.Pau Brasil, pela esquerda com Lote 04 e pela direita com salas final 01. Sala 2401 Limitam-se pela frente com a circulação, pelos fundos com Av.Pau Brasil, pela esquerda com a sala 2409 e pela direita com Rua Boulevard Águas Claras. Sala 2402 Limitam-se pela frente com a circulação, pelos fundos com Rua Boulevard Águas Claras, pela esquerda com a sala 2401 e pela direita com a sala 2403. Sala 2403 Limitam-se pela frente com a circulação, pelos fundos com Rua Boulevard Águas Claras, pela esquerda com a sala 2402 e pela direita com a sala 2404. Sala 2404 Limitam-se pela frente com a circulação, pelos fundos com Rua Boulevard Águas Claras, pela esquerda com a sala 2403 e pela direita com a sala 2405. Sala 2405 Limitam-se pela frente com a circulação, pelos fundos com Rua Boulevard Águas Claras, pela esquerda com a sala 2404 e pela direita com a sala 2406. Sala 2406 Limitam-se pela frente com a circulação, pelos fundos com Rua Boulevard Águas Claras, pela esquerda com a sala 2405 e pela direita com a sala 2407. Sala 2407 Limitam-se pela frente com a circulação, pelos fundos com Rua 22 Norte, pela esquerda Rua Boulevard Águas Claras e pela direita com Lote 04. Sala 2408 Limitam-se pela frente com a circulação, pelos fundos com Lote 04, pela esquerda com área comum e pela direita com a sala 2409. Sala 2409 Limitam-se pela frente com a circulação, pelos fundos com Av. Pau Brasil, pela esquerda com Lote 04 e pela direita com a sala 2401. 11",
+ "3.1 Na hipótese em que as salas com terminação em 01, 02, 07, 08, 09, 10, 11 e 12 (do 2º ao 19º pavimento) de um mesmo pavimento, as salas com terminação em 01, 02, 07, 08, 09, 10 e 11 (do 20 ao 23º pavimentos tipo) de um mesmo pavimento e as salas com terminação em 01, 02, 08 e 09 (do 24º pavimento), tenham um único proprietário ou locatário, a circulação interna de tal ala deste pavimento ficará afeta ao uso exclusivo do respectivo proprietário ou locatário, que poderá colocar divisórias para extremar a área utilizada. Também na hipótese em que 2 (duas) ou mais unidades autônomas consecutivas, tenham um único proprietário ou um só locatário, as circulações contíguas a essas unidades autônomas, poderão ficar afetas ao uso exclusivo do respectivo proprietário ou locatário, que poderá colocar divisórias para extremar a área utilizada. Na hipótese em que todas as unidades autônomas de um mesmo pavimento, tenham um único proprietário ou um só locatário, as circulações contíguas a essas unidades autônomas, poderão ficar afetas ao uso exclusivo do respectivo proprietário ou locatário, que poderá colocar divisórias para extremar a área utilizada.",
+ "3.2 O uso exclusivo da circulação prevista neste item 3.1 deverá ser exercido de forma a não prejudicar o acesso à área de circulação dos elevadores e escadas, ou às demais unidades autônomas do mesmo pavimento, conforme o caso, bem como aos hidrantes, alarmes de incêndio e caixas de passagem. 3.3 O proprietário ou locatário que desejar exercer a faculdade prevista neste item deverá obter a necessária autorização das autoridades competentes, se assim se fizer necessário, bem como previamente comunicar ao síndico acerca de seu propósito a fim de obter a devida concordância. 3.4 Nos termos do art. 1.340 do Código Civil vigente, incumbe ao condômino que se valer da área comum de uso exclusivo a conservação e manutenção de referida área comum, cujas despesas não serão consideradas custo do CONDOMÍNIO. 3.5 As unidades autônomas contíguas poderão ser anexadas com a remoção das paredes divisórias, desde que seja concedida a necessária autorização das autoridades competentes, se assim se fizer necessário.",
+ "4.1 O condômino poderá exercer direitos e deverá cumprir obrigações, a saber: a) - DIREITOS: a.1) - usar das partes de propriedade e uso exclusivos e as de propriedade e uso comuns, e sobre elas exercer todos os direitos que lhe confere a lei, a convenção e o regimento interno, com observância das normas de boa vizinhança; a.2) - convocar assembleia geral, pela forma prescrita nesta convenção, e a ela comparecer, discutir, deliberar e votar; a.3) - examinar livros e arquivos do CONDOMÍNIO; a.4) - formular queixas e reclamações, por escrito, ao síndico; a.5) - recorrer das decisões proferidas pelo síndico à assembleia geral; a.6) - realizar modificações ou benfeitorias nas unidades autônomas, desde que não afetem ou prejudiquem a solidez e segurança do CONDOMÍNIO e que respeitem as disposições legais pertinentes às construções, observado o disposto no item 4.4. a.7) - utilizar os serviços de portaria desde que não perturbe a sua ordem, nem desvie empregados para serviços internos de sua unidade autônoma; 12 b) - OBRIGAÇÕES: b.1) - Atualizar seu endereço constante nos registros do CONDOMÍNIO, sob pena de não poder alegar que não foi notificado dos assuntos e reuniões do CONDOMÍNIO; b.2) - permitir ao síndico e seus prepostos, empregados, o u não, do CONDOMÍNIO, acesso à unidade autônoma de sua propriedade para fins de execução de obras ou serviços necessários; b.3) - executar, em sua própria unidade autônoma e às expensas próprias, obra e serviço, para atender ao disposto no item 4.3; b.4) - destinar a unidade autônoma à finalidade prevista nesta convenção, vedando-se utilização diversa, ainda que de forma temporária e de pouca intensidade; b.5) - Não alterar a forma e a cor da fachada, das partes e esquadrias, sendo vedada a instalação de qualquer estrutura externa, não prevista no projeto do edifício, exceto lojas do térreo, devendo seguir o modelo definido em assembleia, que será único para todos os condôminos. b.6) - não realizar obras que comprometam a segurança da edificação do CONDOMÍNIO. b.7) - comunicar imediatamente ao síndico a ocorrência de moléstia contagiosa em sua unidade autônoma; b.8) - denunciar ao síndico qualquer irregularidade observada;",
+ "4.2 O condômino é responsável pelos danos a que der causa, seja nas partes de propriedade e uso comuns do CONDOMÍNIO, seja nas unidades autônomas de outros condôminos. 4.3 O condômino em cuja unidade autônoma forem realizadas obras, será responsável pela perfeita limpeza dos elevadores, áreas, corredores e outros locais por onde transitarem materiais de construção ou entulhos, os quais não poderão ser depositados, sem anuência do síndico, em qualquer área de uso comum. Ocorrendo tal depósito, será de sua responsabilidade o pagamento das despesas de sua remoção e armazenamento em local adequado. 4.4 Nas unidades autônomas e áreas comuns do CONDOMÍNIO não poderão ser desenvolvidas atividades que acarretem a emissão constante de ruídos que possam afetar o sossego e o uso normal das demais unidades autônomas e áreas comuns, exceto quanto autorizado pela administração. Também não poderão ser desenvolvidas no local atividades que impliquem na manutenção ou circulação de animais. CAPÍTULO V - DA ADMINISTRAÇÃO DO CONDOMÍNIO A) - DO SÍNDICO E DO SUBSÍNDICO",
+ "5.1 O CONDOMÍNIO será administrado por um síndico que deverá ser proprietário, salvo na hipótese de não haver proprietário interessado ao cargo. Não havendo interessado, deverá ser contratado pelo CONDOMÍNIO síndico profissional, devendo ser pessoa jurídica. 5.2 O síndico será assessorado por um CONSELHO FISCAL e eventualmente auxiliado por um subsíndico também condômino, e, também eventualmente, por uma administradora. 5.2.1 Todos os membros indicados nos preceitos anteriores, assim como os suplentes do CONSELHO FISCAL, serão eleitos em assembleia geral, sendo desde logo considerados empossados, todos com mandato de 2 (dois) anos, podendo ser reeleitos por igual prazo. O cargo de subsíndico poderá deixar de ser preenchido. 5.2.2 Os cargos indicados nas cláusulas 5.1, 5.2 e 5. 2.1, serão preenchidos por meio de eleição em assembleia geral devidamente convocada com esta finalidade. 13",
+ "5.2.3 Não poderá se candidatar para os cargos de síndico, subsíndico, membro do CONSELHO FISCAL e de outros eventuais órgãos da administração ou de assessoramento do CONDOMÍNIO, direta ou indireta, o condômino que tenha sido multado ou condenado com trânsito em julgado, para cobrança das quotas - partes de sua responsabilidade em qualquer dos 2 (dois) exercícios sociais anteriores ao da eleição, nem estar inadimplente com o Condomínio.",
+ "5.3 Além das legais, o síndico tem as seguintes atribuições, devendo atuar com moderação: a) - fixar as atribuições do subsíndico, se houver; b) - apresentar o orçamento do exercício social, que terá duração de 1(um) ano, iniciando-se em 1º de abril de cada ano e encerrando-se no dia 31 de março do ano subsequente; c) - fazer demonstração mensal das despesas efetuadas e receitas auferidas, apresentando aos condôminos, quando solicitado, a documentação correspondente, que deverá estar arquivada com o restante dos documentos do CONDOMÍNIO, nas dependências do mesmo; d) - fazer concorrências ou tomada de preços para serviços do CONDOMÍNIO, podendo ordenar qualquer reparo ou adquirir o que for necessário, submetendo previamente à aprovação do CONSELHO FISCAL as despesas extra orçamentárias; e) - mandar executar quaisquer consertos ou reparos de vulto, de caráter urgente, nas instalações danificadas, independentemente de consulta aos condôminos e ao CONSELHO FISCAL, desde que as peculiaridades das medidas a serem tomadas não possibilitem tal consulta prévia; f) - advertir, verbalmente ou por escrito, o condômino infrator de qualquer disposição da presente convenção e regimento interno; g) - representar, ativa e passivamente, o CONDOMÍNIO em juízo ou fora dele, receber e dar quitação em nome do CONDOMÍNIO, movimentar contas bancárias do mesmo, emitindo e endossando cheques, depositando as importâncias recebidas em pagamento, etc., aplicando os respectivos valores, inclusive as parcelas referentes ao fundo de reserva, em instituição financeira de escolha conjunta com o CONSELHO FISCAL; h) - efetuar seguro do CONDOMÍNIO, previsto nesta convenção, devendo fazer constar da respectiva apólice previsão da reconstrução do CONDOMÍNIO, em caso de destruição total ou parcial; i) - efetuar seguros do CONDOMÍNIO contra incêndio e de responsabilidade civil contra terceiros; j) - convocar assembleia geral e reunião do CONSELHO FISCAL e de outros órgãos eventuais e resolver casos que, porventura, não tiverem solução prevista, expressamente, na lei ou nesta convenção; k) - dispor dos seguintes documentos para a administração, que deverão ser, obrigatoriamente, transferidos a seus sucessores, tudo devendo constar de relação na ata da eleição de cada novo síndico: livro de atas da assembleia geral; livro de presença de condôminos na assembleia geral; livro de atas das reuniões do CONSELHO FISCAL; livro-caixa; livro de queixas; ocorrências e sugestões; fichário de empregados; plantas, etc.…; l) - providenciar abertura, numeração, rubrica e encerramento dos livros; m) - determinar execução de obras e serviços autorizados pelo CONSELHO FISCAL, quando inadiáveis, ou pela assembleia geral, nos casos gerais, tanto nas partes de propriedade e uso comuns, quanto nas próprias unidades autônomas, especialmente, neste caso, se não cumpridas pelo condômino suas próprias obrigações; m.1) - na hipótese de não cumprimento das obrigações pelo condômino, os serviços serão realizados às suas expensas, e, se necessário, o CONDOMÍNIO adiantará o pagamento das despesas, cujo valor será reembolsado dentro de 15 ( quinze) dias, a contar do recebimento de notificação enviada ao condômino, acrescido de taxa de administração de 20% (vinte por cento); 14 m.2) - inadimplente o condômino de vedor, incidirá nas penalidades previstas no capítulo respectivo; n) - admitir e demitir empregados do CONDOMÍNIO, dentro dos critérios e normas legais, fixando-lhes salários e definindo-lhes funções, para os efeitos de legislação trabalhista e de previdência social, observadas as bases correntes, sem prejuízo do orçamento anual; o) - dirigir, fiscalizar, licenciar, transferir e punir empregados do CONDOMÍNIO, submetendo-os à disciplina adequada; p) - emitir e enviar os carnês de cobrança a cada condômino; q) - pagar pontualmente as taxas de serviços públicos utilizados pelo CONDOMÍNIO, tais como telefone, luz, água, gás, esgoto, etc.; r) - proceder ao registro de todos os empregados do CONDOMÍNIO nos prazos legais, assim como efetuar os recolhimentos de tributos e contribuições, previstos em lei; s) - enviar cartas de convocação para a assembleia geral, providenciando os respectivos registros das atas e remetendo cópias aos condôminos; t) - delegar, total ou parcialmente, poderes de representação ou funções administrativas, especificando- as, quando da delegação, a pessoas, físicas ou jurídicas, de sua confiança, mediante referendo da assembleia geral.",
+ "5.4 Das decisões do síndico caberá recurso para a assembleia geral. 5.5 As funções do síndico, do subsíndico, do CONSELHO FISCAL e dos membros de outros órgãos eventuais são de natureza não remunerada. Poderá a assembleia geral, entretanto, atribuir natureza remunerada a essas funções. 5.6 Na hipótese de renúncia, destituição ou impedimento do síndico, assumirá as funções o subsíndico, se houver, e, na sua falta ou impedimento, o presidente do CONSELHO FISCAL. 5.6.1 O presidente do conselho fiscal, assumindo as funções do síndico, convocará a assembleia geral, que se reunirá dentro de 30 (trinta) dias corridos, contados da vacância do cargo, para fins de eleger novo síndico, cujo mandato vigorará até a realização da próxima assembleia geral ordinária. B) - DO CONSELHO FISCAL",
+ "5.7 O CONSELHO CONSULTIVO será constituído de um mínimo de 3 (três ) e máximo de 5 (cinco) condôminos proprietários, que elegerão entre si o Presidente do Conselho e terá as seguintes atribuições, além daquelas fixadas por lei: a) - assessorar o síndico e fiscalizar sua ação nas soluções dos problemas; b) - autorizar o síndico a efetuar despesas extraordinárias não previstas no orçamento aprovado pela assembleia geral; c) - emitir parecer sobre as contas do síndico, conferindo-as, aprovando-as ou rejeitando-as. d) - Perderá sumariamente a condição de membro do conselho Fiscal o condômino inadimplente com suas obrigações, sendo obrigação do sindico efetuar a consulta dos membros aptos antes de submeter-lhes quaisquer consulta e/ou parecer. 5.7.1 Quando da eleição dos membros do CONSELHO FISCAL, serão eleitos também até 3 (três) suplentes. 5.8 No caso de vacância do cargo de conselheiro, o substituto será nomeado pelos remanescentes e permanecerá até o final do mandato vigente. 15",
+ "5.8.1 Se ocorrer vacância da maioria ou da totalidade dos cargos, a assembleia geral será convocada para proceder à nova eleição. 5.9 O CONSELHO FISCAL reunir-se-á sempre que os interesses do CONDOMÍNIO exigirem, podendo a reunião ser convocada, também, pelo síndico. As decisões do CONSELHO FISCAL serão tomadas pelo voto da maioria, devendo ser lavrada ata, observado o disposto, no que couber, para as da assembleia geral. 5.10 Como órgão de assessoria, as decisões do CONSELHO FISCAL não vinculam a atuação do síndico. Quando a decisão do síndico contrariar aquela do CONSELHO FISCAL, este poderá recorrer à assembleia geral. C) - DA ADMINISTRADORA 5.11 A administradora é órgão facultativo da administração, terá as funções administrativas que lhe forem delegadas pelo síndico e procederá de acordo com suas determinações. 5.12 A admin istradora deverá ser empresa especializada no setor, eleita em assembleia e será contratada por período máximo de 2 (dois) anos, sendo permitida a prorrogação de seu contrato, por períodos sucessivos de idêntica duração. D) - DA ASSEMBLEIA GERAL",
+ "5.13 As deliberações conjuntas dos condôminos serão tomadas em assembleia geral, ordinária ou extraordinária, realizada em dependências do próprio CONDOMÍNIO. 5.14 A convocação da assembleia geral poderá ser efetuada: a) - pelo síndico; b) - por condôminos, que representem ¼ (um quarto) dos votos do CONDOMÍNIO; c) - pelo CONSELHO FISCAL. 5.14.1 Se, por qualquer motivo a assembleia geral não se reunir, notadamente a assembleia geral ordinária, a requerimento de qualquer condômino, o juiz poderá decidir quanto a sua realização. 5.15 A assembleia geral será convocada por meio de edital de convocação, colocado no (s) quadro (s) de Avisos do condomínio, em locais visíveis, como elevadores e circulações, e enviado, por cópia para as unidades do próprio CONDOMÍNIO, ou por meio eletrônico a cada condômino, com antecedência mínima de 7 (sete) dias úteis. 5.15.1 No edital de convocação constará, ainda que abreviada mente, a ordem do dia, sobre a qual deliberarão os presentes, e, caso necessário, mais o item “assuntos gerais e de interesse do CONDOMÍNIO”.",
+ "5.15.2 Também serão indicados no edital de convocação o dia, hora e local da realização da assembleia geral e a disposição de que, não havendo quorum suficiente para instalação da assembleia geral, em primeira convocação, a segunda far-se-á 30 (trinta) minutos após. 5.15.3 Como exceção, ainda que não conste da ordem do dia, a assembleia geral tomará conhecimento de recurso apresentado por condômino ou pelo CONSELHO FISCAL de decisão proferida pelo síndico ou por delegação deste, pelo subsíndico ou pela administradora, e que se refira, especialmente, a esse mesmo condômino ou ao CONSELHO FISCAL. 5.16 As reuniões serão dirigidas por mesa composta por um presidente, escolhido por aclamação, entre os condôminos, e secretariada por pessoa de livre escolha do presidente eleito.",
+ "5.16.1 Caberá ao presidente da assembleia geral: a) - examinar o livro de registro de presença e verificar os requisitos necessários à instalação da reunião; 16 b) - examinar as procurações apresentadas, admitindo, ou não, o respectivo mandatário, com recurso dos interessados à própria assembleia geral; enquanto não deliberado a respeito, o voto dos mesmos será tomado em apartado; c) - dirigir os trabalhos, determinando os atos a serem praticados pelo secretário, colocando os assuntos em debate e votação, aceitando, ou não, as propostas apresentadas, podendo, até mesmo, inverter a ordem do dia; d) - suspender a reunião, em face do adiantado da hora, ou se houver necessidade de coligir elementos ou completar informações, ou se os trabalhos estiverem tumultuados, transferindo-a para outro dia ou local mais apropriado; e) - encerrar o livro de registro de presença e assinar o livro de atas da assembleia geral.",
+ "5.17 Dos trabalhos e deliberações da assembleia geral será lavrada ata, em livro próprio, a qual poderá ser elaborada na forma de sumário dos fatos ocorridos, inclusive dissidências e protestos, e conter apenas a transcrição das deliberações tomadas, desde que: a) - os documentos ou propostas submetidos à assembleia geral, assim como as declarações de voto ou dissidência, referidas na ata, sejam numerados seguidamente, autenticados pela mesa e por qualquer condômino que o solicitar, e arquivados no CONDOMÍNIO; b) - a mesa, a pedido do condômino interessado, autentique exemplar ou cópia de proposta, declaração de voto ou dissidência, ou protesto apresentado. 5.17.1 A ata da assembleia geral será lavrada por pessoa de indicação do presidente da assembleia geral, que será o(a) secretário(a) dos trabalhos, condômino ou não, devendo ser assinada pelo presidente e pelo(a) secretário(a) e, se for assim deliberado, levada a registro no Cartório de registro de títulos e documentos.",
+ "5.17.2 Quando a ata refletir alteração ou acréscimo de dis positivo constante nesta convenção será averbada no registro de imóveis competente. 5.17.3 A cópia da ata deverá ser afixada no Quadro de Avisos do CONDOMÍNIO dentro de 8 (oito) dias da data da assembleia geral, ainda que não tenha sido objeto de registro, e fornecida cópia aos condôminos que a solicitarem ao síndico ou ADMINISTRADORA, sendo certo que o silêncio caracterizará sua aprovação integral e irrevogável. 5.17.4 A manifestação em contrário, por parte de algum condômino, significará recurso à próx ima assembleia geral, devendo a decisão ser obedecida, desde logo, por todos os condôminos, inclusive pelo impugnante.",
+ "5.18 A assembleia geral ordinária deverá ser realizada até o final do primeiro trimestre após o término do exercício social e a ela competirá, principalmente: a) - apreciar e deliberar sobre a prestação de contas do síndico e relatório das atividades da administradora, se houver, tudo relativamente ao exercício social anterior; b) - fixar o orçamento anual para o exercício social vince ndo e a forma de cobrança das respectivas despesas de condomínio; c) - eleger o síndico, subsíndico, os membros do CONSELHO FISCAL e de outros eventuais órgãos; d) - impor multa a condômino; e) - conhecer e decidir recurso de condômino ou do CONSELHO FISCAL; f) - decidir sobre assuntos de interesse geral e de outras matérias constantes da ordem do dia. 17",
+ "5.18.1 A assembleia geral extraordinária decidirá, entre outros itens, sobre: a) - matéria específica da assembleia geral ordinária, quando esta não for realizada tempestivamente, ou que tenha surgido posteriormente; b) - alteração da presente convenção ou do regimento interno; c) - destituição do síndico, subsíndico e/ou dos membros do CONSELHO FISCAL e de outros eventuais órgãos, sem necessidade de motivação para essa decisão; d) - substituição da administradora ou restrição de suas funções. 5.19 Para instalação da assembleia geral e deliberação sobre as matérias do CONDOMÍNIO, que não se exijam quórum especial, será observado o seguinte quórum (art. 1.352 e 1.353 do CC): a) - primeira (1ª) convocação: maioria de votos dos presentes, que representem pelo menos metade das frações ideais do CONDOMÍNIO; b) - segunda (2ª) convocação: qualquer número de votos dos presentes na assembleia.",
+ "5.19.1 Deverá ser obedecido, conforme a matéria, o seguinte quórum para deliberação em assembleia geral: a) - assuntos gerais: maioria simples de votos dos condôminos presentes (metade mais um), em segunda chamada; b) - destituição do síndico que praticar irregu laridades, não prestar contas ou não administrar convenientemente o condomínio; destituição do subsíndico, membros dos CONSELHOS FISCAL e CONSULTIVO e de outros eventuais órgãos: maioria simples de votos dos condôminos presentes (metade mais um), em segunda chamada; c) - modificação desta convenção, inclusive acréscimo de novas disposições: 2/3 (dois terços) dos votos do CONDOMÍNIO; d) - realização de obras voluptuárias no condomínio: 2/3 (dois terços) dos votos do CONDOMÍNIO, (art. 1.341, I, do CC); e) - realização de obras úteis: voto da maioria dos condôminos (art. 1.341, II, do CC); f) - modificação das “Condições Gerais” desta convenção, do “Capítulo VI – “Do Seguro””, do “item",
+ "1.2” e dos “itens 5.19” e “5.19.1”, total ou parcialmente: 90% (noventa por cento) dos votos do CONDOMÍNIO; g) - reconstrução ou venda do terreno e materiais, na ocorrência de sinistro total, ou que destrua mais de 2/3 do CONDOMÍNIO: por votos que representem metade mais uma das frações ideais dos votos do CONDOMÍNIO (art. 1.357, do CC). 5.20 Na assembleia geral, os votos serão proporcionais às frações ideais de terreno e partes comuns pertencentes a cada condômino. 5.20.1 Em caso de empate na apuração dos votos, além de seu voto normal, caberá o de qualidade (desempate) ao presidente da assembleia geral. 5.20.2 O condômino em atraso no pagamento de sua quota nas despesas de condomínio, bem como respectivos reajustes monetários, juros e multa, terá suspenso seu direito de deliberação e voto em qualquer matéria. 18",
+ "5.21 As decisões da assembleia geral serão obrigatórias para todos os condôminos, ainda que vencidos nas deliberações, ou que a ela não tenham comparecido, mesmo que ausentes do domicílio e independentemente do recebimento pessoal do edital de convocação, desde que regularmente convocados. 5.22 Se a unidade autônoma pertencer a mais de uma pessoa, deverá ser designada uma delas para que represente as demais na assembleia geral, mediante mandato, sob pena de suspensão temporária do exercício dos direitos e vantagens assegurados pela presente convenção, inclusive do direito de voto. 5.23 O condômino poderá ser representado na assembleia geral por procurador, bastante, com poderes gerais para, legalmente, praticar os atos necessários e contrair obrigações, deve ndo o instrumento de procuração ser depositado em mãos do síndico, que o encaminhará ao presidente da assembleia geral - ou do próprio presidente, tudo antes de iniciadas as deliberações. Fica dispensado o reconhecimento de firma no instrumento de mandato.",
+ "5.24 A assembleia geral se reunirá e deliberará em ato contínuo. Os trabalhos poderão ser suspensos e prosseguirão em data posterior, quer pelo adiantado da hora, quer pela necessidade de obter novos elementos ou completar informações, quer por estarem tumultuados os trabalhos. 5.24.1 O prosseguimento da assembleia geral em outra data independerá de nova convocação, cabendo, exclusivamente, ao presidente da reunião suspensa, definir data, horário e local para prosseguimento, o que deverá ser comunicado aos presentes, quando da suspensão. Na reunião em continuação poderão participar condôminos não presentes na anterior. 5.25 As assembleias gerais ordinárias e as extraordinárias poderão ser, cumulativamente, convocadas e realizadas no mesmo local, data e hora e instrumentadas em ata única. E) - DE OUTROS ÓRGÃOS 5.26 Além do CONSELHO FISCAL poderá a assembleia geral instituir outros órgãos administrativos ou de assessoria, com atribuições que expressamente definir.",
+ "5.27 Esses órgãos complementares terão caráter transitório ou permanente, de acordo com os interesses do CONDOMÍNIO. Quando instituídos, adotar-se-ão, quanto a seu procedimento, as normas estabelecidas ao CONSELHO FISCAL, no que couberem, inclusive a natureza não remunerada de suas funções. 5.28 Em especial, poderá ser instituído um CONSELHO CONSULTIVO, composto por 03 (três) membros, eleitos pela assembleia, com mandato de 02 (dois) anos, ao qual competirá auxiliar o síndico nos assuntos administrativos. 6.1 O CONDOMÍNIO é obrigado a proceder e manter, sob as penas da lei, o seguro contra riscos de incêndio ou outro sinistro que cause destruição, no todo ou em parte, de todas as unidades autônomas e partes comuns que o compõem, discriminando-as, individualmente, com respectivos valores.",
+ "6.1.1 Cada condômino poderá aumentar, por sua conta exclusiva, o valor do seguro de sua unidade autônoma, para cobrir o valor das benfeitorias, úteis ou voluptuárias, que, porventura, tenha realizado, e, neste caso, pagará diretamente à companhia seguradora o prêmio correspondente ao aumento solicitado. 6.2 Ficam fazendo parte integrante da presente convenção, como se cláusulas desta fossem, os artigos 1.357 e 1.358 do Código Civil Brasileiro, cujos termos os condôminos se obrigam a respeitar, quando da ocorrência das hipóteses neles previstas. 6.3 No caso de sinistro parcial, o valor da respectiva indenização será aplicado, preferencialmente, na reconstrução das coisas de uso e propriedade comuns e o saldo, se houver, rateado entre os condôminos afetados pelo sinistro. 19",
+ "6.4 – Ao condômino que por ventura der causa a aumento do risco, durante a vigência da apólice, obriga- se a informar formalmente, e previamente antes da criação do risco a administração do condomínio o fato, que de posse da informação, decidirá sobre a questão, e informará os condôminos sobre o fato. Caberá ao condômino causador do aumento do risco a complementação do prêmio para garantia do seguro vigente, enquanto perdurar o risco causado. 7.1 Cada condômino participará do rateio de todas as despesas do condomínio, de acordo com o orçamento fixado para o exercício, assim como das despesas ordinárias e extraordinárias, recolhendo as respectivas quotas no dia do mês determinado pela Administração do Condomínio. 7.1.1 Fica vedado o rateio e faturamento flutuante mensal para as despesas do CONDOMÍNIO, devendo ser respeitado o valor aprovado em assembleia ordinária.",
+ "7.1.2 As unidades salas comerciais participarão do rateio das despesas do CONDOMÍNIO de acordo com a fração ideal de cada unidade, acrescido dos custos de áreas comuns, indicadas nesta convenção, e porventura outras utilizadas. 7.1.3 As unidades lojas localizadas no térreo participarão do rateio d as despesas com o valor correspondente a 30 % (trinta por cento), enquanto as lojas localizadas no Mezanino/ 1 ° Pavimento participarão com 70% (setenta por cento) das frações ideais, por serviços que utilizam no CONDOMÍNIO, em função de contarem com medidores de água, gás e energia individualizados, e não utilizarem integralmente os serviços de portaria, etc.… acrescido do custo das áreas comuns porventura utilizadas. 7.1.4 O síndico enviará para cada unidade do CONDOMÍNIO o boleto de cobrança, ou o disponibilizará por meio eletrônico ou por solicitação do condômino à Administração do CONDOMÍNIO.",
+ "7.1.5 Se o vulto das despesas extraordinárias aconselhar que seja feito o recolhimento do dinheiro em prestações, com a manifestação do Conselho Fiscal e aprovação da assembleia geral, deverá ser fixados os respectivos valores e vencimentos.",
+ "7.2 São consideradas despesas condominiais, exemplificativamente: a) - tributos incidentes sobre as partes comuns do CONDOMÍNIO; b) - prêmios de seguro, com exclusão do valor correspondente ao seguro facultativo que cada condômino queira fazer, além dos obrigatórios; c) - remuneração da administradora; d) - salários, seguros e encargos previdenciários e trabalhistas, relativos aos empregados do condomínio; e) - despesas de manutenção, conservação, limpeza, reparos e funcionamento das partes, dependências, instalações e equipamentos de propriedade e uso comuns, inclusive na hipótese do item 4.3; f) - despesas de energia elétrica, água, esgoto e telefone do CONDOMÍNIO; g) - despesas necessárias à implantação, funcionamento e manutenção dos serviços prestados pelo CONDOMÍNIO aos condôminos, e tudo o mais que interessa ou tenha relação com as partes de propriedade e uso comuns, ou que os condôminos deliberem fazer como de interesse coletivo, inclusive verba para o fundo de reserva; h) - custeio de manutenção e de consumo corrente de todos os equipamentos, máquinas e motores de propriedade do condomínio, ainda que temporária ou permanentemente a serviço apenas de algum condômino. 20",
+ "7.3 O condômino que aumentar as despesas comuns, por sua exclusiva conveniência, pagará o excesso que motivar. 7.4 Os condôminos suprirão o CONDOMÍNIO das quotas com que tenham de concorrer para as despesas comuns aprovadas em assembleia geral, na forma em que nela ficar decidido, se for alterada a disposição geral constante dos itens 7.1, 7.1.2 e 7.1.3. 7.5 As obras que interessarem à estrutura integral do prédio serão feitas mediante orçamento prévio, obtido em concorrência ou tomada de preços, a ser aprovado em assembleia geral, ficando o síndico encarregado de mandar executá-las. 7.5.1 As obras ou reparações necessárias e urgentes podem ser realizadas pelo síndico, independentemente de autorização. 7.6 As despesas com a remoção e depósito de coisas e objetos deixados em área de propriedade e uso comuns serão cobradas do condômino responsável. 7.7 As quotas das despesas de condomínio serão devidas pelos condôminos, mediante rateio proporcional às frações ideais de terreno e partes comuns, tal como indicado na presente Convenção de Condomínio.",
+ "8.1 Fica criado o fundo de reserva do CONDOMÍNIO, cobrável juntamente com as contribuições para as despesas comuns, o qual será constituído das seguintes parcelas: a) - 5% (cinco por cento) da contribuição mensal de cada condômino; b) - juros moratórios e multas previstas nesta convenção, e que venham a ser cobrados dos condôminos; c) - rendimentos decorrentes da aplicação das verbas do próprio fundo de reserva. 8.2 A assembleia geral poderá estabelecer o limite do fundo de reserva. 8.3 O síndico, desde que autorizado pelo CONSELHO CONSULTIVO, observado o disposto nesta convenção, poderá utilizar o fundo de reserva para execução de obras ou serviços considerados inadiáveis. 8.4 Ressalvado o disposto no item 8.3, a assembleia geral deliberará sobre a utilização do fundo de reserva.",
+ "9.1 A falta de cumprimento ou inobservância de qualquer das estipulações desta convenção, tornará o condômino infrator passível de advertência formulada pelo síndico ou pela administradora. No caso de não ser imediatamente acatada a determinação, ou no caso de reincidência, será aplicada multa, no valor do equivalente a 50% (cinquenta por cento) do valor atribuído à contribuição para as despesas condominiais ordinárias da unidade autônoma respectiva, no mês anterior. 9.1.1 Na hipótese de reincidência em infração a essa convenção, seja ela genérica ou específica, excluída a prevista no item 9.3, a multa determinada no item 9.1 será acrescida de 100% (cem por cento).",
+ "9.2 Além das advertências e multas mencionadas nos itens 9.1 e 9.1.1 acima, porém, sem delas depender ou vincular-se, a assembleia geral, por decisão tomada por três quartos dos condôminos restantes, poderá impor ao condômino infrator multa correspondente até o quíntuplo do valor atribuído à contribuição para as despesas condominiais ordinárias da unidade autônoma-tipo do mês anterior, conforme a gravidade das faltas e a reiteração, independentemente das perdas e danos que se apurem. 9.2.1 Na hipótese de reincidência em infração a essa convenção, seja ela genérica ou específica, excluída a prevista no item 9.3, notadamente em razão do comportamento anti -social do condômino infrator, capaz de gerar incompatibilidades de convivência com os demais condôminos, a multa poderá ser 21 até cinco vezes o valor atribuído à contribuição para as despesas condominiais ordinárias da unidade autônoma-tipo do mês anterior. 9.2.2 Fica o CONDOMÍNIO autorizado a cadastrar os condôminos inadimplentes no Serviço de Proteção ao Crédito, mediante aviso prévio de 30 (trinta) dias.",
+ "9.3 O condômino que não pagar a sua contribuição condominial ficará sujeito aos juros moratórios de 1% (um por cento) ao mês, multa de 2% (dois por cento) sobre o débito e atualização monetária pelo INPC/FGV, calculados pró rata die, até o pagamento integral. 9.3.1 Persistindo o condômino com o débito cobrado regularmente e não pago por mais de 90 (noventa) dias, o síndico deverá promover contra o devedor ação judicial de cobrança ou execução, para receber as contribuições devidas, acrescidas de juros, multa e correção indicados no item 9.3 acima. Todas as despesas relativas à cobrança judicial deverão ser ressarcidas pelo condômino de vedor, inclusive os honorários advocatícios contratuais aqui estipulados em 20% (vinte por cento) sobre o valor do débito cobrado. Por meio desta Convenção, os condôminos devedores não poderão alegar desconhecimento ou não adesão valor estipulado para os honorários advocatícios contratuais, aqui estabelecidos.",
+ "9.3.2 É vedado ao síndico, à administração e ao advogado (a) do condomínio conceder descontos em negociações para acordos para pagamento de débitos de condomínio, sendo permitido apenas o parcelamento. Descontos para pagamento de débito condominial, somente serão admitidos com autorização da assembleia geral, com aprovação de votos dos condôminos correspondentes a 2/3 (dois terços) da fração ideal do CONDOMÍNIO. 9.3.3 Se o condômino deixar de cumprir reiteradamente o dever de pagar sua quota parte nas despesas condominiais, assim entendido aquele que acumular 03 (três) ou mais contribuições sem pagamento, ficará sujeito à multa de 100% (cem por cento) do valor de uma contribuição ordinária, em vigor no momento da aplicação da multa, a cada 03 (três) contribuições não pagas, aplicadas de forma proporcional, até o limite de 05 (cinco) contribuições ordinárias.",
+ "9.4 Em caso de alienação ou de compromisso de alienação da unidade autônoma, o condômino alienante se obriga a cientificar o CONDOMÍNIO, caso em que os boletos relativos às despesas condominiais poderão passar a ser emitidos em nome do adquirente, que será, então, responsável pelo seu pagamento a partir da comunicação formal ao CONDOMÍNIO. 9.5 Fica o CONDOMÍNIO autorizado a cadastrar os condôminos inadimplentes no Serviço de Proteção ao Crédito, mediante aviso prévio de 30 (trinta) dias. 10.1 A tolerância quanto a alguma demora, atraso ou omissão no cumprimento de qualquer das obrigações ajustadas nesta convenção, ou a não aplicação, na ocasião oportuna, das cominações nela constantes, não importará em novação ou cancelamento das penalidades, podendo estas ser aplicadas a qualquer tempo. 10.1.1 A ocorrência de tolerância não implica em precedente, novação ou modificação de quaisquer das condições ou itens desta convenção, os quais permanecerão íntegros e em pleno vigor, como se nenhum favor houvesse ocorrido.",
+ "10.2 A eventual concessão de algum direito especi al a determina do condômino será sempre a título provisório, podendo ser revogada a qualquer tempo. 10.3 O CONDOMÍNIO não será responsável: a) - por prejuízos ocorridos ou decorrentes de furtos ou roubo s acontecidos em qualquer de suas dependências; b) - por sinistros decorrentes de acidentes, extravios e danos, que venham a sofrer os condôminos; c) - por extravios de quaisquer bens entregues pelos condôminos aos empregados do CONDOMÍNIO. 22 11.1 O presente regimento interno é o disciplinador da conduta interna dos condôminos do CONDOMÍNIO. 11.2 O síndico ou a administradora designará funcionário para atender os condôminos, obedecendo às disposições da convenção do CONDOMÍNIO e deste regimento interno. 11.3 Quaisquer reclamações apresentadas pelos condôminos deverão ser atendidas, prontamente, por tal funcionário e transmitidas ao síndico as dificuldades porventura existentes. 11.4 Os serviços dos funcionários do CONDOMÍNIO serão dirigidos pela administradora, se houver, ou, na sua falta, pelo síndico.",
+ "11.5 Haverá vigilância na portaria e demais entradas do CONDOMÍNIO, e eventualmente em outro local indicado pelo síndico, durante as vinte e quatro (24) horas do dia. 11.6 As chaves da casa de máquinas e demais dependências de propriedade e uso comuns do CONDOMÍNIO ficarão sempre em poder de funcionário designado pelo síndico, que as passará a seus sucessores, quando deixar suas funções. 11.6.1 É vedada a permanência dessas chaves em unidade que não a do síndico ou de seus representantes no CONDOMÍNIO, devendo sempre existir na portaria duplicata das mesmas, para uso em caso de urgência. 11.7 A correspondência - jornais, revistas, cartas, telegramas, embrulhos, etc. - endereçada às unidades autônomas, deverá ser depositada nas caixas de correspondências de seus respectivos destinatários localizadas em cada andar do condomínio.",
+ "11.8 É vedada a entrada nas dependências do CONDOMÍNIO, sem licença do síndico, de agenciadores, cobradores, ofertantes de produtos, serviços, sendo proibida a entrada de vendedores ambulantes, solicitantes e pedintes, de qualquer natureza, assim como de pessoas com o fim de angariar donativos e misteres semelhantes, compradores de coisas usadas, jornais, garrafas, etc. 11.9 O uso dos elevadores será determinado pelo síndico conforme as necessidades do CONDOMÍNIO, sem diminuir a sua utilidade ou finalidade aos condôminos; 11.10 Os funcionários do CONDOMÍNIO, quando em serviço, somente poderão permanecer nas partes de propriedade e uso comuns, uniformizados com o tipo de traje fornecido pelo condomínio. 11.11 Incumbe ao administrador, porteiros, serventes e funcionários em geral, na qualidade de prepostos do síndico, fiscalizar o fiel cumprimento do regimento interno, considerando-se motivo de justa causa à demissão a desídia no desempenho das respectivas funções, omissão ou o desconhecimento de suas estipulações.",
+ "11.12 Deve o condômino observar o que segue: a) - não abandonar torneiras de água , quando as mesm as estiverem defeituos as, del as resultando escoamento de água, com perigo à segurança do condômino ou do ocupante infrator e à dos demais condôminos; b) - não instalar nas paredes do CONDOMÍNIO fios ou condutores de qualquer espécie, nem colocar placas, avisos, letreiros, cartazes, anúncios ou propagandas na sua parte externa ou nas janelas, terraços, varandas e amuradas, áreas e corredores, prejudicando sua estética, e, tampouco, usar máquinas, aparelhos ou instalações que provoquem trepidações e ruídos excessivos, salvo as unidades lojas que poderão instalar suas vitrines e letreiros na frente de suas lojas, desde que com moderação e bom gosto; c) - não remover pó de tapetes, de cortinas ou de outros pertences nas j anelas, devendo sempre ser utilizados aspiradores dotados de dispositivos que impeçam a sua dispersão , de forma a não prejudicar o asseio das partes de propriedade e uso comuns; 23 d) - não usar, ceder ou alugar as unidades autônomas para fins incompatíveis com o uso para atividades ruidosas, ou permitir sua utilização por pessoa de vida irregular ou antissocial ou de maus costumes, passível de repreensão penal ou policial, ou que, de qualquer forma ou modo, possa prejudicar a boa ordem ou afetar a reputação dos demais condôminos e/ou do CONDOMÍNIO; e) - não estender panos, roupas ou similares em peitoris, janelas, terraços, prejudicando a estética do CONDOMÍNIO e nem colocar, nesses mesmos locais, vasos, enfeites, plantas ou quaisquer outros objetos que possam, a qualquer momento, cair nas áreas externas, tornando perigosa a passagem pelas mesmas; f) - dar ao lixo o tratamento que vier a ser determinado pelo síndico; g) - comunicar ao síndico qualquer caso de moléstia epidêmica, para fins de providências junto à saúde pública; h) - não manter em sua unidade autônoma cofres ou móveis de peso excessivo, que possa ocasionar uma sobrecarga na estrutura e nas lajes do CONDOMÍNIO com peso superior a sobrecarga utilizada no cálculo estrutural, sem expresso conhecimento e autorização do síndico; i) - não utilizar em sua unidade autônoma, sem autorização do síndico, aparelhos que demandem utilização de energia elétrica incompatível com a do CONDOMÍNIO, ou que emanem radiação que ofereça risco aos condôminos ou usuários; j) - não lançar quaisquer objetos ou líquidos sobre a via pública, área ou pátio interno; k)- não decorar as paredes, portas e esquadrias com cores ou tonalidades diferentes das empregadas no CONDOMÍNIO; l)- não colocar ou deixar que se coloquem nas partes comuns do CONDOMÍNIO, quaisquer objetos ou instalações de que natureza forem; m)- não alterar o material, o padrão e a cor das portas externas das unidades autônomas, exceto quando o modelo for aprovado em assembleia geral; n)- não utilizar os empregados do CONDOMÍNIO para serviços particulares; o)- não manter nas respectivas unidades autônomas, substâncias, instalações ou aparelhos que causem perigo à segurança e solidez do CONDOMÍNIO ou incomodo aos demais condôminos; p)- não fracionar a respectiva unidade autônoma para o fim de aliená -la a mais de uma pessoa separadamente; q)- não permitir a realização de quaisquer tipos de jogos ou atividades físicas nas partes comuns do CONDOMÍNIO; r)- não utilizar aparelhos sonoros em tom alto; s)- não permitir a entrada de animais de qualquer espécie, exceto os previstos em lei. t)- não alterar de qualquer forma a fachada do CONDOMÍNIO, exceto quando permitido nesta convenção, obedecendo sempre o padrão e a estética estabelecidos pela INCORPORADORA; u)- submeter-se, assim como seus visitantes, às normas de acesso e segurança do condomínio;",
+ "11.13 A utilização da s salas de reuniões, bem como o auditório existentes na área comum do CONDOMÍNIO será permitida somente aos condôminos ocupantes de suas respectivas unidades ou terceiros por este indicados e aprovados pelo CONDOMÍNIO, observados os seguintes princípios: a) - solicitação de reserva ao síndico, com antecedência mínima de 03 (três) dias, respeitada, no caso de interesse de mais de um condômino, a prioridade de acordo com antecedência da solicitação; 24 b) - assinatura de termo de responsabilidade pela utilização dos mesmos; c) - a prioridade na utilização d as salas de reunião e do auditório será daquele que primeiro fizer a reserva. d) - o valor a ser cobrado pelo uso da sala de reuniões ou auditório será estabelecido pelo condomínio e a receita proveniente desta cobrança será revertida para o mesmo.",
+ "11.13.1 Se procederá, antes da utilização vistoria e “Checklist” das instalações, equipamentos e bens, e após utilização das salas de reuniões ou do auditório, for constatado algum dano à mesma, o condômino que dela se utilizou será notificado a repará -los ou restituir o CONDOMÍNIO das despesas incorridas para recuperá-lo, no prazo de 07 (sete) dias contados do recebimento da notificação. 11.14 O regimento interno será afixado em partes de propriedade e uso comuns do CONDOMÍNIO, em locais de escolha do síndico. 11.15 O regimento interno poderá ser acrescido, a critério do síndico, de outras disposições da presente convenção de condomínio.",
+ "12.1 O CONDOMÍNIO será composto de 285 (duzentas e oitenta e cinco) vagas de garagem, sem destinação indicativa e individualizada para cada unidade, garantido o direito de uso de vagas pelos condôminos, conforme estabelecido nas cláusulas 2.3 e 2.4.1 desta Convenção, sendo que sua utilização será sempre feita por meio de ordem de chegada e demanda dos condôminos ou usuários, devendo ser respeitado o direito de uso indicado nas cláusulas 2.3 e 2.4.1 da Convenção. 12.2 O direito de uso sobre as vagas de garagem, localizadas na área comum do CONDOMÍNIO é atribuído entre as unidades autônomas. 12.3 As vagas de garagem localizar-se-ão em locais individuais e indeterminados, sendo que, tão somente para efeitos de discriminação, identificação e disponibilidade, e para fins de registro, tais vagas foram numeradas, conforme planta do projeto aprovado que acompanha a presente Convenção de Condomínio. 12.4 A garagem do CONDOMÍNIO poderá ser administrada por empresa de estacionamento.",
+ "12.5 De forma a otimizar a utilização das garagens, bem como propiciar melhor serviço aos usuários do CONDOMÍNIO, as garagens poderão ser utilizadas por terceiros, usuários do CONDOMÍNIO ou visitantes de suas unidades autônomas, devendo ser pago à empresa administradora do estacionamento o valor que vier a ser fixado. 12.6 A contratação da empresa administradora do estacionamento será feita por meio de deliberação em assembleia geral extraordinária, definindo-se as condições básicas, de forma que: a) – os condôminos (exclusivamente) não tenham que pagar por sua utilização, no limite das vagas, comuns ou unidades autônomas, a que tenham direito; b)- a empresa administradora, após pagamento do aluguel das vagas de garagem autônoma(s) cedidas pelos condôminos, apurará o resultado financeiro conforme contrato de administração e repassará a receita devida ao condomínio. Poderá ser cobrado um aluguel fixo pela exploração econômica do espaço das garagens. c) - a empresa administradora de estacionamento deverá contratar seguro que contemple sinistros nos carros e patrimônio do condomínio. 25",
+ "12.7 As vagas de garagem do CONDOMÍNIO serão destinadas, exclusivamente, à guarda de veículos de passeio, tendo suas dimensões de acordo com o padrão mínimo exigido pela legislação municipal competente. 13.1 É permitido à INCORPORADORA manter placas de venda na frente do CONDOMÍNIO, e autorizar a permanência de corretores de plantão em partes de propriedade e uso comuns do CONDOMÍNIO, ou em unidade autônoma liberada por seus proprietários, mesmo após a instalação do condomínio de utilização, enquanto a INCORPORADORA tiver unidades autônomas à venda. 13.2 É permitido à INCORPORADORA e/ou à construtora a fixação e iluminação de placa de bronze ou similar, com sua logomarca, em área comum do CONDOMÍNIO ou, então, sinal indicativo no topo do edifício, sendo que os condôminos não poderão retirá-la pelo prazo mínimo de 15 (quinze) anos, contados da obtenção do “habite-se”.",
+ "14.1 Observadas as disposições da presente Convenção de Condomínio e Regimento Interno, a administração das lojas no que se refere às suas ati vidades e funcionamento é independente e exclusivamente exercida pelos seus condôminos/proprietários. 14.2 A finalidade de um centro de lojas é consagrar, num mesmo local, certa diversidade de ramos de comércio e serviços, visando dar condições de conf orto e segurança aos condôminos e consumidores, facilitando-lhes a escolha e aquisição de quaisquer mercadorias ou serviços oferecidos.",
+ "14.3 Os condôminos/locadores/ocupantes das lojas do CONDOMÍNIO, formal e expressamente, se obrigam a: a) respeitar as normas da presente Convenção de Condomínio, Regimento Interno, decisões da Assembleia Geral, especialmente no que se refere aos ramos de atividades das lojas e eventual normatização de fundo de promoção, que porventura a maioria absoluta (metade mais uma) das unidades autônomas lojas queiram futuramente elaborar, o qual será vinculativo as todas as unidades autônomas lojas; b) manter suas unidades abertas nos dias e horários estabelecidos, em conjunto, pelos proprietários das lojas, que os estabelecerá de forma a atender as exigências do mercado, desde que não interfiram ou prejudiquem o funcionamento do CONDOMÍNIO, sendo certo que os horários poderão sofrer alterações a qualquer momento; c) pagarem todas as despesas referentes à criação e manutenção de um serviço de segurança e vigilância, que terá como finalidade orientar e fiscalizar o uso das áreas específicas comuns, supervisionar o funcionamento de todas as instalações e os equipamentos existentes nas áreas específicas comuns, dar combate ao surgimento do fogo de qualquer procedência e as despesas necessárias a manter o pessoal especializado e os equipamentos necessários ao tratamento de qualquer emergência, de acordo com as técnicas mais atualizadas; assim, com os serviços de limpeza, manutenção, impostos, consumo de energia elétrica, água e esgoto, enfim, todos os custos necessários ao funcionamento das lojas; 26 d) obedecer aos horários e locais estabelecidos para carga e descarga de mercadorias e de bens de qualquer natureza, sendo certo que serão de sua exclusiva responsabilidade quaisquer problemas decorrentes do não cumprimento.",
+ "14.4 Todo o lixo, detrito ou refugo proveniente de qualquer loja, deverá ser transportado e depositado pelos condôminos/locadores/ocupantes por sua conta e responsabilidade exclusivas, no tipo de recipientes, nos horários e para os locais determinados pelo síndico.",
+ "14.5 As unidades que venham manipular alimentos e que eventualmente necessitem de abastecimento de gás e exaustão mecânica, deverão, por sua conta e risco, após prévia autorização do síndico e órgãos da administração pública, fazer as respectivas instalações de acordo com as determinações das autoridades competentes e/ou concessionárias de serviços públicos, devendo obrigatori amente adotar lavadores e/ou exaustores de ar na descarga de exaustão de suas coifas, independentemente do tamanho de suas instalações, sendo certo, ainda, que a aquisição de tais equipamentos serão de exclusiva responsabilidade do respectivo condômino/loc ador/ocupante. Os projetos de instalação deverão ser previamente apresentados ao condomínio assim como as autorizações dos órgãos competentes. As unidades que façam uso de gás GLP ou outro combustível, deverá fazer seguro de sua unidade e terceiros, contemplando garantia de sinistro ao condomínio e a terceiros decorrente do uso de material combustível e/ou explosivo.",
+ "14.6 As áreas comuns do pavimento térreo e do mezanino do CONDOMÍNIO, poderão também ser utilizadas com instalação de quiosques, stands etc.… ou servirem como prolongamento das atividades das unidades, mediante prévia aprovação do síndico e eventual acréscimo nas despesas normais de condomínio da respectiva unidade loja, pelo direito de uso, e desde que não prejudiquem a circulação de condôminos, funcionários, usuários e visitantes do CONDOMÍNIO. Todas as benfeitorias e obras civis de que alguma loja eventualmente necessite serão realizadas pelos proprietários/locatários/ocupantes, mas sua execução dependerá de prévia autorização do síndico. 14.6.1 A execução das benfeitorias e obras civis previstas no item 14.6 supra, também não poderão implicar em prejuízo para as lojas vizinhas, nem poderão importunar o funcionamento das mesmas durante o período em que estiverem abertas ao público.",
+ "14.7 Os locatários/ocupantes serão responsáveis, perante o proprietário e o CONDOMÍNIO, por todos os danos e prejuízos causados por si, seus prepostos, funcionários nas lojas e em quaisquer partes comuns, instalações e equipamentos do CONDOMÍNIO, correndo por s ua conta o integral custeio das despesas necessárias aos consertos, reparos ou alterações que se fizerem necessárias. 14.7.1 Todavia, o proprietário será responsável, perante o CONDOMÍNIO, pelos danos mencionados no item 14.7 supra, na hipótese de os reparos não serem iniciados no prazo máximo de 10 (dez) dias a contar da constatação de quaisquer danos, ficando, a seu critério, posteriormente, promover contra os locatários/ocupantes, as medidas necessárias para se ressarcir dos prejuízos sofridos. 14.8 Não será permitido às unidades autônomas lojas promoverem eventos ruidosos, com som em alto volume, apresentações musicais ao vivo ou qualquer outro tipo de manifestação que possa perturbar o sossego dos demais condôminos.",
+ "14.9 Competirá aos proprietários/locatários/ocupantes das unidades autônomas lojas a obtenção de todas as licenças e autorizações necessárias para seu regular funcionamento. 15.1 A presente convenção obriga a todos os condôminos, seus herdeiros e sucessores, na forma da lei. 27 15.2 Enquanto a INCORPORADORA ainda tiver no CONDOMÍNIO unidades autônomas que não foram alienadas a terceiros e estiverem desocupadas, caberá à INCORPORADORA, no que se refere a tais unidades, o pagamento das despesas de IPTU e demais tributos. Entretanto, considerando que não serão por ela utilizados os serviços condominiais, com relação a tais unidades, será pago pela INCORPORADORA somente 30% (trinta por cento) das despesas de condomínio que seriam normalmente devidas por tais unidades, até que as mesmas venham a ser alienadas a terceiros. 15.2 Fica eleito o foro de Águas Claras, com renúncia expressa a qualquer outro, por mais privilegiado que seja, como o único competente para dirimir ação ou dúvida que, direta ou indiretamente, decorram da presente convenção. Águas Claras, 12 de novembro de 2018."
+];
+/* Busca por palavras: pontua cada trecho pelos termos encontrados. */
+function convBuscar(pergunta,limite){
+  const q=_norm(pergunta).replace(/[^a-z0-9\s]/g,' ');
+  const termos=q.split(/\s+/).filter(w=>w.length>3&&!CONV_STOP.includes(w));
+  if(!termos.length) return [];
+  const res=CONVENCAO.map((txt,i)=>{
+    const n=_norm(txt);
+    let p=0;
+    termos.forEach(t=>{
+      const m=n.split(t).length-1;
+      if(m) p+=m*(t.length>6?2:1);
+    });
+    return {i,txt,p};
+  }).filter(x=>x.p>0).sort((a,b)=>b.p-a.p);
+  return res.slice(0,limite||3);
+}
+const CONV_STOP=['para','como','onde','quando','qual','quais','quem','sobre','pode','posso',
+  'tem','esta','estao','isso','esse','essa','pelo','pela','dos','das','com','sem','mais',
+  'condominio','predio','edificio','preciso','saber','fala','diz'];
+/* Recorta o trecho ao redor do termo, para a resposta não virar um paredão. */
+function convTrecho(txt,pergunta,tam){
+  const n=_norm(txt), q=_norm(pergunta).split(/\s+/).filter(w=>w.length>4);
+  let pos=-1;
+  for(const w of q){ const p=n.indexOf(w); if(p>=0){ pos=p; break } }
+  if(pos<0) return txt.slice(0,tam||420)+(txt.length>(tam||420)?'…':'');
+  const ini=Math.max(0,pos-160), fim=Math.min(txt.length,pos+(tam||420));
+  return (ini?'…':'')+txt.slice(ini,fim).trim()+(fim<txt.length?'…':'');
+}
+
 /* ============ ASSISTENTE — PERGUNTAS EM PORTUGUÊS ============
    Interpreta a pergunta por palavras-chave e responde com os números
    reais do sistema. Sem serviço externo: tudo calculado aqui. */
@@ -11527,7 +11644,7 @@ function iaAbrir(pergunta){
      </div>
      <div class="ia-sug">
        ${['O que está atrasado?','Consumo de água','Notas fiscais','Resumo da semana',
-          'O que a brigada achou?','O que fazer hoje?']
+          'O que a brigada achou?','O que diz a convenção sobre obras?']
          .map(q=>`<button class="ia-chip" onclick="iaPerguntar('${q}')">${q}</button>`).join('')}
      </div>`,
     `<button class="btn" onclick="closeModal()">Fechar</button>`);
@@ -11540,7 +11657,8 @@ function iaPintar(){
   if(!iaHist.length){
     box.innerHTML=`<div class="ia-msg bot"><div class="ia-av">${ic('sparkles')}</div>
       <div class="ia-txt">Olá, ${esc(session.nome.split(' ')[0])}. Pergunte sobre tarefas, água, notas,
-      estoque, manutenções ou a brigada — eu leio os dados do sistema e respondo.</div></div>`;
+      estoque, manutenções, a brigada — ou sobre a <b>convenção do condomínio</b>.
+      Eu leio os dados do sistema e respondo.</div></div>`;
     return;
   }
   box.innerHTML=iaHist.map(m=>m.q
@@ -11566,6 +11684,17 @@ function iaResponder(q){
   const cid=condoFilter==='all'?null:condoFilter;
   const t=today();
 
+  /* Pergunta claramente sobre as regras do condomínio vai direto à convenção,
+     antes de esbarrar nas palavras usadas pelas telas operacionais. */
+  if(_tem(q,'convenç','convenc','regiment','cláusula','clausula','artigo',
+      'assembleia','quorum','quórum','permitido','proibido','pode fazer','posso fazer')){
+    const ach=convBuscar(q,3);
+    if(ach.length) return `<b>Na convenção do condomínio</b>`+
+      ach.map(a=>`<div class="conv-tr">${esc(convTrecho(a.txt,q,460))}</div>`).join('')+
+      `<div class="muted" style="margin-top:8px;font-size:11.5px">
+        Trecho localizado no texto da convenção. Para o teor completo, consulte o documento oficial.</div>`;
+  }
+
   /* --- atrasos --- */
   if(_tem(q,'atras','venc','pendent','abert') && !_tem(q,'nota','nf')){
     const base=tasks.filter(x=>!x.arquivada&&P().tipos.includes(x.tipo)&&(!cid||x.condoId===cid));
@@ -11580,7 +11709,7 @@ function iaResponder(q){
       _btn("drill('atrasadas')",'Ver atrasadas');
   }
   /* --- hoje / prioridade --- */
-  if(_tem(q,'hoje','agora','prioridade','primeiro','fazer')){
+  if(_tem(q,'hoje','agora','prioridade','primeiro','o que fazer','fazer hoje','fazer agora')){
     const p=iaPrioridades(cid);
     if(!p.length) return 'Nada crítico para hoje. Bom momento para adiantar o que vence na semana.';
     return `<b>Prioridades de hoje</b>`+
@@ -11688,6 +11817,18 @@ function iaResponder(q){
   }
   /* --- genérico: "como está?", "situação" --- */
   if(_tem(q,'como est','situação','situacao','geral')) return iaResumoHtml(cid);
+  /* --- convenção do condomínio --- */
+  const achados=convBuscar(q,3);
+  if(achados.length&&(_tem(q,'convenç','convenc','regiment','regra','permitido','proibido',
+      'assembleia','quorum','quórum','síndic','sindic','obra','reforma','horário','horario',
+      'multa','fração','fracao','vaga','garagem','depósito','deposito','animal','barulho',
+      'ruído','ruido','pet','mudança','mudanca','uso','autoriza','pode','artigo','cláusula','clausula')
+      ||achados[0].p>=4)){
+    return `<b>Na convenção do condomínio</b>`+
+      achados.map((a,i)=>`<div class="conv-tr">${esc(convTrecho(a.txt,q,460))}</div>`).join('')+
+      `<div class="muted" style="margin-top:8px;font-size:11.5px">
+        Trecho localizado no texto da convenção. Para o teor completo, consulte o documento oficial.</div>`;
+  }
   /* --- não entendeu --- */
   return `Não consegui entender a pergunta. Tente algo como:`+
     _lista(['<i>o que está atrasado?</i>','<i>como está o consumo de água?</i>',
@@ -11844,6 +11985,8 @@ function ocuSalvarSala(id){
     numero:($('#slNum')&&$('#slNum').value.trim())||'',
     andar:($('#slAndar')&&$('#slAndar').value.trim())||'',
     area:parseFloat(($('#slArea')&&$('#slArea').value)||'')||null,
+    vagas:parseInt(($('#slVagas')&&$('#slVagas').value)||'0',10)||0,
+    deposito:(($('#slDep')&&$('#slDep').value)||'').trim(),
     ocupante:($('#slOcup')&&$('#slOcup').value.trim())||'',
     tipo:($('#slTipo')&&$('#slTipo').value)||'Locatário',
     status:($('#slStatus')&&$('#slStatus').value)||'Vaga',
@@ -11873,7 +12016,9 @@ function ocuFormSala(id){
         ${condosDo('ocupacao').map(c=>`<option value="${c.id}" ${s&&s.condoId===c.id?'selected':''}>${c.nome}</option>`).join('')}</select></div>
       <div class="field"><label>Sala / Unidade</label><input id="slNum" value="${esc(s?.numero||'')}" placeholder="ex.: 305" autocomplete="off"></div>
       <div class="field"><label>Andar</label><input id="slAndar" value="${esc(s?.andar||'')}" placeholder="ex.: 3"></div>
-      <div class="field"><label>Área (m²)</label><input type="number" step="0.01" id="slArea" value="${s?.area??''}" placeholder="ex.: 38,50"></div>
+      <div class="field"><label>Área privativa (m²)</label><input type="number" step="0.01" id="slArea" value="${s?.area??''}" placeholder="ex.: 38,55"></div>
+      <div class="field"><label>Vagas de garagem</label><input type="number" min="0" id="slVagas" value="${s?.vagas??0}"></div>
+      <div class="field"><label>Depósito (nº)</label><input id="slDep" value="${esc(s?.deposito||'')}" placeholder="deixe vazio se não tem"></div>
       <div class="field"><label>Ocupante atual</label><input id="slOcup" value="${esc(s?.ocupante||'')}" placeholder="nome ou razão social"></div>
       <div class="field"><label>Vínculo</label><select id="slTipo">
         ${['Proprietário','Locatário','Vago'].map(t=>`<option ${s?.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
@@ -11917,269 +12062,270 @@ function ocuExcluirSala(id){
 }
 
 /* Relação real das salas do E-Business (261 unidades), conforme a planilha
-   da administração. Formato: [sala, andar, ocupante] — ocupante vazio = vaga. */
+   da administração, com as áreas, vagas e depósitos da Minuta da Convenção (2018).
+   Formato: [sala, andar, ocupante, área m², vagas, depósito] — ocupante vazio = vaga. */
 const SALAS_SEED=[
- ["Loja 01","Térreo","Subway"],
- ["Loja 02","Térreo","Odontoclinic"],
- ["Loja 03","Térreo",""],
- ["Loja 04","Térreo","Aredda"],
- ["Loja 05","Térreo","Barbearia & Pub Al Capone"],
- ["Loja 06","Térreo","Mana Poke"],
- ["Loja 07","Térreo","Park Idiomas"],
- ["Loja 08","Térreo","Açai do Ninja"],
- ["Loja 09","Térreo","Instituto Ninar"],
- ["Loja Mez. 01","Mezanino","Study Box"],
- ["Loja Mez. 02","Mezanino","JK Exclusive"],
- ["Loja Mez. 03","Mezanino",""],
- ["Loja Mez. 04","Mezanino",""],
- ["Loja Mez. 05","Mezanino","Café Urbana Imóveis"],
- ["201","2º",""],
- ["202","2º","Divertidamente Clinicas Integradas"],
- ["203","2º","Julio Gulyas Kenosis. PSI"],
- ["204","2º","Comtemplare Psicologia"],
- ["205","2º","IF Estetica"],
- ["206","2º","Bio Estetic"],
- ["207","2º",""],
- ["208","2º",""],
- ["209","2º",""],
- ["210","2º","Estudio 3 Estetica e Micropigmentação"],
- ["211","2º","Canaã Telecomunicações"],
- ["212","2º",""],
- ["301","3º","VS Beauty Hair"],
- ["302","3º","Clinica Evelyn Antunes"],
- ["303","3º","Beauty Derm Saúde e Estética"],
- ["304","3º","Mep Odontologia Integrada"],
- ["305","3º","Dente In Foco"],
- ["306","3º","Moa Massoterapia e Estetica"],
- ["307","3º","Carollina Odontologia"],
- ["308","3º","Seja Bank"],
- ["309","3º","Clinica Caminhar"],
- ["310","3º","Clinica Caminhar"],
- ["311","3º","Raquel Ciseski Fonoaudiologia"],
- ["312","3º","Clinic Harmo by Dra. Samanta Souza"],
- ["401","4º","Bahia Brita Mineração"],
- ["402","4º","ESSENCE PERSONALIZADOS"],
- ["403","4º","DW VIAGENS"],
- ["404","4º","DRS Advocacia"],
- ["405","4º","Espaço Insight"],
- ["406","4º",""],
- ["407","4º","Coworking Center"],
- ["408","4º","Coworking Center"],
- ["409","4º","Coworking Center"],
- ["410","4º","ACP & LP - Advogados"],
- ["411","4º","Coworking Center"],
- ["412","4º","Coworking Center"],
- ["501","5º",""],
- ["502","5º","NEURO APRENDIZAGEM"],
- ["503","5º",""],
- ["504","5º","Amma Contabilidade"],
- ["505","5º","Zulene Imoveis"],
- ["506","5º","Instituo Favero"],
- ["507","5º","Recriar Estetica"],
- ["508","5º","Recriar Estetica"],
- ["509","5º","ICN CONCPT"],
- ["510","5º","ICN CONCPT"],
- ["511","5º","Conecte Engenharia"],
- ["512","5º","Conecte Engenharia"],
- ["601","6º","Intech Soluções em Tecnologia da Informática LTDA"],
- ["602","6º","Intech Soluções em Tecnologia da Informática LTDA"],
- ["603","6º","Intech Soluções em Tecnologia da Informática LTDA"],
- ["604","6º","Casa Espaço Terapeutico"],
- ["605","6º",""],
- ["606","6º","JULIANA CANABRAVA ODONTOLOGIA ESPECIALIZADA"],
- ["607","6º","Clinica Reabilitar"],
- ["608","6º","Clinica Reabilitar"],
- ["609","6º","Evolutiva Clinica de Fisioterapia"],
- ["610","6º","Clinica Reabilitar - Fisioterapia Infantil"],
- ["611","6º",""],
- ["612","6º",""],
- ["701","7º","Nelio Carlos Nutritional Consulting"],
- ["702","7º","Dow Capital"],
- ["703","7º","Inovazul"],
- ["704","7º","Inovazul"],
- ["705","7º","UNIASSELVI"],
- ["706","7º","CAMARIM / RAPHAELLA GOMES"],
- ["707","7º","MR2 Serviços Administrativos"],
- ["708","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia"],
- ["709","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia"],
- ["710","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia"],
- ["711","7º","Siemens LTDA"],
- ["712","7º","Siemens LTDA"],
- ["801","8º","HARMONIE SAUDE"],
- ["802","8º","Cinge Ginecologia e dermatologia"],
- ["803","8º","GROWTH"],
- ["804","8º",""],
- ["805","8º","STUDIO THEA SAMPAIO"],
- ["806","8º","Consultorio de Psicologia Nathalia Miranda"],
- ["807","8º","Adriana Neris"],
- ["808","8º","Nucleo Evolutiva"],
- ["809","8º","Nucleo Evolutiva"],
- ["810","8º",""],
- ["811","8º",""],
- ["812","8º","HARMONIE SAUDE"],
- ["901","9º","FS ALISAMENTO E SAUDE CAPILAR"],
- ["902","9º","Simetri Odontologia Estética"],
- ["903","9º","Clinica Rafa Duarte"],
- ["904","9º","Clinica Rafa Duarte"],
- ["905","9º",""],
- ["906","9º","Grande Muralha"],
- ["907","9º",""],
- ["908","9º","Roseane Barreto Castro - Advocacia"],
- ["909","9º","Cef Espaço Lobato Engenharia"],
- ["910","9º","Instituto Ana Alves"],
- ["911","9º","LIFLEG LTDA"],
- ["912","9º","Recupera Glosas / Yesc"],
- ["1001","10º","Instituto Misson Paulin"],
- ["1002","10º","Instituto Misson Paulin"],
- ["1003","10º","DEAXE"],
- ["1004","10º","Anny Fernandes Clinic"],
- ["1005","10º","Ana Claudia de Oliveira Grossi"],
- ["1006","10º","Maison Lashes"],
- ["1007","10º","SAKURA CONSOLIDADORA"],
- ["1008","10º","Dez DB Instituto de Música"],
- ["1009","10º","Care Reabilitação Oral Integrada"],
- ["1010","10º","Dez DB Instituto de Música"],
- ["1011","10º","Instituto Misson Paulin"],
- ["1012","10º","Instituto Misson Paulin"],
- ["1101","11º",""],
- ["1102","11º","Bio Ortho Odontologia e Estetica"],
- ["1103","11º","Bio Ortho Odontologia e Estetica"],
- ["1104","11º","ROCHA BANDEIRA ADVOCACIA"],
- ["1105","11º","Cobeauty"],
- ["1106","11º","Martins Odontologia e Harmonização Facial"],
- ["1107","11º","Integra Odontologia Especializada LTDA EPP"],
- ["1108","11º","Integra Odontologia Especializada LTDA EPP"],
- ["1109","11º","Investimmob"],
- ["1110","11º","PRESTAMO BSB IMOBILIÁRIA"],
- ["1111","11º","Esplendor Feminino"],
- ["1112","11º","LUMINI CLINIC (ENDOCRINOLOGIA E NUTRIÇÃO)"],
- ["1201","12º","Noa"],
- ["1202","12º","Tavora Odontologia"],
- ["1203","12º","4Quality Tecnologia"],
- ["1204","12º","Brasilia Capital Soluções Imobiliarias"],
- ["1205","12º","Mind Clínica Médica LTDA-ME"],
- ["1206","12º","Mind Clínica Médica LTDA-ME"],
- ["1207","12º","Global JR Representações e Transportes LTDA-ME"],
- ["1208","12º","JR Representação Global LTDA-ME"],
- ["1209","12º","Mind Clínica Médica LTDA-ME"],
- ["1210","12º","Coelho e Arruda Advogados Associados"],
- ["1211","12º","Mind Clínica Médica LTDA-ME"],
- ["1212","12º","Mind Clínica Médica LTDA-ME"],
- ["1301","13º","IBEC - INSTITUTO BRASILEIRO DE EDUCAÇÃO E CULTURA"],
- ["1302","13º","Enjoy Odontologia"],
- ["1303","13º","CANUTO HOLDIING"],
- ["1304","13º","GRUPO HELA"],
- ["1305","13º","Sobrinho Advogados"],
- ["1306","13º","Intense Odontologia"],
- ["1307","13º","Concremat Engenharia e Tecnologia S/A"],
- ["1308","13º","Concremat Engenharia e Tecnologia S/A"],
- ["1309","13º","Concremat Engenharia e Tecnologia S/A"],
- ["1310","13º","Concremat Engenharia e Tecnologia S/A"],
- ["1311","13º","Sinapsi Clinica de Psicologia"],
- ["1312","13º","JK Exclusive"],
- ["1401","14º","Espaço Ink Tatu Art"],
- ["1402","14º",""],
- ["1403","14º","NUCLEO BRASIL"],
- ["1404","14º","Dra. Marília Rafaela Estética Avançada"],
- ["1405","14º","Venâncio Advocacia"],
- ["1406","14º",""],
- ["1407","14º",""],
- ["1408","14º",""],
- ["1409","14º",""],
- ["1410","14º",""],
- ["1411","14º","Clinica de Psicologia Luize Bonaparte"],
- ["1412","14º","Clinica Caminhar"],
- ["1501","15º","Escritório de Advocacia Elisângela e Omar"],
- ["1502","15º","DR. BRUNO BRUNELLI ODONTOLOGIA"],
- ["1503","15º",""],
- ["1504","15º","Baroli Imoveis"],
- ["1505","15º",""],
- ["1506","15º","Plena Psicologia"],
- ["1507","15º","CLINICA INOVAR"],
- ["1508","15º",""],
- ["1509","15º","Adriana Diniz Odontologia"],
- ["1510","15º","SOUD HORIZON ESTUDIO"],
- ["1511","15º","Clinica Ella"],
- ["1512","15º","Clinica Ella"],
- ["1601","16º","JPIB Negócios Imobiliários Eireli"],
- ["1602","16º","Kézia P. Galdino / Karina Barbosa Dorneles (Psicologia)"],
- ["1603","16º","Fisio 3"],
- ["1604","16º","UROFLUX"],
- ["1605","16º","ALIVE TURISMO"],
- ["1606","16º","ZS3 INVESTIMENTOS"],
- ["1607","16º","Roma Engenharia"],
- ["1608","16º","GARRA CERTIFICAÇÃO"],
- ["1609","16º","Amaro Tattoo"],
- ["1610","16º","Luminnus Pscicologia"],
- ["1611","16º","Atelie Judy Alves"],
- ["1612","16º","Lucas Neris Odonto"],
- ["1701","17º","CURUMIN CLINICA DE PEDIATRIA"],
- ["1702","17º","AMJ Auto Locadora"],
- ["1703","17º","Trendbuild"],
- ["1704","17º","Trendbuild"],
- ["1705","17º","Hello Baby Fotografia"],
- ["1706","17º","Vanessa Rodrigues Psicologia"],
- ["1707","17º","Lounge Odontologia"],
- ["1708","17º","Lounge Odontologia"],
- ["1709","17º",""],
- ["1710","17º","JL Odontologia"],
- ["1711","17º","Consultorio de Psicologia Nathalia Miranda"],
- ["1712","17º","Helenio Andrade Odontologia / Ortopedia Funcional Dos Maxilares / Ortondontia"],
- ["1801","18º",""],
- ["1802","18º","G4 REPRESENTAÇÕES E CONSULTORIA"],
- ["1803","18º",""],
- ["1804","18º","SUPLE TECNOLOGIA DA INFORMAÇÃO"],
- ["1805","18º","Studio Karol Nails"],
- ["1806","18º","ALEX BARROS"],
- ["1807","18º","Clever System"],
- ["1808","18º","CAROL BRESSANE / FOUR FOUND OFFICE"],
- ["1809","18º","Nossa Psicologia Aplicada"],
- ["1810","18º","Nossa Psicologia Aplicada"],
- ["1811","18º","ESPAÇO EVOLVE PSICOLOGIA INFANTO JUVENIL"],
- ["1812","18º",""],
- ["1901","19º","Aline Mota - Biomedica Estetica"],
- ["1902","19º","Intense Sallon"],
- ["1903","19º",""],
- ["1904","19º","LAILA FEITOSA"],
- ["1905","19º","Via Vitae Clinica de Psicologia"],
- ["1906","19º","THAISA PEREIRA PSICOLOGIA"],
- ["1907","19º",""],
- ["1908","19º","Espaço Saúde"],
- ["1909","19º",""],
- ["1910","19º","VERITÁ"],
- ["1911","19º","Intense Sallon"],
- ["1912","19º","BCP EMPRESARIAL"],
- ["2001","20º",""],
- ["2002","20º","AZZZ SMART CITIES INNOVATIONS"],
- ["2003","20º",""],
- ["2004","20º",""],
- ["2005","20º","AURUN"],
- ["2006","20º","Elite Gestão Condominial"],
- ["2007","20º",""],
- ["2008","20º","Corazi Imóveis"],
- ["2009","20º","Corazi Imóveis"],
- ["2010","20º","Bridge & Insight Comunicação"],
- ["2011","20º",""],
- ["2201","22º","We Concept"],
- ["2202","22º","Prospectare"],
- ["2203","22º","Sindmetrô DF"],
- ["2204","22º","Barinject Clinica de Cirurgia Bariatrica e Soroterapia"],
- ["2205","22º","RS Semi Joias"],
- ["2206","22º","Grupo Contato Contabilidade"],
- ["2207","22º","EPTEL"],
- ["2208","22º","Clinica La Femme"],
- ["2209","22º","RS Semi Joias"],
- ["2210","22º","PHYSIO MASTER"],
- ["2211","22º","B4you"],
- ["2401","24º","Schon Studio de Arquitetura"],
- ["2402","24º",""],
- ["2403","24º","UT2"],
- ["2404","24º","Playgig"],
- ["2405","24º","Lab Sharp"],
- ["2406","24º","BMF ASSESSORIA EMPRESARIAL"],
- ["2407","24º","Engeteles"],
- ["2408","24º","INF Contabilidade"],
- ["2409","24º","Schon Studio de Arquitetura"]
+ ["Loja 01","Térreo","Subway",112.39,2,"09"],
+ ["Loja 02","Térreo","Odontoclinic",90.36,2,"01"],
+ ["Loja 03","Térreo","",83.59,2,"02"],
+ ["Loja 04","Térreo","Aredda",93.16,2,"03"],
+ ["Loja 05","Térreo","Barbearia & Pub Al Capone",86.49,2,"04"],
+ ["Loja 06","Térreo","Mana Poke",104.27,2,"05"],
+ ["Loja 07","Térreo","Park Idiomas",106.29,2,"07"],
+ ["Loja 08","Térreo","Açai do Ninja",131.31,3,"08"],
+ ["Loja 09","Térreo","Instituto Ninar",314.31,4,"06"],
+ ["Loja Mez. 01","Mezanino","Study Box",120.91,2,"10"],
+ ["Loja Mez. 02","Mezanino","JK Exclusive",186.39,3,"11"],
+ ["Loja Mez. 03","Mezanino","",236.49,3,"12"],
+ ["Loja Mez. 04","Mezanino","",231.4,3,"13"],
+ ["Loja Mez. 05","Mezanino","Café Urbana Imóveis",217.13,2,"15"],
+ ["201","2º","",38.55,1,""],
+ ["202","2º","Divertidamente Clinicas Integradas",33.09,1,""],
+ ["203","2º","Julio Gulyas Kenosis. PSI",31.26,1,""],
+ ["204","2º","Comtemplare Psicologia",32.18,1,""],
+ ["205","2º","IF Estetica",32.18,1,""],
+ ["206","2º","Bio Estetic",31.26,1,""],
+ ["207","2º","",33.09,1,""],
+ ["208","2º","",38.55,1,""],
+ ["209","2º","",38.55,1,""],
+ ["210","2º","Estudio 3 Estetica e Micropigmentação",33.26,1,""],
+ ["211","2º","Canaã Telecomunicações",33.26,1,""],
+ ["212","2º","",38.55,1,""],
+ ["301","3º","VS Beauty Hair",38.55,1,""],
+ ["302","3º","Clinica Evelyn Antunes",46.07,1,""],
+ ["303","3º","Beauty Derm Saúde e Estética",42.4,1,""],
+ ["304","3º","Mep Odontologia Integrada",41.71,1,""],
+ ["305","3º","Dente In Foco",38.72,1,""],
+ ["306","3º","Moa Massoterapia e Estetica",33.74,1,""],
+ ["307","3º","Carollina Odontologia",30.41,1,""],
+ ["308","3º","Seja Bank",29.43,1,""],
+ ["309","3º","Clinica Caminhar",38.55,1,""],
+ ["310","3º","Clinica Caminhar",33.26,1,""],
+ ["311","3º","Raquel Ciseski Fonoaudiologia",33.26,1,""],
+ ["312","3º","Clinic Harmo by Dra. Samanta Souza",38.55,1,""],
+ ["401","4º","Bahia Brita Mineração",38.55,1,""],
+ ["402","4º","ESSENCE PERSONALIZADOS",46.07,1,""],
+ ["403","4º","DW VIAGENS",42.4,1,""],
+ ["404","4º","DRS Advocacia",41.71,1,""],
+ ["405","4º","Espaço Insight",38.72,1,""],
+ ["406","4º","",33.74,1,""],
+ ["407","4º","Coworking Center",30.41,1,""],
+ ["408","4º","Coworking Center",29.43,1,""],
+ ["409","4º","Coworking Center",38.55,1,""],
+ ["410","4º","ACP & LP - Advogados",33.26,1,""],
+ ["411","4º","Coworking Center",33.26,1,""],
+ ["412","4º","Coworking Center",38.55,1,""],
+ ["501","5º","",38.55,1,""],
+ ["502","5º","NEURO APRENDIZAGEM",46.07,1,""],
+ ["503","5º","",42.4,1,""],
+ ["504","5º","Amma Contabilidade",41.71,1,""],
+ ["505","5º","Zulene Imoveis",38.72,1,""],
+ ["506","5º","Instituo Favero",33.74,1,""],
+ ["507","5º","Recriar Estetica",30.41,1,""],
+ ["508","5º","Recriar Estetica",29.43,1,""],
+ ["509","5º","ICN CONCPT",38.55,1,""],
+ ["510","5º","ICN CONCPT",33.26,1,""],
+ ["511","5º","Conecte Engenharia",33.26,1,""],
+ ["512","5º","Conecte Engenharia",38.55,1,""],
+ ["601","6º","Intech Soluções em Tecnologia da Informática LTDA",38.55,1,""],
+ ["602","6º","Intech Soluções em Tecnologia da Informática LTDA",46.07,1,""],
+ ["603","6º","Intech Soluções em Tecnologia da Informática LTDA",42.4,1,""],
+ ["604","6º","Casa Espaço Terapeutico",41.71,1,""],
+ ["605","6º","",38.72,1,""],
+ ["606","6º","JULIANA CANABRAVA ODONTOLOGIA ESPECIALIZADA",33.74,1,""],
+ ["607","6º","Clinica Reabilitar",30.41,1,""],
+ ["608","6º","Clinica Reabilitar",29.43,1,""],
+ ["609","6º","Evolutiva Clinica de Fisioterapia",38.55,1,""],
+ ["610","6º","Clinica Reabilitar - Fisioterapia Infantil",33.26,1,""],
+ ["611","6º","",33.26,1,""],
+ ["612","6º","",38.55,1,""],
+ ["701","7º","Nelio Carlos Nutritional Consulting",43.83,1,"14"],
+ ["702","7º","Dow Capital",46.07,1,""],
+ ["703","7º","Inovazul",31.26,1,""],
+ ["704","7º","Inovazul",32.18,1,""],
+ ["705","7º","UNIASSELVI",32.18,1,""],
+ ["706","7º","CAMARIM / RAPHAELLA GOMES",33.74,1,""],
+ ["707","7º","MR2 Serviços Administrativos",30.41,1,""],
+ ["708","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia",29.43,1,""],
+ ["709","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia",38.55,1,""],
+ ["710","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia",33.26,1,""],
+ ["711","7º","Siemens LTDA",33.26,1,""],
+ ["712","7º","Siemens LTDA",38.55,1,""],
+ ["801","8º","HARMONIE SAUDE",43.74,1,"16"],
+ ["802","8º","Cinge Ginecologia e dermatologia",46.07,1,""],
+ ["803","8º","GROWTH",31.26,1,""],
+ ["804","8º","",32.18,1,""],
+ ["805","8º","STUDIO THEA SAMPAIO",32.18,1,""],
+ ["806","8º","Consultorio de Psicologia Nathalia Miranda",33.74,1,""],
+ ["807","8º","Adriana Neris",30.41,1,""],
+ ["808","8º","Nucleo Evolutiva",29.43,1,""],
+ ["809","8º","Nucleo Evolutiva",38.55,1,""],
+ ["810","8º","",33.26,1,""],
+ ["811","8º","",33.26,1,""],
+ ["812","8º","HARMONIE SAUDE",38.55,1,""],
+ ["901","9º","FS ALISAMENTO E SAUDE CAPILAR",43.79,1,"19"],
+ ["902","9º","Simetri Odontologia Estética",46.07,1,""],
+ ["903","9º","Clinica Rafa Duarte",31.26,1,""],
+ ["904","9º","Clinica Rafa Duarte",32.18,1,""],
+ ["905","9º","",32.18,1,""],
+ ["906","9º","Grande Muralha",33.74,1,""],
+ ["907","9º","",30.41,1,""],
+ ["908","9º","Roseane Barreto Castro - Advocacia",29.43,1,""],
+ ["909","9º","Cef Espaço Lobato Engenharia",38.55,1,""],
+ ["910","9º","Instituto Ana Alves",33.26,1,""],
+ ["911","9º","LIFLEG LTDA",33.26,1,""],
+ ["912","9º","Recupera Glosas / Yesc",38.55,1,""],
+ ["1001","10º","Instituto Misson Paulin",43.99,1,"20"],
+ ["1002","10º","Instituto Misson Paulin",46.07,1,""],
+ ["1003","10º","DEAXE",31.26,1,""],
+ ["1004","10º","Anny Fernandes Clinic",32.18,1,""],
+ ["1005","10º","Ana Claudia de Oliveira Grossi",32.18,1,""],
+ ["1006","10º","Maison Lashes",33.74,1,""],
+ ["1007","10º","SAKURA CONSOLIDADORA",30.41,1,""],
+ ["1008","10º","Dez DB Instituto de Música",29.43,1,""],
+ ["1009","10º","Care Reabilitação Oral Integrada",38.55,1,""],
+ ["1010","10º","Dez DB Instituto de Música",33.26,1,""],
+ ["1011","10º","Instituto Misson Paulin",33.26,1,""],
+ ["1012","10º","Instituto Misson Paulin",38.55,1,""],
+ ["1101","11º","",44.21,1,"21"],
+ ["1102","11º","Bio Ortho Odontologia e Estetica",46.07,1,""],
+ ["1103","11º","Bio Ortho Odontologia e Estetica",31.26,1,""],
+ ["1104","11º","ROCHA BANDEIRA ADVOCACIA",32.18,1,""],
+ ["1105","11º","Cobeauty",32.18,1,""],
+ ["1106","11º","Martins Odontologia e Harmonização Facial",33.74,1,""],
+ ["1107","11º","Integra Odontologia Especializada LTDA EPP",30.41,1,""],
+ ["1108","11º","Integra Odontologia Especializada LTDA EPP",29.43,1,""],
+ ["1109","11º","Investimmob",38.55,1,""],
+ ["1110","11º","PRESTAMO BSB IMOBILIÁRIA",33.26,1,""],
+ ["1111","11º","Esplendor Feminino",33.26,1,""],
+ ["1112","11º","LUMINI CLINIC (ENDOCRINOLOGIA E NUTRIÇÃO)",38.55,1,""],
+ ["1201","12º","Noa",38.55,1,""],
+ ["1202","12º","Tavora Odontologia",46.07,1,""],
+ ["1203","12º","4Quality Tecnologia",31.26,1,""],
+ ["1204","12º","Brasilia Capital Soluções Imobiliarias",32.18,1,""],
+ ["1205","12º","Mind Clínica Médica LTDA-ME",32.18,1,""],
+ ["1206","12º","Mind Clínica Médica LTDA-ME",33.74,1,""],
+ ["1207","12º","Global JR Representações e Transportes LTDA-ME",30.41,1,""],
+ ["1208","12º","JR Representação Global LTDA-ME",29.43,1,""],
+ ["1209","12º","Mind Clínica Médica LTDA-ME",38.55,1,""],
+ ["1210","12º","Coelho e Arruda Advogados Associados",33.26,1,""],
+ ["1211","12º","Mind Clínica Médica LTDA-ME",33.26,1,""],
+ ["1212","12º","Mind Clínica Médica LTDA-ME",38.55,1,""],
+ ["1301","13º","IBEC - INSTITUTO BRASILEIRO DE EDUCAÇÃO E CULTURA",38.55,1,""],
+ ["1302","13º","Enjoy Odontologia",46.07,1,""],
+ ["1303","13º","CANUTO HOLDIING",31.26,1,""],
+ ["1304","13º","GRUPO HELA",32.18,1,""],
+ ["1305","13º","Sobrinho Advogados",32.18,1,""],
+ ["1306","13º","Intense Odontologia",33.74,1,""],
+ ["1307","13º","Concremat Engenharia e Tecnologia S/A",30.41,1,""],
+ ["1308","13º","Concremat Engenharia e Tecnologia S/A",29.43,1,""],
+ ["1309","13º","Concremat Engenharia e Tecnologia S/A",38.55,1,""],
+ ["1310","13º","Concremat Engenharia e Tecnologia S/A",33.26,1,""],
+ ["1311","13º","Sinapsi Clinica de Psicologia",33.26,1,""],
+ ["1312","13º","JK Exclusive",38.55,1,""],
+ ["1401","14º","Espaço Ink Tatu Art",38.55,1,""],
+ ["1402","14º","",46.07,1,""],
+ ["1403","14º","NUCLEO BRASIL",31.26,1,""],
+ ["1404","14º","Dra. Marília Rafaela Estética Avançada",32.18,1,""],
+ ["1405","14º","Venâncio Advocacia",32.18,1,""],
+ ["1406","14º","",33.74,1,""],
+ ["1407","14º","",30.41,1,""],
+ ["1408","14º","",29.43,1,""],
+ ["1409","14º","",38.55,1,""],
+ ["1410","14º","",33.26,1,""],
+ ["1411","14º","Clinica de Psicologia Luize Bonaparte",33.26,1,""],
+ ["1412","14º","Clinica Caminhar",38.55,1,""],
+ ["1501","15º","Escritório de Advocacia Elisângela e Omar",38.55,1,""],
+ ["1502","15º","DR. BRUNO BRUNELLI ODONTOLOGIA",46.07,1,""],
+ ["1503","15º","",31.26,1,""],
+ ["1504","15º","Baroli Imoveis",32.18,1,""],
+ ["1505","15º","",32.18,1,""],
+ ["1506","15º","Plena Psicologia",33.74,1,""],
+ ["1507","15º","CLINICA INOVAR",30.41,1,""],
+ ["1508","15º","",29.43,1,""],
+ ["1509","15º","Adriana Diniz Odontologia",38.55,1,""],
+ ["1510","15º","SOUD HORIZON ESTUDIO",33.26,1,""],
+ ["1511","15º","Clinica Ella",33.26,1,""],
+ ["1512","15º","Clinica Ella",38.55,1,""],
+ ["1601","16º","JPIB Negócios Imobiliários Eireli",38.55,1,""],
+ ["1602","16º","Kézia P. Galdino / Karina Barbosa Dorneles (Psicologia)",46.07,1,""],
+ ["1603","16º","Fisio 3",31.26,1,""],
+ ["1604","16º","UROFLUX",32.18,1,""],
+ ["1605","16º","ALIVE TURISMO",32.18,1,""],
+ ["1606","16º","ZS3 INVESTIMENTOS",33.74,1,""],
+ ["1607","16º","Roma Engenharia",30.41,1,""],
+ ["1608","16º","GARRA CERTIFICAÇÃO",29.43,1,""],
+ ["1609","16º","Amaro Tattoo",38.55,1,""],
+ ["1610","16º","Luminnus Pscicologia",33.26,1,""],
+ ["1611","16º","Atelie Judy Alves",33.26,1,""],
+ ["1612","16º","Lucas Neris Odonto",38.55,1,""],
+ ["1701","17º","CURUMIN CLINICA DE PEDIATRIA",38.55,1,""],
+ ["1702","17º","AMJ Auto Locadora",46.07,1,""],
+ ["1703","17º","Trendbuild",31.26,1,""],
+ ["1704","17º","Trendbuild",32.18,1,""],
+ ["1705","17º","Hello Baby Fotografia",32.18,1,""],
+ ["1706","17º","Vanessa Rodrigues Psicologia",33.74,1,""],
+ ["1707","17º","Lounge Odontologia",30.41,1,""],
+ ["1708","17º","Lounge Odontologia",29.43,1,""],
+ ["1709","17º","",38.55,1,""],
+ ["1710","17º","JL Odontologia",33.26,1,""],
+ ["1711","17º","Consultorio de Psicologia Nathalia Miranda",33.26,1,""],
+ ["1712","17º","Helenio Andrade Odontologia / Ortopedia Funcional Dos Maxilares / Ortondontia",38.55,1,""],
+ ["1801","18º","",38.55,1,""],
+ ["1802","18º","G4 REPRESENTAÇÕES E CONSULTORIA",46.07,1,""],
+ ["1803","18º","",31.26,1,""],
+ ["1804","18º","SUPLE TECNOLOGIA DA INFORMAÇÃO",32.18,1,""],
+ ["1805","18º","Studio Karol Nails",32.18,1,""],
+ ["1806","18º","ALEX BARROS",33.74,1,""],
+ ["1807","18º","Clever System",30.41,1,""],
+ ["1808","18º","CAROL BRESSANE / FOUR FOUND OFFICE",29.43,1,""],
+ ["1809","18º","Nossa Psicologia Aplicada",38.55,1,""],
+ ["1810","18º","Nossa Psicologia Aplicada",33.26,1,""],
+ ["1811","18º","ESPAÇO EVOLVE PSICOLOGIA INFANTO JUVENIL",33.26,1,""],
+ ["1812","18º","",38.55,1,""],
+ ["1901","19º","Aline Mota - Biomedica Estetica",38.55,1,""],
+ ["1902","19º","Intense Sallon",46.07,1,""],
+ ["1903","19º","",31.26,1,""],
+ ["1904","19º","LAILA FEITOSA",32.18,1,""],
+ ["1905","19º","Via Vitae Clinica de Psicologia",32.18,1,""],
+ ["1906","19º","THAISA PEREIRA PSICOLOGIA",33.74,1,""],
+ ["1907","19º","",30.41,1,""],
+ ["1908","19º","Espaço Saúde",29.43,1,""],
+ ["1909","19º","",38.55,1,""],
+ ["1910","19º","VERITÁ",33.26,1,""],
+ ["1911","19º","Intense Sallon",33.26,1,""],
+ ["1912","19º","BCP EMPRESARIAL",38.55,1,""],
+ ["2001","20º","",59.42,1,"23"],
+ ["2002","20º","AZZZ SMART CITIES INNOVATIONS",67.38,1,""],
+ ["2003","20º","",66.91,1,""],
+ ["2004","20º","",66.99,1,""],
+ ["2005","20º","AURUN",64.0,1,""],
+ ["2006","20º","Elite Gestão Condominial",58.27,1,""],
+ ["2007","20º","",51.7,1,""],
+ ["2008","20º","Corazi Imóveis",104.49,2,"17"],
+ ["2009","20º","Corazi Imóveis",51.79,1,""],
+ ["2010","20º","Bridge & Insight Comunicação",51.81,1,""],
+ ["2011","20º","",54.69,1,""],
+ ["2201","22º","We Concept",59.69,1,"18"],
+ ["2202","22º","Prospectare",67.38,1,""],
+ ["2203","22º","Sindmetrô DF",66.91,1,""],
+ ["2204","22º","Barinject Clinica de Cirurgia Bariatrica e Soroterapia",66.99,1,""],
+ ["2205","22º","RS Semi Joias",64.0,1,""],
+ ["2206","22º","Grupo Contato Contabilidade",58.27,1,""],
+ ["2207","22º","EPTEL",51.7,1,""],
+ ["2208","22º","Clinica La Femme",104.53,2,"22"],
+ ["2209","22º","RS Semi Joias",51.79,1,""],
+ ["2210","22º","PHYSIO MASTER",51.81,1,""],
+ ["2211","22º","B4you",54.69,1,""],
+ ["2401","24º","Schon Studio de Arquitetura",38.55,1,""],
+ ["2402","24º","",46.07,1,""],
+ ["2403","24º","UT2",42.4,1,""],
+ ["2404","24º","Playgig",41.71,1,""],
+ ["2405","24º","Lab Sharp",38.72,1,""],
+ ["2406","24º","BMF ASSESSORIA EMPRESARIAL",33.74,1,""],
+ ["2407","24º","Engeteles",147.57,3,"24"],
+ ["2408","24º","INF Contabilidade",33.26,1,""],
+ ["2409","24º","Schon Studio de Arquitetura",38.55,1,""]
 ];
 const OCU_ANDARES=["Térreo", "Mezanino", "2º", "3º", "4º", "5º", "6º", "7º", "8º", "9º", "10º", "11º", "12º", "13º", "14º", "15º", "16º", "17º", "18º", "19º", "20º", "22º", "24º"];
 /* Carrega o mapa uma única vez; depois a manutenção é pela tela. */
@@ -12191,8 +12337,9 @@ function migrarSalas(){
      usuário (CFG.salasLimpas) impede a recarga. */
   if(CFG.salasLimpas) return false;
   {
-    SALAS_SEED.forEach(([num,andar,ocup])=>{
-      salas.push({id:uid('sl'),condoId:'c1',numero:num,andar,area:null,
+    SALAS_SEED.forEach(([num,andar,ocup,area,vagas,dep])=>{
+      salas.push({id:uid('sl'),condoId:'c1',numero:num,andar,area:area||null,
+        vagas:vagas||0,deposito:dep||'',
         ocupante:ocup||'',tipo:ocup?'Locatário':'Vago',
         status:ocup?'Ocupada':'Vaga',obs:'',manual:false,
         historico:[{q:'Sistema',w:nowStamp(),t:'Importada da relação de salas'}]});
@@ -12326,6 +12473,98 @@ function salaInfo(id){
     s.ocupante?' · '+esc(s.ocupante):''}</span>`;
 }
 
+/* ---- gráfico de pizza: visão rápida da ocupação ---- */
+function ocuPizza(cid){
+  const r=ocuResumo(cid);
+  if(!r.total) return '';
+  const fatias=[
+    {rot:'Ocupadas',n:r.Ocupada,cor:'#1d7a4c'},
+    {rot:'Em obra',n:r['Em obra'],cor:'#a8690b'},
+    {rot:'Reservadas',n:r.Reservada,cor:'#6b4fbb'},
+    {rot:'Vagas',n:r.Vaga,cor:'#c2384a'}
+  ].filter(f=>f.n>0);
+  /* desenha por conic-gradient: sem biblioteca externa e imprime bem */
+  let ac=0; const paradas=[];
+  fatias.forEach(f=>{
+    const ini=ac/r.total*360, fim=(ac+f.n)/r.total*360;
+    paradas.push(`${f.cor} ${ini}deg ${fim}deg`);
+    ac+=f.n;
+  });
+  return `<div class="card" style="margin-bottom:14px">
+    <div class="ap-faixa">${ic('chart')} VISÃO GERAL DA OCUPAÇÃO</div>
+    <div class="pz-wrap">
+      <div class="pz-graf">
+        <div class="pz-torta" style="background:conic-gradient(${paradas.join(',')})"></div>
+        <div class="pz-centro"><b>${r.taxa}%</b><em>ocupação</em></div>
+      </div>
+      <div class="pz-leg">
+        ${fatias.map(f=>`<div class="pz-li" onclick="ocuFiltro='${f.rot==='Ocupadas'?'Ocupada':f.rot==='Vagas'?'Vaga':f.rot==='Em obra'?'Em obra':'Reservada'}';render()">
+          <i style="background:${f.cor}"></i>
+          <span class="pz-n">${f.n}</span>
+          <span class="pz-r">${f.rot}</span>
+          <span class="pz-p">${Math.round(f.n*1000/r.total)/10}%</span>
+        </div>`).join('')}
+        <div class="pz-tot">
+          <div><span class="t-sub">total de salas</span><b>${r.total}</b></div>
+          <div><span class="t-sub">área privativa</span><b>${ocuArea(cid).toLocaleString('pt-BR',{maximumFractionDigits:0})} m²</b></div>
+          <div><span class="t-sub">vagas de garagem</span><b>${ocuVagas(cid)}</b></div>
+          <div><span class="t-sub">com depósito</span><b>${ocuComDeposito(cid)}</b></div>
+        </div>
+      </div>
+    </div>
+    <div class="pz-acoes no-print">
+      <button class="btn ghost sm" onclick="ocuBaixarPizza('${cid}')">${ic('download')}Baixar imagem</button>
+      <span class="t-sub">clique numa fatia da legenda para filtrar</span>
+    </div></div>`;
+}
+function ocuArea(cid){ return ocuSalas(cid).reduce((t,s)=>t+(Number(s.area)||0),0) }
+function ocuVagas(cid){ return ocuSalas(cid).reduce((t,s)=>t+(Number(s.vagas)||0),0) }
+function ocuComDeposito(cid){ return ocuSalas(cid).filter(s=>String(s.deposito||'').trim()).length }
+/* exporta o gráfico como imagem, para colar em ata ou apresentação */
+function ocuBaixarPizza(cid){
+  const r=ocuResumo(cid);
+  const fat=[['Ocupadas',r.Ocupada,'#1d7a4c'],['Em obra',r['Em obra'],'#a8690b'],
+             ['Reservadas',r.Reservada,'#6b4fbb'],['Vagas',r.Vaga,'#c2384a']].filter(f=>f[1]>0);
+  const W=760,H=420,cx=210,cy=210,rd=150;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const g=cv.getContext('2d');
+  g.fillStyle='#fff'; g.fillRect(0,0,W,H);
+  let a0=-Math.PI/2;
+  fat.forEach(([rot,n,cor])=>{
+    const ang=n/r.total*Math.PI*2;
+    g.beginPath(); g.moveTo(cx,cy); g.arc(cx,cy,rd,a0,a0+ang); g.closePath();
+    g.fillStyle=cor; g.fill(); a0+=ang;
+  });
+  /* rosca */
+  g.beginPath(); g.arc(cx,cy,rd*0.58,0,Math.PI*2); g.fillStyle='#fff'; g.fill();
+  g.fillStyle='#0d1b2e'; g.textAlign='center';
+  g.font='bold 34px Arial'; g.fillText(r.taxa+'%',cx,cy+4);
+  g.font='13px Arial'; g.fillStyle='#5c6879'; g.fillText('ocupação',cx,cy+26);
+  /* título e legenda */
+  g.textAlign='left'; g.fillStyle='#0d1b2e'; g.font='bold 19px Arial';
+  g.fillText('Taxa de Ocupação — '+condoName(cid),400,52);
+  g.font='12px Arial'; g.fillStyle='#5c6879';
+  g.fillText(fmt(today())+' · '+r.total+' salas · '+ocuVagas(cid)+' vagas',400,74);
+  let y=112;
+  fat.forEach(([rot,n,cor])=>{
+    g.fillStyle=cor; g.fillRect(400,y-11,13,13);
+    g.fillStyle='#15202e'; g.font='bold 15px Arial';
+    g.fillText(String(n),424,y);
+    g.font='14px Arial'; g.fillStyle='#5c6879';
+    g.fillText(rot+'  ('+(Math.round(n*1000/r.total)/10)+'%)',460,y);
+    y+=30;
+  });
+  g.fillStyle='#8b95a6'; g.font='11px Arial';
+  g.fillText('E-Business Águas Claras · gerado pelo sistema de gestão',400,H-28);
+  try{
+    const a=document.createElement('a');
+    a.href=cv.toDataURL('image/png');
+    a.download='ocupacao_'+today()+'.png'; a.click();
+    audit('Exportou o gráfico de ocupação',condoName(cid),r.taxa+'%',cid);
+    toast('Imagem baixada.');
+  }catch(e){ toast('Não foi possível gerar a imagem.') }
+}
+
 /* ---- Tela: taxa de ocupação ---- */
 function viewOcupacao(){
   const cid=condoFilter==='all'?'c1':condoFilter;
@@ -12366,7 +12605,7 @@ function viewOcupacao(){
       <div class="val">${r['Em obra']}</div><div class="sub">reforma em andamento</div></div>
   </div>`;
 
-  const ia=iaCard('Leitura da ocupação',iaOcupacao(cid),false)+ocuGrafico(cid);
+  const ia=iaCard('Leitura da ocupação',iaOcupacao(cid),false)+ocuPizza(cid)+ocuGrafico(cid);
 
   const linhas=l.map(s=>{
     const st=ocuStatus(s), oc=ocuOcupante(s);
@@ -12377,6 +12616,8 @@ function viewOcupacao(){
       <td><b>${esc(s.numero)}</b>${s.andar?`<div class="t-sub">${esc(ocuAndarRot(s.andar))}</div>`:''}</td>
       <td>${esc(oc||'—')}${oc?`<div class="t-sub">${esc(s.tipo||'')}</div>`:''}</td>
       <td>${s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}</td>
+      <td>${s.vagas?s.vagas+(s.vagas>1?' vagas':' vaga'):'—'}</td>
+      <td>${String(s.deposito||'').trim()?`<span class="badge b-condo">nº ${esc(s.deposito)}</span>`:'<span class="t-sub">—</span>'}</td>
       <td><span class="badge ${bd}">${st}</span>
         ${auto?`<div class="t-sub" title="Situação vinda de outro módulo">automático</div>`:''}</td>
       <td class="t-sub">${esc(s.obs||'')}</td>
@@ -12405,9 +12646,10 @@ function viewOcupacao(){
     </div>
     <div class="card" style="padding:0;overflow:hidden">
       <div class="tablewrap"><table><thead><tr>
-        <th>Sala</th><th>Ocupante</th><th>Área</th><th>Situação</th><th>Observação</th>
+        <th>Sala</th><th>Ocupante</th><th>Área</th><th>Vagas</th><th>Depósito</th>
+        <th>Situação</th><th>Observação</th>
         <th style="text-align:right">Ações</th></tr></thead>
-      <tbody>${linhas||'<tr><td colspan="6" class="t-sub">Nenhuma sala nesse filtro.</td></tr>'}</tbody>
+      <tbody>${linhas||'<tr><td colspan="8" class="t-sub">Nenhuma sala nesse filtro.</td></tr>'}</tbody>
       </table></div></div>
     <div class="legend">
       <span><b>Automático:</b> a sala entra em obra pela Análise de Projetos e muda de ocupante pela Cessão de Direitos.</span>
@@ -12438,8 +12680,9 @@ function ocuExportar(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const l=ocuSalas(cid);
   if(!l.length) return toast('Nada para exportar.');
-  const linhas=[['Sala','Andar','Área (m²)','Ocupante','Vínculo','Situação','Observação']]
-    .concat(l.map(s=>[s.numero,s.andar||'',s.area||'',ocuOcupante(s)||'',s.tipo||'',ocuStatus(s),s.obs||'']));
+  const linhas=[['Sala','Andar','Área (m²)','Vagas','Depósito','Ocupante','Vínculo','Situação','Observação']]
+    .concat(l.map(s=>[s.numero,s.andar||'',s.area||'',s.vagas||0,s.deposito||'',
+      ocuOcupante(s)||'',s.tipo||'',ocuStatus(s),s.obs||'']));
   baixarCsv('ocupacao_'+cid+'_'+today()+'.csv',linhas);
   audit('Exportou o mapa de ocupação',condoName(cid),l.length+' sala(s)',cid);
 }
@@ -12761,6 +13004,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4259d7b2d8ae132',t:'MTc5MDYyODU3MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a425d83f5de778c2',t:'MTc5MDYzMDk3OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
