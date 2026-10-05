@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 const WS = 'default';
 
 // O snapshot com fotos em base64 pode passar de 1 MB.
-app.use(express.json({ limit: '25mb' }));
+app.use(express.json({ limit: '60mb' }));   // fotos de ronda/check-list
 app.disable('x-powered-by');
 
 /* ---------- senha única de acesso ao site (opcional) ----------
