@@ -2,8 +2,10 @@
    Objetivo: o app abrir e funcionar sem internet (subsolo, casa de máquinas).
    Os DADOS ficam no localStorage do aparelho; aqui cuidamos só de ter o
    aplicativo em si disponível offline. */
-const VER   = 'grc-v3';
-const SHELL = ['./', './index.html', './manifest.webmanifest'];
+const VER   = 'grc-v4';
+const SHELL = ['./', './index.html', './manifest.webmanifest',
+  './icones/icone-192.png', './icones/icone-512.png',
+  './icones/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
