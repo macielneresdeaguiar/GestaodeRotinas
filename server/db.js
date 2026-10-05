@@ -36,7 +36,51 @@ export async function migrate() {
        criado      TEXT NOT NULL
      )`,
     `CREATE INDEX IF NOT EXISTS idx_evento_ws ON evento(workspace, id DESC)`,
+    // Fotos ficam FORA do snapshot: cada uma sobe uma única vez. Antes elas
+    // viajavam juntas a cada sincronização, o que tornava o envio inviável
+    // (100 fotos = 36 MB por sincronização) e travava o navegador.
+    `CREATE TABLE IF NOT EXISTS foto (
+       id      TEXT PRIMARY KEY,
+       dados   TEXT NOT NULL,
+       bytes   INTEGER,
+       criado  TEXT NOT NULL
+     )`,
   ], 'write');
+}
+
+/** Grava uma foto. Idempotente: reenviar a mesma foto não custa nada. */
+export async function gravarFoto(id, dados) {
+  const r = await db.execute({
+    sql: `INSERT INTO foto (id, dados, bytes, criado)
+          VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
+    args: [id, dados, dados.length, new Date().toISOString()],
+  });
+  return { id, novo: r.rowsAffected > 0 };
+}
+
+export async function lerFoto(id) {
+  const r = await db.execute({ sql: 'SELECT dados FROM foto WHERE id = ?', args: [id] });
+  return r.rows.length ? String(r.rows[0].dados) : null;
+}
+
+/** Dos ids pedidos, quais o servidor AINDA NÃO tem. */
+export async function fotosQueFaltam(ids) {
+  if (!Array.isArray(ids) || !ids.length) return [];
+  const existentes = new Set();
+  const lote = 300;
+  for (let i = 0; i < ids.length; i += lote) {
+    const parte = ids.slice(i, i + lote);
+    const marc = parte.map(() => '?').join(',');
+    const r = await db.execute({
+      sql: `SELECT id FROM foto WHERE id IN (${marc})`, args: parte });
+    r.rows.forEach((x) => existentes.add(String(x.id)));
+  }
+  return ids.filter((x) => !existentes.has(x));
+}
+
+export async function estatisticaFotos() {
+  const r = await db.execute('SELECT COUNT(*) n, COALESCE(SUM(bytes),0) b FROM foto');
+  return { quantidade: Number(r.rows[0].n || 0), bytes: Number(r.rows[0].b || 0) };
 }
 
 export async function lerWorkspace(id = 'default') {

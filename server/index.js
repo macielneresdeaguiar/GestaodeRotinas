@@ -1,7 +1,8 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { migrate, lerWorkspace, gravarWorkspace, historico } from './db.js';
+import { migrate, lerWorkspace, gravarWorkspace, historico,
+         gravarFoto, lerFoto, fotosQueFaltam, estatisticaFotos } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -26,6 +27,51 @@ function exigeToken(req, res, next) {
   res.status(401).json({ erro: 'nao_autorizado' });
 }
 
+/* ---------- fotos: sobem uma vez, separadas do snapshot ----------
+   Mantê-las dentro do snapshot fazia cada sincronização carregar o acervo
+   inteiro. Agora cada foto é enviada uma única vez e nunca mais trafega. */
+app.put('/api/foto/:id', async (req, res) => {
+  if (!autorizado(req)) return res.status(401).json({ erro: 'não autorizado' });
+  try {
+    const id = String(req.params.id || '');
+    const dados = req.body && req.body.dados;
+    if (!/^[A-Za-z0-9_-]{3,80}$/.test(id)) return res.status(400).json({ erro: 'id inválido' });
+    if (typeof dados !== 'string' || !dados.startsWith('data:image/')) {
+      return res.status(400).json({ erro: 'conteúdo inválido' });
+    }
+    const r = await gravarFoto(id, dados);
+    res.json({ ok: true, ...r });
+  } catch (e) {
+    console.error('[foto:gravar]', e);
+    res.status(500).json({ erro: 'falha ao gravar a foto' });
+  }
+});
+
+app.get('/api/foto/:id', async (req, res) => {
+  if (!autorizado(req)) return res.status(401).json({ erro: 'não autorizado' });
+  try {
+    const dados = await lerFoto(String(req.params.id || ''));
+    if (!dados) return res.status(404).json({ erro: 'foto não encontrada' });
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');  // nunca muda
+    res.json({ ok: true, dados });
+  } catch (e) {
+    console.error('[foto:ler]', e);
+    res.status(500).json({ erro: 'falha ao ler a foto' });
+  }
+});
+
+/* Quais destas o servidor ainda não tem? Evita reenviar o que já subiu. */
+app.post('/api/fotos/faltam', async (req, res) => {
+  if (!autorizado(req)) return res.status(401).json({ erro: 'não autorizado' });
+  try {
+    const ids = (req.body && req.body.ids) || [];
+    res.json({ ok: true, faltam: await fotosQueFaltam(ids.map(String)) });
+  } catch (e) {
+    console.error('[foto:faltam]', e);
+    res.status(500).json({ erro: 'falha ao conferir as fotos' });
+  }
+});
+
 app.get('/api/saude', async (_req, res) => {
   try {
     const w = await lerWorkspace(WS);
@@ -34,6 +80,7 @@ app.get('/api/saude', async (_req, res) => {
       versao: w?.versao ?? 0,
       atualizado: w?.atualizado ?? null,
       protegido: !!TOKEN,
+      fotos: await estatisticaFotos(),
     });
   } catch (e) {
     res.status(500).json({ ok: false, erro: e.message });
