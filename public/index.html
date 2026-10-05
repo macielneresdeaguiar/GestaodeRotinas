@@ -804,6 +804,28 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 .pm-t em{font-style:normal;font-size:11.5px;color:var(--text-2);margin-top:1px}
 
 /* gráfico de ocupação por andar */
+.aviso-versao{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9000;
+  display:flex;align-items:center;gap:10px;background:#0d1b2e;color:#fff;
+  padding:11px 14px;border-radius:11px;box-shadow:0 8px 28px rgba(0,0,0,.3);
+  font-size:13.5px;max-width:92vw;flex-wrap:wrap}
+.aviso-versao .btn{padding:6px 11px;font-size:12.5px}
+.aviso-versao .btn.ghost{background:transparent;color:#aebbcd;border-color:#2a3a52}
+@media(max-width:820px){ .aviso-versao{bottom:74px;left:8px;right:8px;transform:none} }
+
+.rd-esc{display:flex;flex-direction:column;gap:9px;margin-bottom:12px}
+.rd-op{display:grid;grid-template-columns:28px 1fr;grid-template-rows:auto auto;
+  gap:2px 11px;align-items:center;padding:15px 16px;border:2px solid var(--line);
+  border-radius:11px;background:#fff;cursor:pointer;text-align:left;min-height:66px}
+.rd-op svg{grid-row:1/3;width:26px;height:26px}
+.rd-op b{font-size:15px;line-height:1.25}
+.rd-op em{font-style:normal;font-size:12px;color:var(--text-2)}
+.rd-op:hover{border-color:#cfd8e4}
+.rd-op.ok svg{stroke:#1d7a4c}
+.rd-op.nc svg{stroke:#c2384a}
+.rd-op.ok.on{border-color:#1d7a4c;background:#f2f9f5}
+.rd-op.nc.on{border-color:#c2384a;background:#fdf3f4}
+@media(max-width:820px){ .rd-op{min-height:76px;padding:17px 16px} .rd-op b{font-size:16px} }
+
 .conv-ref{display:inline-block;background:var(--navy);color:#fff;font-size:10px;font-weight:700;
   padding:2px 7px;border-radius:4px;margin-right:7px;vertical-align:1px;letter-spacing:.3px}
 
@@ -1536,8 +1558,12 @@ function mkTask(o){
 function refreshStatuses(){
   const t=today();
   tasks.forEach(x=>{
-    if(x.status!=='Concluída' && x.periodicidade!=='Sob Demanda' && x.vencimento && diffDays(x.vencimento,t)<0) x.status='Atrasada';
-    else if(x.status==='Atrasada' && x.vencimento && diffDays(x.vencimento,t)>=0) x.status='Pendente';
+    if(x.status==='Concluída'||x.status==='Cancelada') return;
+    /* Antes, "Sob Demanda" nunca atrasava — a tarefa do dia não concluída
+       sumia: não era de hoje nem aparecia como atrasada. Agora, o que tem
+       data marcada e passou do prazo fica atrasado, seja qual for o tipo. */
+    if(x.vencimento && diffDays(x.vencimento,t)<0){ x.status='Atrasada'; return }
+    if(x.status==='Atrasada' && x.vencimento && diffDays(x.vencimento,t)>=0) x.status='Pendente';
   });
 }
 function maintStatus(m){
@@ -1669,26 +1695,117 @@ function dbSnapshot(){
     tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,brigInsp,brigRondas,salas,
     auditLog, CFG, creds, notifs, notifState};
 }
+/* ============ ONDE O APP GUARDA OS DADOS NO APARELHO ============
+   O localStorage tem um teto de ~5 MB POR SITE — e isso não tem relação
+   com a memória livre do celular. Cada foto de ronda ocupa ~300 KB, então
+   por volta da 14ª foto aparecia "armazenamento cheio" num aparelho com
+   100 GB livres. O IndexedDB usa o espaço real do disco (centenas de MB),
+   e é para lá que a base foi movida. O localStorage fica só como reserva
+   para quem não tiver IndexedDB (navegação privada antiga). */
+const IDB_NOME='grc', IDB_STORE='estado';
+let _idb=null, _idbOk=false;
+
+function idbAbrir(){
+  return new Promise(res=>{
+    try{
+      if(typeof indexedDB==='undefined'||!indexedDB) return res(null);
+      const rq=indexedDB.open(IDB_NOME,1);
+      rq.onupgradeneeded=()=>{
+        const db=rq.result;
+        if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+      };
+      rq.onsuccess=()=>res(rq.result);
+      rq.onerror=()=>res(null);
+      rq.onblocked=()=>res(null);
+      setTimeout(()=>res(null),4000);     // nunca travar a abertura do app
+    }catch(e){ res(null) }
+  });
+}
+function idbLer(chave){
+  return new Promise(res=>{
+    if(!_idb) return res(null);
+    try{
+      const tx=_idb.transaction(IDB_STORE,'readonly');
+      const rq=tx.objectStore(IDB_STORE).get(chave);
+      rq.onsuccess=()=>res(rq.result||null);
+      rq.onerror=()=>res(null);
+    }catch(e){ res(null) }
+  });
+}
+function idbGravar(chave,valor){
+  return new Promise((res,rej)=>{
+    if(!_idb) return rej(new Error('sem indexedDB'));
+    try{
+      const tx=_idb.transaction(IDB_STORE,'readwrite');
+      tx.objectStore(IDB_STORE).put(valor,chave);
+      tx.oncomplete=()=>res(true);
+      tx.onerror=()=>rej(tx.error||new Error('falha ao gravar'));
+      tx.onabort=()=>rej(tx.error||new Error('gravação abortada'));
+    }catch(e){ rej(e) }
+  });
+}
+
+/* Gravação em fila: a tela nunca espera o disco. Se chegar um save novo
+   durante a gravação, só o último estado é escrito. */
+let _gravando=false, _pendenteGravar=null;
+function gravarEstadoIdb(snap){
+  _pendenteGravar=snap;
+  if(_gravando) return;
+  _gravando=true;
+  (async()=>{
+    while(_pendenteGravar){
+      const s=_pendenteGravar; _pendenteGravar=null;
+      try{ await idbGravar(DB_KEY,s); }
+      catch(e){
+        console.warn('Falha ao gravar no aparelho:',e);
+        if(session) toast('Não foi possível salvar neste aparelho. Verifique o espaço livre.');
+      }
+    }
+    _gravando=false;
+  })();
+}
+
+/* Lê a base do aparelho e, na primeira vez, traz o que estava no
+   localStorage antigo — liberando aquele espaço. */
+async function carregarDoAparelho(){
+  _idb=await idbAbrir(); _idbOk=!!_idb;
+  let d=null;
+  if(_idbOk){ try{ d=await idbLer(DB_KEY) }catch(e){ d=null } }
+  if(!d){
+    const st=store();
+    let raw=null; try{ raw=st&&st.getItem(DB_KEY) }catch(e){}
+    if(raw){
+      try{ d=JSON.parse(raw) }catch(e){ d=null }
+      if(d&&_idbOk){
+        try{ await idbGravar(DB_KEY,d); st.removeItem(DB_KEY); }   // migrou
+        catch(e){}
+      }
+    }
+  }
+  return d;
+}
+
 function salvarLocal(){
+  const snap=dbSnapshot();
+  if(_idbOk){ gravarEstadoIdb(snap); checarEspaco(); return }   // espaço de verdade
   const st=store(); if(!st) return;
-  try{ st.setItem(DB_KEY,JSON.stringify(dbSnapshot())); }
-  catch(e){ console.warn('Falha ao salvar:',e); toast('Não foi possível salvar (armazenamento cheio).'); }
+  try{ st.setItem(DB_KEY,JSON.stringify(snap)); checarEspaco(); }
+  catch(e){ console.warn('Falha ao salvar:',e);
+    toast('Não foi possível salvar: o aparelho está sem espaço. Conecte-se à internet para enviar o que já foi registrado.'); }
 }
 function save(){
   if(_booting) return;
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>{
     salvarLocal();
+    if(!SYNC.ligado||estaOffline()) marcarSujosOffline();  // conta o que falta subir
     agendarSync();   // replica para os outros aparelhos
   },250);
 }
-function load(){
-  const st=store(); if(!st) return false;
-  let raw; try{ raw=st.getItem(DB_KEY) }catch(e){ return false }
-  if(!raw) return false;
+function load(d){
+  if(!d) return false;
   try{
-    const d=JSON.parse(raw);
-    if(!d||d.v!==DB_VER) return false;
+    if(d.v!==DB_VER) return false;
     vcUnidades=d.vcUnidades||[]; vcCiclos=d.vcCiclos||[]; vcVendas=d.vcVendas||[];
   tasks=d.tasks||[]; notas=d.notas||[]; cessoes=d.cessoes||[];
     apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
@@ -2922,6 +3039,11 @@ function hojeRange(){
 }
 function viewHoje(){
   const [ini,fim]=hojeRange();
+  /* Pendências de dias anteriores continuam à vista enquanto não forem
+     concluídas — senão a tarefa do dia some ao virar a data. */
+  const atrasadas=hojeFiltro==='hoje'
+    ? avulsas().filter(t=>t.dataProgramada<ini&&t.status!=='Concluída'&&t.status!=='Cancelada')
+    : [];
   let l=avulsas().filter(t=>t.dataProgramada>=ini&&t.dataProgramada<=fim);
   if(condoFilter!=='all') l=l.filter(t=>t.condoId===condoFilter||t.condoId==='geral');
   if(hojeStatus) l=l.filter(t=>t.status===hojeStatus);
@@ -2957,6 +3079,28 @@ function viewHoje(){
             <div class="t-sub">Programada para ${fmt(x.data)} · anterior: ${x.anterior!=null?fmtLeit(x.anterior,x.tipo)+' '+unid(x.tipo):'—'}</div></div>
           ${badgeLeit(leitStatusAuto(x))}
           <button class="btn green sm no-print" onclick="leitTab='${x.tipo}';formLeitura('${x.id}')">Registrar Leitura</button></div>`).join('')}`:''})()}
+    ${atrasadas.length?`
+      <div class="section-title" style="margin-top:0">
+        <h3 style="color:#c2384a">${ic('alertCircle')} Ficaram para trás</h3>
+        <span class="spacer badge b-atr">${atrasadas.length}</span></div>
+      <div class="t-sub" style="margin-bottom:8px">Não foram concluídas no dia marcado.
+        Conclua, passe para hoje ou remarque.</div>
+      ${atrasadas.map(t=>`<div class="check" style="border-left:4px solid #c2384a">
+        <input type="checkbox" onchange="concluirAvulsa('${t.id}')">
+        <div style="flex:1">
+          <div class="ct">${esc(t.titulo)}</div>
+          <div class="t-sub">${esc(t.procedimento||'')}</div>
+          <div class="chip-list" style="margin-top:6px">
+            ${badgeCondo(t.condoId)}${badgePrio4(t.prioridade)}
+            <span class="badge b-atr">era para ${fmt(t.dataProgramada)} · ${Math.abs(diffDays(t.dataProgramada,today()))} dia(s)</span>
+            <span class="badge b-tag">${esc(t.responsavel||'—')}</span></div>
+        </div>
+        <div class="rowact no-print">
+          <button class="btn green sm" onclick="avulsaParaHoje('${t.id}')">${ic('today')}Passar para hoje</button>
+          ${P().edit?`<button class="btn ghost sm" onclick="avulsaRemarcar('${t.id}')">${ic('calendar')}Remarcar</button>`:''}
+          <button class="btn ghost sm" onclick="openTask('${t.id}')">Detalhes</button>
+          ${canDelete(t)?`<button class="btn danger sm" onclick="delAvulsa('${t.id}')">Excluir</button>`:''}
+        </div></div>`).join('')}`:''}
     ${l.length?`<div class="section-title"><h3>${ic('pin')} Tarefas avulsas</h3></div>`:''}
     ${l.length?l.map(t=>`<div class="check ${t.status==='Concluída'?'done':''}" style="${t.status==='Cancelada'?'opacity:.55':''}">
       <input type="checkbox" ${t.status==='Concluída'?'checked disabled':''} ${t.status==='Cancelada'?'disabled':''}
@@ -2978,6 +3122,48 @@ function viewHoje(){
         ${canDelete(t)?`<button class="btn danger sm" onclick="delAvulsa('${t.id}')">Excluir</button>`:''}
       </div></div>`).join('')
       :'<div class="card empty">Nenhuma tarefa avulsa neste período. Use [+ Nova Tarefa do Dia].</div>'}`;
+}
+/* Puxa a pendência para hoje — o caminho mais comum quando algo não saiu no dia. */
+function avulsaParaHoje(id){
+  const t=tasks.find(x=>x.id===id); if(!t) return;
+  if(!P().edit) return toast('Sem permissão.');
+  const antes=t.dataProgramada;
+  t.dataProgramada=today(); t.vencimento=today(); t.status='Pendente';
+  (t.historico=t.historico||[]).push({q:session.nome,w:nowStamp(),
+    t:'Reagendada de '+fmt(antes)+' para hoje'});
+  audit('Tarefa reagendada',t.titulo,fmt(antes)+' → '+fmt(today()),t.condoId,'');
+  save(); render(); toast('"'+t.titulo+'" agora é para hoje.');
+}
+function avulsaRemarcar(id){
+  const t=tasks.find(x=>x.id===id); if(!t) return;
+  if(!P().edit) return toast('Sem permissão.');
+  openModal('Remarcar — '+t.titulo,
+    `<div class="t-sub" style="margin-bottom:10px">Era para <b>${fmt(t.dataProgramada)}</b>.
+       Escolha a nova data.</div>
+     <div class="f2">
+       <div class="field"><label>Nova data</label>
+         <input type="date" id="rmData" value="${today()}"></div>
+       <div class="field"><label>Horário (opcional)</label>
+         <input type="time" id="rmHora" value="${esc(t.horario||'')}"></div>
+     </div>
+     <div class="field"><label>Motivo (fica no histórico)</label>
+       <input id="rmMot" placeholder="ex.: prestador remarcou a visita"></div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn" onclick="avulsaRemarcarConf('${id}')">${ic('check')}Remarcar</button>`);
+}
+function avulsaRemarcarConf(id){
+  const t=tasks.find(x=>x.id===id); if(!t) return;
+  const d=($('#rmData')&&$('#rmData').value)||'';
+  if(!d) return toast('Escolha a nova data.');
+  const mot=($('#rmMot')&&$('#rmMot').value.trim())||'';
+  const hora=($('#rmHora')&&$('#rmHora').value)||'';
+  const antes=t.dataProgramada;
+  t.dataProgramada=d; t.vencimento=d; if(hora) t.horario=hora;
+  t.status=diffDays(d,today())<0?'Atrasada':'Pendente';
+  (t.historico=t.historico||[]).push({q:session.nome,w:nowStamp(),
+    t:'Remarcada de '+fmt(antes)+' para '+fmt(d)+(mot?' — '+mot:'')});
+  audit('Tarefa remarcada',t.titulo,fmt(antes)+' → '+fmt(d),t.condoId,mot);
+  save(); closeModal(); render(); toast('Remarcada para '+fmt(d)+'.');
 }
 function formHoje(id){
   if(!(id?P().edit:P().create)) return toast('Sem permissão.');
@@ -8584,7 +8770,7 @@ function toggleDesktopNotif(el){
 
 /* ============ FOTOS (câmera do celular) ============ */
 let _fotosTmp=[];
-const FOTO_MAX=1000, FOTO_Q=0.72;
+const FOTO_MAX=900, FOTO_Q=0.62;   /* ~300 KB -> ~150 KB por foto, sem perder leitura do problema */
 function comprimirImagem(file){
   return new Promise((res,rej)=>{
     const fr=new FileReader();
@@ -9734,7 +9920,7 @@ function salvarToken(){
 async function testarToken(){
   const el=$('#cfgTokenMsg'); if(el) el.textContent='Testando...';
   try{
-    const r=await fetch('/api/dados',{headers:syncHeaders()});
+    const r=await fetchPrazo('/api/dados',{headers:syncHeaders()});
     if(el) el.innerHTML = r.status===401
       ? '<span style="color:#c2384a">Chave incorreta — o servidor recusou (401).</span>'
       : r.ok ? '<span style="color:#1d7a4c">Conexão autorizada.</span>'
@@ -9797,33 +9983,32 @@ function exportCsv(){
 
 /* ============ INSTALAÇÃO NO CELULAR (PWA) ============ */
 (function(){
-  const ICON="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='108' fill='%230d1b2e'/%3E%3Cg fill='none' stroke='%232563eb' stroke-width='30' stroke-linecap='round' stroke-linejoin='round' transform='translate(104 104) scale(12.7)'%3E%3Cpath d='M4 21V5.5A1.5 1.5 0 0 1 5.5 4h7A1.5 1.5 0 0 1 14 5.5V21'/%3E%3Cpath d='M14 10h4.5A1.5 1.5 0 0 1 20 11.5V21M2.5 21h19M7 8h4M7 12h4M7 16h4'/%3E%3C/g%3E%3C/svg%3E";
-  const manifest={name:'Gestão de Rotinas Condominiais',short_name:'Rotinas',start_url:'.',
-    display:'standalone',background_color:'#0d1b2e',theme_color:'#0d1b2e',orientation:'portrait',
-    description:'Tarefas, manutenção, estoque e leituras prediais.',
-    icons:[{src:ICON,sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}]};
+  /* manifest e service worker são ARQUIVOS de verdade: o navegador recusa
+     registrar um service worker a partir de blob:, que era o que fazíamos
+     antes — por isso o app nunca ficava disponível offline. */
   try{
-    const l=document.createElement('link'); l.rel='manifest';
-    l.href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}));
-    document.head.appendChild(l);
+    if(!document.querySelector('link[rel="manifest"]')){
+      const l=document.createElement('link');
+      l.rel='manifest'; l.href='manifest.webmanifest';
+      document.head.appendChild(l);
+    }
   }catch(e){}
-  // service worker (cache do próprio arquivo) — só em https ou localhost
   if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){
-    const sw=`const C='grc-v1';
-      self.addEventListener('install',e=>{self.skipWaiting()});
-      self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});
-      self.addEventListener('fetch',e=>{
-        if(e.request.method!=='GET')return;
-        e.respondWith(
-          fetch(e.request).then(r=>{const c=r.clone();
-            caches.open(C).then(k=>k.put(e.request,c));return r})
-          .catch(()=>caches.match(e.request))
-        );
-      });`;
-    try{
-      navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'})))
-        .catch(()=>{});
-    }catch(e){}
+    window.addEventListener('load',()=>{
+      navigator.serviceWorker.register('sw.js',{scope:'./'}).then(reg=>{
+        SW_REG=reg;
+        reg.addEventListener('updatefound',()=>{
+          const novo=reg.installing; if(!novo) return;
+          novo.addEventListener('statechange',()=>{
+            if(novo.state==='installed'&&navigator.serviceWorker.controller) avisarVersaoNova();
+          });
+        });
+      }).catch(()=>{});
+      let recarregando=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(recarregando) return; recarregando=true; location.reload();
+      });
+    });
   }
   let deferred=null;
   window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferred=e;
@@ -9841,6 +10026,176 @@ function exportCsv(){
    O localStorage continua sendo a base local: o app funciona offline
    normalmente. O servidor é a fonte compartilhada entre os aparelhos.
    Estratégia: snapshot inteiro + versão (trava otimista).            */
+/* ===================== TRABALHO OFFLINE =====================
+   O app guarda tudo no próprio aparelho e sobe sozinho quando a
+   internet volta. Nada depende de o usuário lembrar de sincronizar. */
+let SW_REG=null;
+const CONEX={ online:true, tentativas:0, timer:null, avisado:false, voltando:false };
+
+/* navigator.onLine mente: diz "online" só por estar no wifi, mesmo sem
+   saída para a internet. Por isso o que vale é o resultado das chamadas. */
+function estaOffline(){ return CONEX.online===false || navigator.onLine===false }
+
+/* Toda chamada ao servidor tem prazo: sem isso o app trava 30s no subsolo. */
+function fetchPrazo(url,opt,ms){
+  opt=opt||{}; ms=ms||12000;
+  if(typeof AbortController==='undefined') return fetch(url,opt);
+  const ac=new AbortController();
+  const t=setTimeout(()=>ac.abort(),ms);
+  return fetch(url,Object.assign({},opt,{signal:ac.signal}))
+    .finally(()=>clearTimeout(t));
+}
+
+/* Quantas alterações ainda não subiram */
+function pendentesSync(){
+  const s=SYNC.sujos||{}; let n=0;
+  Object.keys(s).forEach(k=>{ n+=Object.keys(s[k]||{}).length });
+  return n;
+}
+function marcarOnline(){
+  const era=CONEX.online;
+  CONEX.online=true; CONEX.tentativas=0; CONEX.avisado=false;
+  if(!era) atualizarBadgeConex();
+}
+function marcarOffline(){
+  const era=CONEX.online;
+  CONEX.online=false;
+  if(era){
+    atualizarBadgeConex();
+    const n=pendentesSync();
+    if(!CONEX.avisado&&session){
+      CONEX.avisado=true;
+      toast(n?('Sem internet. '+n+' alteração'+(n>1?'ões':'')+' guardada'+(n>1?'s':'')+' no aparelho.')
+             :'Sem internet. Pode continuar trabalhando normalmente.');
+    }
+    agendarRetentativa();
+  }
+}
+function atualizarBadgeConex(){
+  const el=document.querySelector('#syncBadge');
+  if(el) el.outerHTML=badgeSync();
+}
+
+/* Repete o envio com espera crescente: 5s, 10s, 20s, 40s, 60s (teto). */
+function agendarRetentativa(){
+  clearTimeout(CONEX.timer);
+  if(!SYNC.ligado&&!temServidor()) return;
+  const esperas=[5000,10000,20000,40000,60000];
+  const t=esperas[Math.min(CONEX.tentativas,esperas.length-1)];
+  CONEX.tentativas++;
+  CONEX.timer=setTimeout(()=>tentarReconectar(),t);
+}
+async function tentarReconectar(){
+  if(CONEX.voltando) return;
+  if(!temServidor()) return;
+  if(navigator.onLine===false){ agendarRetentativa(); return }
+  CONEX.voltando=true;
+  try{
+    const r=await fetchPrazo('/api/saude',{},8000);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    marcarOnline();
+    if(!SYNC.ligado){ CONEX.voltando=false; await ligarSync(true); CONEX.voltando=true }
+    const n=pendentesSync();
+    await syncVerificar();
+    await syncEnviar(true);
+    if(n&&SYNC.estado==='ok'&&session){
+      toast('Conexão de volta: '+n+' alteração'+(n>1?'ões enviadas':' enviada')+'.');
+    }
+  }catch(e){
+    marcarOffline();
+    agendarRetentativa();
+  }
+  CONEX.voltando=false;
+}
+
+/* Os avisos do navegador valem como pista, não como verdade. */
+function ligarEscutaConexao(){
+  if(CONEX._ligado) return; CONEX._ligado=true;
+  window.addEventListener('online',()=>{ CONEX.tentativas=0; tentarReconectar() });
+  window.addEventListener('offline',()=>marcarOffline());
+  /* volta do bolso/segundo plano: é quando o brigadista sai do subsolo */
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden&&(estaOffline()||pendentesSync())){ CONEX.tentativas=0; tentarReconectar() }
+  });
+  /* rede de segurança: a cada 60s, havendo pendência, tenta de novo */
+  setInterval(()=>{ if(pendentesSync()&&!estaOffline()&&!SYNC.enviando) syncEnviar() },60000);
+}
+
+/* Aviso de versão nova do app (o service worker já baixou) */
+function avisarVersaoNova(){
+  if(!session) return;
+  const el=document.querySelector('#avisoVersao');
+  if(el) return;
+  const d=document.createElement('div');
+  d.id='avisoVersao'; d.className='aviso-versao';
+  d.innerHTML='<span>Uma versão nova do aplicativo está pronta.</span>'+
+    '<button class="btn sm primary" onclick="aplicarVersaoNova()">Atualizar agora</button>'+
+    '<button class="btn sm ghost" onclick="this.parentNode.remove()">Depois</button>';
+  document.body.appendChild(d);
+}
+function aplicarVersaoNova(){
+  try{
+    if(SW_REG&&SW_REG.waiting) SW_REG.waiting.postMessage('atualizar');
+    else location.reload();
+  }catch(e){ location.reload() }
+}
+
+/* Espaço do aparelho: fotos de ronda são o que mais pesa. */
+/* Quanto o app ocupa e quanto ainda cabe — responde à dúvida
+   "o celular tem memória, por que deu cheio?" */
+async function medirEspaco(){
+  const el=document.querySelector('#espacoUso'); if(!el) return;
+  const bytes=JSON.stringify(dbSnapshot()).length;
+  const fotos=contarFotos();
+  let txt=(bytes/1048576).toFixed(1)+' MB';
+  if(fotos.n) txt+=' · '+fotos.n+' foto'+(fotos.n>1?'s':'');
+  try{
+    if(navigator.storage&&navigator.storage.estimate){
+      const e=await navigator.storage.estimate();
+      if(e&&e.quota) txt+=' · cabe até '+(e.quota/1073741824).toFixed(1)+' GB';
+    }else if(!_idbOk){
+      txt+=' de ~5 MB (limite do navegador)';
+    }
+  }catch(e){}
+  el.textContent=txt;
+}
+function contarFotos(){
+  let n=0,b=0;
+  const olhar=v=>{ if(typeof v==='string'&&v.slice(0,11)==='data:image/'){ n++; b+=v.length } };
+  const varrer=o=>{
+    if(!o||typeof o!=='object') return;
+    if(Array.isArray(o)) return o.forEach(varrer);
+    Object.keys(o).forEach(k=>{ const v=o[k];
+      if(typeof v==='string') olhar(v); else varrer(v); });
+  };
+  [brigRondas,brigInsp,apontamentos,tasks,analises,manutObrig,notas].forEach(varrer);
+  return {n,kb:Math.round(b/1024)};
+}
+
+function usoArmazenamento(){
+  try{
+    const s=store(); if(!s) return 0;
+    return (s.getItem(DB_KEY)||'').length;
+  }catch(e){ return 0 }
+}
+const LIMITE_ENVIO_MB=60;
+function checarVolumeEnvio(){
+  const mb=JSON.stringify(dbSnapshot()).length/1048576;
+  if(mb>LIMITE_ENVIO_MB*0.7&&!CONEX._avisouVolume){
+    CONEX._avisouVolume=true;
+    toast('O acervo de fotos está em '+mb.toFixed(0)+' MB, perto do limite de envio. Avise o administrador.');
+  }
+  return mb;
+}
+function checarEspaco(){
+  if(_idbOk){ checarVolumeEnvio(); return }   // no IndexedDB o espaço é o do aparelho
+  const kb=usoArmazenamento()/1024;
+  if(kb>4200&&!CONEX._avisouEspaco){
+    CONEX._avisouEspaco=true;
+    toast('O aparelho está quase sem espaço para guardar offline. Conecte-se à internet para enviar as fotos.');
+  }
+}
+
 const SYNC={
   ligado:false, versao:0, estado:'off', ultimo:null, erro:null,
   enviando:false, pendente:false, timer:null, autoTimer:null, assinatura:null,
@@ -9874,6 +10229,13 @@ function syncEstado(e,erro){
   if(el) el.outerHTML=badgeSync();
 }
 function badgeSync(){
+  /* offline tem prioridade: é a informação que o usuário precisa ver */
+  if(estaOffline()&&temServidor()){
+    const n=pendentesSync();
+    return `<span id="syncBadge" class="badge b-avencer" style="cursor:pointer"
+      title="Sem internet. Tudo que você fizer fica guardado neste aparelho e sobe sozinho quando a conexão voltar."
+      onclick="abrirSync()">${ic('alert')}Offline${n?' · '+n+' a enviar':''}</span>`;
+  }
   if(!SYNC.ligado) return '<span id="syncBadge"></span>';
   const m={
     ok:      ['b-conc','check','Sincronizado'],
@@ -9893,7 +10255,7 @@ async function syncBaixar(){
   if(!SYNC.ligado) return false;
   syncEstado('baixando');
   try{
-    const r=await fetch('/api/dados',{headers:syncHeaders()});
+    const r=await fetchPrazo('/api/dados',{headers:syncHeaders()});
     if(r.status===401){ syncEstado('erro','Token do site incorreto.'); return false }
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d=await r.json();
@@ -9911,10 +10273,14 @@ async function syncBaixar(){
       return true;
     }
     const _foto=_fotoLocal();
+    /* Antes de aceitar o que vem do servidor, anota o que foi feito aqui e
+       ainda não subiu (trabalho offline). */
+    _marcarSujos(SYNC.base);
     aplicarSnapshot(d.snapshot);
-    const _n=SYNC.base?_reaplicarLocal(_foto,SYNC.base):0;
+    const _n=(SYNC.base||SYNC.baseIdx)?_reaplicarLocal(_foto,SYNC.base):0;
     SYNC.base=JSON.parse(JSON.stringify(d.snapshot));
     SYNC.versao=d.versao;
+    gravarBaseIdx(d.snapshot);
     SYNC.assinatura=_assina(d.snapshot);
     if(_n) agendarSync(); else SYNC.assinatura=_assina(dbSnapshot());
     SYNC.ultimo=new Date().toLocaleString('pt-BR');
@@ -9934,9 +10300,9 @@ async function syncBaixar(){
    (Extintores, Hidrantes/VGA, Acionadores, Portas Corta-Fogo e Iluminação
    de Emergência). São 311 pontos distribuídos do 24º andar ao 4º subsolo. */
 const BRIG_ANDARES=[
-  {id:'COB',nome:'Cobertura',soRonda:true},
-  {id:'CMA',nome:'Casa de Máquinas — Lado A',soRonda:true},
-  {id:'CMB',nome:'Casa de Máquinas — Lado B',soRonda:true},
+  {id:'COB',nome:'Cobertura'},
+  {id:'CMA',nome:'Casa de Máquinas — Lado A'},
+  {id:'CMB',nome:'Casa de Máquinas — Lado B'},
   {id:'24',nome:'24º andar'},{id:'22',nome:'22º andar'},{id:'20',nome:'20º andar'},
   {id:'19',nome:'19º andar'},{id:'18',nome:'18º andar'},{id:'17',nome:'17º andar'},
   {id:'16',nome:'16º andar'},{id:'15',nome:'15º andar'},{id:'14',nome:'14º andar'},
@@ -9946,7 +10312,8 @@ const BRIG_ANDARES=[
   {id:'4',nome:'4º andar'},{id:'3',nome:'3º andar'},{id:'2',nome:'2º andar'},
   {id:'MEZ',nome:'Mezanino'},{id:'CM',nome:'Casa de Máquinas'},{id:'TER',nome:'Térreo'},
   {id:'SS1',nome:'1º Subsolo'},{id:'SS2',nome:'2º Subsolo'},
-  {id:'SS3',nome:'3º Subsolo'},{id:'SS4',nome:'4º Subsolo'}
+  {id:'SS3',nome:'3º Subsolo'},{id:'SS4',nome:'4º Subsolo'},
+  {id:'CMS',nome:'Casa de Máquinas — 4º Subsolo'}
 ];
 const BRIG_SISTEMAS=[
   {id:'extintores',nome:'Extintores',icone:'flame',periodicidade:'Quinzenal',
@@ -9969,6 +10336,23 @@ const BRIG_SISTEMAS=[
           'Sinalização de rota de fuga']}
 ];
 const BRIG_INV=[
+ {s:'extintores',a:'COB',d:'Extintor da Cobertura'},
+ {s:'hidrantes',a:'COB',d:'Hidrante da Cobertura (barrilete)'},
+ {s:'pcf',a:'COB',d:'Porta corta-fogo de acesso à Cobertura'},
+ {s:'iluminacao',a:'COB',d:'Iluminação de emergência — Cobertura'},
+ {s:'acionadores',a:'COB',d:'Acionador manual — Cobertura'},
+ {s:'extintores',a:'CMA',d:'Extintor da Casa de Máquinas Lado A'},
+ {s:'iluminacao',a:'CMA',d:'Iluminação de emergência — Casa de Máquinas Lado A'},
+ {s:'acionadores',a:'CMA',d:'Acionador manual — Casa de Máquinas Lado A'},
+ {s:'pcf',a:'CMA',d:'Porta corta-fogo de acesso — Casa de Máquinas Lado A'},
+ {s:'extintores',a:'CMB',d:'Extintor da Casa de Máquinas Lado B'},
+ {s:'iluminacao',a:'CMB',d:'Iluminação de emergência — Casa de Máquinas Lado B'},
+ {s:'acionadores',a:'CMB',d:'Acionador manual — Casa de Máquinas Lado B'},
+ {s:'pcf',a:'CMB',d:'Porta corta-fogo de acesso — Casa de Máquinas Lado B'},
+ {s:'extintores',a:'CMS',d:'Extintor da Casa de Máquinas 4º Subsolo'},
+ {s:'iluminacao',a:'CMS',d:'Iluminação de emergência — Casa de Máquinas 4º Subsolo'},
+ {s:'acionadores',a:'CMS',d:'Acionador manual — Casa de Máquinas 4º Subsolo'},
+ {s:'pcf',a:'CMS',d:'Porta corta-fogo de acesso — Casa de Máquinas 4º Subsolo'},
  {s:'extintores',a:"2",d:"2 extintores (PQS-ABC- 6Kg)/ Nº43 e Nº44"},
  {s:'extintores',a:"3",d:"2 extintores (PQS-ABC- 6Kg)/ Nº41 e Nº42"},
  {s:'extintores',a:"4",d:"2 extintores (PQS-ABC- 6Kg)/ Nº39 e Nº40"},
@@ -10491,7 +10875,7 @@ function viewBrigada(){
   const cards=`<div class="grid metrics" style="margin-bottom:14px">
     <div class="card metric"><div class="lbl">${ic('clipboardCheck')}Check-lists do mês</div><div class="val">${prog.feitos}/${prog.total}</div><div class="sub">${prog.pct}% concluído</div></div>
     <div class="card metric ${an.totalNC?'red':'green'}"><div class="lbl">${ic('alert')}Peças não conformes</div><div class="val">${an.totalNC}</div><div class="sub">aguardando providência</div></div>
-    <div class="card metric"><div class="lbl">${ic('flame')}Pontos inspecionados</div><div class="val">${BRIG_INV.length}</div><div class="sub">do 24º ao 4º subsolo</div></div>
+    <div class="card metric"><div class="lbl">${ic('flame')}Pontos inspecionados</div><div class="val">${BRIG_INV.length}</div><div class="sub">da cobertura ao 4º subsolo</div></div>
     <div class="card metric"><div class="lbl">${ic('shieldCheck')}Sistemas</div><div class="val">${BRIG_SISTEMAS.length}</div><div class="sub">combate a incêndio</div></div>
   </div>`;
 
@@ -10557,6 +10941,7 @@ function viewBrigada(){
     <div class="card">
       <div class="ap-faixa">${ic('doc')} RELATÓRIOS</div>
       <div style="padding:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" onclick="brigPdfAtividade('${cid}','${mes}')">${ic('clipboardCheck')} O que foi feito no mês</button>
         <button class="btn" onclick="brigPdfGeral('${cid}','${mes}')">${ic('doc')} Geral do mês</button>
         <button class="btn" onclick="brigPdfSistema('${cid}','${sis}','${mes}')">${ic('doc')} Só ${esc(brigSis(sis).nome)}</button>
         <button class="btn danger" onclick="brigPdfNC('${cid}','${mes}')">${ic('alert')} Só não conformidades</button>
@@ -10649,7 +11034,8 @@ function viewBrigForm(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         <button class="btn" onclick="brigVoltar()">${ic('arrowLeft')} Voltar</button>
         ${fechado?`<button class="btn" onclick="brigPdfInsp('${i.id}')">${ic('doc')} PDF deste check-list</button>
-          <button class="btn danger" onclick="brigReabrir('${i.id}')">Reabrir</button>`
+          <button class="btn danger ghost" onclick="brigReabrir('${i.id}')">Reabrir</button>
+          ${brigPodeExcluir(i)?`<button class="btn danger" onclick="brigExcluirInsp('${i.id}')">${ic('trash')}Excluir</button>`:''}`
         :`<button class="btn primary" onclick="brigConcluir('${i.id}')">${ic('checkCircle')} Concluir check-list</button>`}
       </div>
       ${histHtml(i.historico)}
@@ -10754,6 +11140,12 @@ tr.nc td{background:#fdecee} tr.na td{color:#7a8596}
 .tot .v.bad{color:#c2384a}
 .ass{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:26px}
 .ass div{border-top:1px solid #15202e;padding-top:5px;font-size:10px;text-align:center;color:#5c6879}
+h2{font-size:12.5px;text-transform:uppercase;letter-spacing:.5px;color:#0d1b2e;
+  margin:16px 0 7px;padding-bottom:4px;border-bottom:2px solid #0d1b2e}
+.aviso{background:#fdf3f4;border-left:3px solid #c2384a;padding:8px 10px;
+  font-size:10.5px;line-height:1.6;margin:0 0 8px}
+td.bad{color:#c2384a;font-weight:700}
+
 .rod{margin-top:16px;border-top:1px solid #c9d0dc;padding-top:7px;font-size:9px;color:#7a8596}
 h2.sec{font-size:12px;color:#1f3864;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.3px}
 *{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
@@ -10844,6 +11236,88 @@ function brigPdfSistema(cid,sis,mes){
   audit('Gerou PDF da brigada por sistema',brigSis(sis).nome,'',cid);
 }
 /* 4 — geral do mês */
+/* ===== RELATÓRIO DE ATIVIDADES: o que a brigada fez no mês =====
+   Junta a ronda diária e os check-lists, por pessoa e por dia, para
+   mostrar o trabalho realizado — não só as pendências. */
+function brigAtividade(cid,mes){
+  const rs=brigRondas.filter(r=>r.condoId===cid&&String(r.data).slice(0,7)===mes);
+  const is=brigInsp.filter(i=>i.condoId===cid&&String(i.data).slice(0,7)===mes);
+  const porPessoa={};
+  const anota=(nome,campo,qtd)=>{
+    const n=nome||'Não identificado';
+    porPessoa[n]=porPessoa[n]||{nome:n,rondas:0,ocorr:0,checks:0,concl:0,nc:0,dias:{}};
+    porPessoa[n][campo]+=(qtd===undefined?1:qtd);
+  };
+  rs.forEach(r=>{
+    anota(r.autor,'rondas'); if(!r.ok) anota(r.autor,'ocorr');
+    const p=porPessoa[r.autor||'Não identificado']; p.dias[r.data]=1;
+  });
+  is.forEach(i=>{
+    anota(i.responsavel,'checks');
+    if(i.status==='Concluído') anota(i.responsavel,'concl');
+    anota(i.responsavel,'nc',brigNC(i).length);
+    const p=porPessoa[i.responsavel||'Não identificado']; p.dias[i.data]=1;
+  });
+  const pessoas=Object.values(porPessoa)
+    .map(p=>Object.assign(p,{diasAtivos:Object.keys(p.dias).length}))
+    .sort((a,b)=>(b.rondas+b.checks)-(a.rondas+a.checks));
+  /* dias do mês com e sem ronda */
+  const comRonda={}; rs.forEach(r=>comRonda[r.data]=1);
+  const [ano,mm]=mes.split('-').map(Number);
+  const ultimo=new Date(ano,mm,0).getDate();
+  const hoje=today();
+  const diasMes=[];
+  for(let d=1;d<=ultimo;d++){
+    const iso=`${ano}-${String(mm).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(iso>hoje) break;
+    diasMes.push({d:iso,ok:!!comRonda[iso]});
+  }
+  const semRonda=diasMes.filter(x=>!x.ok);
+  return {rondas:rs,insp:is,pessoas,diasMes,semRonda,
+    ocorrencias:rs.filter(r=>!r.ok),
+    concluidos:is.filter(i=>i.status==='Concluído').length};
+}
+function brigPdfAtividade(cid,mes){
+  const a=brigAtividade(cid,mes);
+  if(!a.rondas.length&&!a.insp.length) return toast('Nenhuma atividade registrada neste mês.');
+  const prog=brigProgresso(cid,mes);
+  const topo=`<div class="tot">
+    <div><div class="k">Rondas feitas</div><div class="v">${a.rondas.length}</div></div>
+    <div><div class="k">Dias com ronda</div><div class="v ${a.semRonda.length?'bad':''}">${a.diasMes.length-a.semRonda.length}/${a.diasMes.length}</div></div>
+    <div><div class="k">Ocorrências</div><div class="v ${a.ocorrencias.length?'bad':''}">${a.ocorrencias.length}</div></div>
+    <div><div class="k">Check-lists concluídos</div><div class="v">${a.concluidos}/${prog.total}</div></div>
+  </div>`;
+  const equipe=`<h2>Por brigadista</h2>
+    <table><thead><tr><th>BRIGADISTA</th><th>DIAS ATIVOS</th><th>RONDAS</th>
+      <th>OCORRÊNCIAS</th><th>CHECK-LISTS</th><th>CONCLUÍDOS</th><th>NÃO CONFORMES</th></tr></thead><tbody>
+    ${a.pessoas.map(p=>`<tr><td><b>${esc(p.nome)}</b></td><td>${p.diasAtivos}</td><td>${p.rondas}</td>
+      <td class="${p.ocorr?'bad':''}">${p.ocorr}</td><td>${p.checks}</td><td>${p.concl}</td>
+      <td class="${p.nc?'bad':''}">${p.nc}</td></tr>`).join('')}
+    </tbody></table>`;
+  const falhas=a.semRonda.length?`<h2>Dias sem nenhuma ronda registrada</h2>
+    <p class="aviso">${a.semRonda.map(x=>fmt(x.d)).join(' · ')}</p>`:
+    `<h2>Cobertura da ronda</h2><p>Todos os ${a.diasMes.length} dias corridos do mês tiveram ronda registrada.</p>`;
+  const ocor=a.ocorrencias.length?`<h2>Ocorrências registradas na ronda</h2>
+    <table><thead><tr><th>DATA</th><th>HORA</th><th>LOCAL</th><th>O QUE FOI ENCONTRADO</th>
+      <th>PRIORIDADE</th><th>QUEM REGISTROU</th></tr></thead><tbody>
+    ${a.ocorrencias.sort((x,y)=>x.data.localeCompare(y.data)).map(r=>`<tr>
+      <td>${fmt(r.data)}</td><td>${esc(r.hora||'')}</td><td>${esc(brigAndarNome(r.andar))}</td>
+      <td>${esc(r.obs||'')}</td><td>${esc(r.prioridade||'—')}</td>
+      <td>${esc(r.autor||'—')}</td></tr>`).join('')}</tbody></table>`:'';
+  const checks=a.insp.length?`<h2>Check-lists do mês</h2>
+    <table><thead><tr><th>DATA</th><th>SISTEMA</th><th>LOCAL</th><th>PONTOS</th>
+      <th>NÃO CONFORMES</th><th>SITUAÇÃO</th><th>RESPONSÁVEL</th></tr></thead><tbody>
+    ${a.insp.sort((x,y)=>x.data.localeCompare(y.data)).map(i=>`<tr>
+      <td>${fmt(i.data)}</td><td>${esc(brigSis(i.sistema).nome)}</td>
+      <td>${esc(brigAndarNome(i.andar))}</td><td>${i.pontos.length}</td>
+      <td class="${brigNC(i).length?'bad':''}">${brigNC(i).length}</td>
+      <td>${esc(i.status)}</td><td>${esc(i.responsavel||'—')}</td></tr>`).join('')}</tbody></table>`:'';
+  brigAbrirPdf('Brigada — atividades '+mes,
+    brigCab('Relatório de Atividades da Brigada',condoName(cid)+' · '+mesExtenso(mes))+
+    topo+equipe+falhas+ocor+checks+
+    `<div class="rod">Emitido por ${esc(session?session.nome:'')} em ${nowStamp()}</div>`);
+}
+
 function brigPdfGeral(cid,mes){
   const is=brigInsp.filter(x=>x.condoId===cid&&String(x.data).slice(0,7)===mes)
     .sort((a,b)=>a.sistema.localeCompare(b.sistema)||brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
@@ -11260,15 +11734,68 @@ function viewBrigRonda(){
     <div class="card">
       <div class="ap-faixa">${ic('clock')} ÚLTIMOS REGISTROS</div>
       <div class="tablewrap"><table class="ap-tb"><thead><tr>
-        <th>DATA</th><th>HORA</th><th>ANDAR</th><th>SITUAÇÃO</th><th>OBSERVAÇÃO</th><th>BRIGADISTA</th></tr></thead><tbody>
+        <th>DATA</th><th>HORA</th><th>ANDAR</th><th>SITUAÇÃO</th><th>OBSERVAÇÃO</th><th>BRIGADISTA</th>
+        <th style="text-align:right">AÇÕES</th></tr></thead><tbody>
         ${ultimas.map(r=>`<tr>
           <td>${fmt(r.data)}</td><td>${esc(r.hora)}</td><td>${esc(brigAndarNome(r.andar))}</td>
           <td>${r.ok?'<span class="badge green">Sem novidade</span>':'<span class="badge red">Ocorrência</span>'}</td>
-          <td>${esc(r.obs||'—')}</td><td class="muted">${esc(r.autor||'—')}</td></tr>`).join('')
-          ||'<tr><td colspan="6" class="muted">Nenhuma ronda registrada ainda.</td></tr>'}
+          <td>${esc(r.obs||'—')}</td><td class="muted">${esc(r.autor||'—')}</td>
+          <td style="text-align:right">${brigPodeExcluir(r)
+            ?`<button class="btn danger ghost sm" onclick="brigExcluirRonda('${r.id}')" title="Excluir registro">${ic('trash')}</button>`
+            :'<span class="t-sub">—</span>'}</td></tr>`).join('')
+          ||'<tr><td colspan="7" class="muted">Nenhuma ronda registrada ainda.</td></tr>'}
       </tbody></table></div>
     </div>`;
 }
+/* ============ EXCLUIR REGISTRO ERRADO ============
+   O brigadista desfaz o que ele mesmo lançou; o Gestor pode desfazer
+   qualquer um. Fica tudo na auditoria, com o motivo. */
+function brigPodeExcluir(reg){
+  if(!session) return false;
+  if(session.role==='Gestor') return true;
+  return reg && (reg.userId===session.id || reg.autor===session.nome ||
+                 reg.responsavel===session.nome);
+}
+/* --- ronda --- */
+function brigExcluirRonda(id){
+  const r=brigRondas.find(x=>x.id===id); if(!r) return;
+  if(!brigPodeExcluir(r)) return toast('Você só pode excluir os registros que fez.');
+  const m=prompt('Por que está excluindo este registro de ronda?\n\n'+
+    brigAndarNome(r.andar)+' · '+fmt(r.data)+' às '+r.hora);
+  if(m===null) return;
+  /* a ocorrência pode ter aberto um chamado — ele também sai */
+  let chamado=null;
+  if(r.chamadoId){
+    const t=tasks.find(x=>x.id===r.chamadoId);
+    if(t&&t.status!=='Concluída'){ tasks=tasks.filter(x=>x.id!==r.chamadoId); chamado=t.titulo }
+  }
+  brigRondas=brigRondas.filter(x=>x.id!==id);
+  audit('Registro de ronda excluído',brigAndarNome(r.andar),
+    fmt(r.data)+' '+r.hora+(chamado?' · chamado cancelado':''),r.condoId,m||'—');
+  save(); render();
+  toast('Registro excluído'+(chamado?' e chamado cancelado.':'.'));
+}
+/* --- check-list --- */
+function brigExcluirInsp(id){
+  const i=brigInsp.find(x=>x.id===id); if(!i) return;
+  if(!brigPodeExcluir(i)) return toast('Você só pode excluir os check-lists que fez.');
+  const nc=brigNC(i).length;
+  const m=prompt('Por que está excluindo este check-list?\n\n'+
+    brigSis(i.sistema).nome+' · '+brigAndarNome(i.andar)+' · '+fmt(i.data)+
+    (nc?'\n'+nc+' não conformidade(s) serão descartadas.':''));
+  if(m===null) return;
+  /* avisos abertos por este check-list perdem o motivo */
+  const avisos=tasks.filter(t=>t.brigInspId===id&&t.status!=='Concluída');
+  if(avisos.length) tasks=tasks.filter(t=>!(t.brigInspId===id&&t.status!=='Concluída'));
+  brigInsp=brigInsp.filter(x=>x.id!==id);
+  if(brigAtual===id) brigAtual=null;
+  audit('Check-list excluído',brigSis(i.sistema).nome+' · '+brigAndarNome(i.andar),
+    fmt(i.data)+(avisos.length?' · '+avisos.length+' aviso(s) cancelado(s)':''),i.condoId,m||'—');
+  save();
+  if(page==='brigada-form') brigVoltar(); else render();
+  toast('Check-list excluído'+(avisos.length?' e '+avisos.length+' aviso(s) cancelado(s).':'.'));
+}
+
 /* ---- Ocorrência na ronda: foto + descrição viram chamado ---- */
 let _rondaFoto=null;
 /* Dois brigadistas dividem o prédio sem divisão fixa: o quadro mostra
@@ -11289,11 +11816,16 @@ function brigQuemCobriu(cid,dia){
 function brigRondaMarcar(cid,andar){
   _rondaFoto=null;
   openModal('Ronda — '+brigAndarNome(andar),
-    `<div class="muted" style="margin-bottom:10px">Como encontrou o andar?</div>
-     <label>Situação</label>
-     <select id="brOk" onchange="brigRondaTipo(this.value)">
-       <option value="1">Tudo em pleno funcionamento</option>
-       <option value="0">Encontrei uma ocorrência</option></select>
+    `<div class="muted" style="margin-bottom:11px">Como encontrou o andar?</div>
+     <div class="rd-esc">
+       <button type="button" class="rd-op ok" id="rdOk" onclick="brigRondaTipo('1')">
+         ${ic('checkCircle')}<b>Tudo em pleno funcionamento</b>
+         <em>nada a relatar neste andar</em></button>
+       <button type="button" class="rd-op nc" id="rdNc" onclick="brigRondaTipo('0')">
+         ${ic('alert')}<b>Encontrei uma ocorrência</b>
+         <em>abre o registro com foto</em></button>
+     </div>
+     <input type="hidden" id="brOk" value="1">
      <div id="brBox" style="display:none;margin-top:12px">
        <label>O que você encontrou <span style="color:#c2384a">*</span></label>
        <textarea id="brObs" rows="3" placeholder="ex.: luminária da escada lado B apagada"></textarea>
@@ -11313,9 +11845,15 @@ function brigRondaMarcar(cid,andar){
      </div>`,
     `<button class="btn" onclick="closeModal()">Cancelar</button>
      <button class="btn primary" onclick="brigRondaSalvar('${cid}','${andar}')">Registrar</button>`);
+  brigRondaTipo('1');          /* abre já com "tudo em pleno" destacado */
 }
 function brigRondaTipo(v){
+  const h=$('#brOk'); if(h) h.value=v;
   const b=$('#brBox'); if(b) b.style.display=v==='0'?'block':'none';
+  const ok=$('#rdOk'), nc=$('#rdNc');
+  if(ok&&ok.classList) v==='1'?ok.classList.add('on'):ok.classList.remove('on');
+  if(nc&&nc.classList) v==='0'?nc.classList.add('on'):nc.classList.remove('on');
+  if(v==='0') setTimeout(()=>{const t=$('#brObs'); if(t&&t.focus)t.focus()},80);
 }
 function brigRondaFoto(){
   let inp=document.querySelector('#brFile');
@@ -12997,8 +13535,23 @@ function _colRef(nome){
 /* Fotografia do estado local antes de aceitar o do servidor. */
 function _marcarSujos(base,foto){
   SYNC.sujos=SYNC.sujos||{};
+  /* Sem base em memória (app reaberto), vale a impressão digital guardada
+     no aparelho — sem ela o trabalho offline era dado como inexistente e
+     o snapshot do servidor passava por cima dele. */
+  const porIdx=!base&&!!SYNC.baseIdx;
   SYNC_COLS.forEach(k=>{
     const atual=(foto&&foto[k])||_colRef(k); if(!Array.isArray(atual)) return;
+    if(porIdx){
+      const ref=SYNC.baseIdx[k]||{};
+      atual.forEach(x=>{
+        if(!x||!x.id) return;
+        const h=_hash1(JSON.stringify(x));
+        if(ref[x.id]===undefined||ref[x.id]!==h){
+          (SYNC.sujos[k]=SYNC.sujos[k]||{})[x.id]=true;
+        }
+      });
+      return;
+    }
     const idx={}; ((base&&base[k])||[]).forEach(x=>{ if(x&&x.id) idx[x.id]=JSON.stringify(x) });
     atual.forEach(x=>{
       if(!x||!x.id) return;
@@ -13008,6 +13561,42 @@ function _marcarSujos(base,foto){
     });
   });
 }
+/* ===== BASE DE COMPARAÇÃO QUE SOBREVIVE A FECHAR O APP =====
+   Para saber o que foi feito neste aparelho e ainda não subiu, precisamos
+   lembrar como estavam os dados na última conversa com o servidor. Guardar
+   o snapshot inteiro pesaria demais (fotos), então guardamos só uma
+   impressão digital por registro: {coleção:{id:hash}}. */
+const BASE_KEY='grc.base.v1';
+function _hash1(t){ let h=0; for(let i=0;i<t.length;i++){ h=(h*31+t.charCodeAt(i))|0 } return h }
+function _indiceDe(snap){
+  const idx={};
+  if(!snap) return idx;
+  SYNC_COLS.forEach(k=>{
+    const arr=snap[k]; if(!Array.isArray(arr)) return;
+    const m={}; arr.forEach(x=>{ if(x&&x.id) m[x.id]=_hash1(JSON.stringify(x)) });
+    idx[k]=m;
+  });
+  return idx;
+}
+function gravarBaseIdx(snap){
+  SYNC.baseIdx=_indiceDe(snap);
+  try{ localStorage.setItem(BASE_KEY,JSON.stringify({v:SYNC.versao,idx:SYNC.baseIdx})) }catch(e){}
+}
+function carregarBaseIdx(){
+  try{
+    const o=JSON.parse(localStorage.getItem(BASE_KEY)||'null');
+    if(o&&o.idx){ SYNC.baseIdx=o.idx; return true }
+  }catch(e){}
+  return false;
+}
+/* Enquanto estiver sem servidor, mantém a conta do que falta subir —
+   é isso que aparece no selo "Offline · N a enviar". */
+function marcarSujosOffline(){
+  if(!SYNC.baseIdx) return;          // aparelho que nunca sincronizou: servidor manda
+  _marcarSujos(null);
+  atualizarBadgeConex();             // o contador do selo acompanha na hora
+}
+
 function _temSujos(){
   const s=SYNC.sujos||{};
   return Object.keys(s).some(k=>Object.keys(s[k]||{}).length);
@@ -13056,10 +13645,18 @@ async function syncEnviar(forcar){
   if(SYNC.enviando){ SYNC.pendente=true; return }
   SYNC.enviando=true; syncEstado('salvando');
   try{
-    const r=await fetch('/api/dados',{method:'POST',headers:syncHeaders(),
+    const r=await fetchPrazo('/api/dados',{method:'POST',headers:syncHeaders(),
       body:JSON.stringify({snapshot:snap,versaoBase:(forcar&&!SYNC.versao)?null:SYNC.versao,
         autor:session?session.nome:'—',dispositivo:nomeDispositivo()})});
     if(r.status===401){ syncEstado('erro','Token do site incorreto.'); SYNC.enviando=false; return }
+    if(r.status===413){
+      /* Não é falta de internet: o pacote de fotos ficou grande demais.
+         Dizer "sem conexão" aqui faria o usuário procurar o problema no
+         lugar errado. */
+      syncEstado('erro','O volume de fotos ficou grande demais para enviar de uma vez.');
+      if(session) toast('As fotos acumuladas passaram do tamanho aceito pelo servidor. Avise o administrador.');
+      SYNC.enviando=false; return;
+    }
     if(r.status===409){
       // outra pessoa gravou antes: junta os dois lados sem descartar nada daqui
       const d=await r.json();
@@ -13068,6 +13665,7 @@ async function syncEnviar(forcar){
       const n=_reaplicarLocal(foto,SYNC.base);
       SYNC.versao=d.versao;
       SYNC.base=JSON.parse(JSON.stringify(d.snapshot));
+      gravarBaseIdx(d.snapshot);
       // assinatura = o que o SERVIDOR tem. Se a junção mudou algo, a diferença
       // é detectada e o resultado sobe; sem isso o reenvio era cancelado.
       SYNC.assinatura=_assina(d.snapshot);
@@ -13086,12 +13684,16 @@ async function syncEnviar(forcar){
     SYNC.versao=d.versao;
     SYNC.assinatura=assin;
     SYNC.base=JSON.parse(JSON.stringify(snap));
+    gravarBaseIdx(snap);              // sobrevive a fechar o aplicativo
     SYNC.sujos={};                    // confirmado pelo servidor: nada pendente
     SYNC.ultimo=new Date().toLocaleString('pt-BR');
     salvaSyncCfg({versao:d.versao});
+    marcarOnline();
     syncEstado('ok');
   }catch(e){
+    marcarOffline();
     syncEstado('erro','Alteração salva neste aparelho; será enviada quando a conexão voltar.');
+    agendarRetentativa();
   }
   SYNC.enviando=false;
   if(SYNC.pendente){ SYNC.pendente=false; setTimeout(()=>syncEnviar(),400) }
@@ -13130,8 +13732,9 @@ function agendarSync(){
 async function ligarSync(silencioso){
   if(!temServidor()) return false;
   try{
-    const r=await fetch('/api/saude');
+    const r=await fetchPrazo('/api/saude',{},8000);
     if(!r.ok) throw new Error();
+    marcarOnline();
     const d=await r.json();
     SYNC.ligado=true;
     if(d.protegido && !syncCfg().token){
@@ -13142,10 +13745,16 @@ async function ligarSync(silencioso){
     clearInterval(SYNC.autoTimer);
     // busca novidades a cada 45s (leve: só o snapshot quando muda a versão)
     SYNC.autoTimer=setInterval(()=>{ if(!SYNC.enviando) syncVerificar() },45000);
-    window.addEventListener('online',()=>syncEnviar());
+    ligarEscutaConexao();
     return true;
   }catch(e){
+    /* Começou sem internet: o app funciona do mesmo jeito e fica
+       vigiando a conexão para subir tudo assim que ela aparecer. */
     SYNC.ligado=false;
+    marcarSujosOffline();   /* mostra desde já o que está esperando envio */
+    marcarOffline();
+    ligarEscutaConexao();
+    agendarRetentativa();
     return false;
   }
 }
@@ -13232,33 +13841,59 @@ async function salvarToken(){
 }
 function abrirSync(){
   const c=syncCfg();
+  const off=estaOffline()&&temServidor();
+  const pend=pendentesSync();
+  setTimeout(medirEspaco,80);
   openModal('Sincronização',
-    `<div class="feed-item ${SYNC.estado==='erro'?'red':'blue'}" style="margin-bottom:12px">
-       <div class="fi-ic">${ic(SYNC.estado==='erro'?'alert':'cloud')}</div>
-       <div><div class="ft">${SYNC.estado==='erro'?'Sem conexão com o servidor':'Dados compartilhados entre os aparelhos'}</div>
-       <div class="fd">${SYNC.erro||'Tudo que você altera aparece para os outros usuários em até 45 segundos.'}</div></div></div>
+    `<div class="feed-item ${off?'amber':(SYNC.estado==='erro'?'red':'blue')}" style="margin-bottom:12px">
+       <div class="fi-ic">${ic(off||SYNC.estado==='erro'?'alert':'cloud')}</div>
+       <div><div class="ft">${off?'Trabalhando sem internet'
+           :(SYNC.estado==='erro'?'Sem conexão com o servidor':'Dados compartilhados entre os aparelhos')}</div>
+       <div class="fd">${off
+           ?('Pode registrar rondas, check-lists e tarefas normalmente: fica tudo guardado neste aparelho'+
+             (pend?(' — <b>'+pend+' alteração'+(pend>1?'ões aguardando':' aguardando')+' envio</b>'):'')+
+             '. Assim que a internet voltar, sobe sozinho.')
+           :(SYNC.erro||'Tudo que você altera aparece para os outros usuários em até 45 segundos.')}</div></div></div>
      <div class="f2">
-       <div><div class="t-sub">Estado</div><b>${SYNC.ligado?'Ativo':'Somente neste aparelho'}</b></div>
+       <div><div class="t-sub">Estado</div><b>${off?'Offline':(SYNC.ligado?'Ativo':'Somente neste aparelho')}</b></div>
+       <div><div class="t-sub">Aguardando envio</div><b>${pend||'nenhuma alteração'}</b></div>
        <div><div class="t-sub">Versão dos dados</div><b>${SYNC.versao}</b></div>
        <div><div class="t-sub">Última sincronização</div><b>${SYNC.ultimo||'—'}</b></div>
        <div><div class="t-sub">Este aparelho</div><b>${esc(nomeDispositivo())}</b></div>
+       <div><div class="t-sub">Onde os dados ficam</div><b>${_idbOk?'Armazenamento do aparelho':'Reserva do navegador (5 MB)'}</b></div>
+       <div><div class="t-sub">Espaço usado</div><b id="espacoUso">calculando...</b></div>
      </div>`,
-    `<button class="btn ghost" onclick="syncBaixar().then(()=>{render();toast('Dados recarregados do servidor.')})">Baixar do servidor</button>
-     <button class="btn" onclick="syncEnviar(true).then(()=>toast('Enviado ao servidor.'))">Enviar deste aparelho</button>`);
+    off
+    ? `<button class="btn primary" onclick="closeModal();tentarReconectar()">Tentar conectar agora</button>`
+    : `<button class="btn ghost" onclick="syncBaixar().then(()=>{render();toast('Dados recarregados do servidor.')})">Baixar do servidor</button>
+       <button class="btn" onclick="syncEnviar(true).then(()=>toast('Enviado ao servidor.'))">Enviar deste aparelho</button>`);
 }
 
 /* ============ INIT ============ */
-if(!load()) seed();
-_booting=false;
-aplicarMarca();
-buildProfiles();          /* monta a lista de acesso antes de escolher o perfil */
-pickUser('u1');
-/* Conecta ao servidor depois de pintar a tela: o app abre offline-first */
-setTimeout(()=>{ ligarSync().then(ok=>{ if(ok&&session) render(); }); },300);
+function iniciarCom(guardado){
+  if(!load(guardado)) seed();
+  carregarBaseIdx();      /* o que o servidor já conhecia na última conversa */
+  _booting=false;
+  aplicarMarca();
+  buildProfiles();        /* monta a lista de acesso antes de escolher o perfil */
+  pickUser('u1');
+  /* Conecta ao servidor depois de pintar a tela: o app abre offline-first */
+  setTimeout(()=>{ ligarSync().then(ok=>{ if(ok&&session) render(); }); },300);
+  ligarEscutaConexao();   /* vigia a conexão desde o primeiro segundo */
+}
+/* Sem IndexedDB (navegação privada antiga, ambiente de teste) o app abre
+   pelo caminho síncrono de sempre; com ele, espera a leitura do disco. */
+if(typeof indexedDB==='undefined'||!indexedDB){
+  let _d=null;
+  try{ const _st=store(); const _raw=_st&&_st.getItem(DB_KEY); if(_raw) _d=JSON.parse(_raw) }catch(e){}
+  iniciarCom(_d);
+}else{
+  carregarDoAparelho().then(iniciarCom);
+}
 window.addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeModal();closeDrawer()}
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a42b230b8994b4af',t:'MTc5MDY4NjQ3MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
