@@ -1022,6 +1022,80 @@ tbody td{padding-top:11px;padding-bottom:11px}
   padding:38px 20px;text-align:center;color:var(--text-2)}
 .card.empty .ico-lg{color:var(--text-3);margin-bottom:10px}
 /* legenda de rodapé das telas */
+/* ===== v16 — trilha de etapas das Notas Fiscais ===== */
+.trilha{display:inline-flex;align-items:center;gap:0;white-space:nowrap}
+.trilha .et{display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;border:0;background:none;padding:2px}
+.trilha .rot{display:none}
+.trilha .et[disabled]{cursor:default}
+.trilha .pt{width:20px;height:20px;border-radius:50%;border:1.6px solid #c6cfdd;
+  background:#fff;display:flex;align-items:center;justify-content:center;
+  transition:.14s;color:#fff}
+.trilha .pt svg{width:12px;height:12px;stroke-width:3}
+.trilha .et:hover:not([disabled]) .pt{border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(37,99,235,.13)}
+.trilha .et.feito .pt{background:#1d7a4c;border-color:#1d7a4c}
+.trilha .et.na .pt{border-style:dashed;border-color:#d7dde7;background:#f6f8fb}
+.trilha .rot{font-size:10px;line-height:1;color:var(--text-3);letter-spacing:.2px}
+.trilha .et.feito .rot{color:#1d7a4c;font-weight:700}
+.trilha .et.na .rot{color:#aab4c3}
+.trilha .lig{width:18px;height:1.6px;background:#dde3ec;flex:0 0 auto}
+.trilha .lig.on{background:#1d7a4c}
+
+/* observação: vira campo só quando se clica */
+.obsced{border:1px solid transparent;border-radius:7px;padding:5px 7px;width:100%;
+  min-width:110px;font:inherit;color:var(--text);background:transparent;transition:.12s}
+.obsced::placeholder{color:#b9c2cf}
+.obsced:hover{border-color:var(--line);background:#fafbfd}
+.obsced:focus{outline:none;border-color:var(--accent);background:#fff;
+  box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+
+/* "não se aplica" discreto, no lugar do emblema cheio */
+.na-mini{color:#b3bcc9;font-size:11px;letter-spacing:.3px}
+
+/* a tabela de notas agora cabe na tela, sem rolagem lateral */
+.tablewrap table.nf-tb{min-width:720px}
+.nf-tb th,.nf-tb td{padding-left:10px;padding-right:10px}
+.tablewrap table.pub-tb{min-width:860px}
+.pub-tb th,.pub-tb td{padding-left:10px;padding-right:10px}
+.pub-tb td{vertical-align:middle}
+.pub-tb .na-mini{white-space:nowrap}
+.nf-tb .badge{white-space:nowrap}
+.nf-tb .th-sub{font-size:9.5px;font-weight:600;color:#aab4c3;letter-spacing:.2px;
+  text-transform:none;margin-top:2px}
+.nf-tb td{vertical-align:middle}
+
+/* ===== v16 — menu de ações compacto (Publicidade) ===== */
+.maisw{position:relative;display:inline-block}
+.btn.icon{padding:6px 8px;min-width:auto;line-height:1}
+.maismenu{position:absolute;right:0;top:calc(100% + 4px);z-index:60;background:#fff;
+  border:1px solid var(--line);border-radius:10px;min-width:176px;padding:5px;
+  box-shadow:0 12px 30px rgba(13,27,46,.16);display:none;text-align:left}
+.maisw.open .maismenu{display:block}
+.maismenu button{display:flex;align-items:center;gap:8px;width:100%;border:0;
+  background:none;padding:9px 10px;border-radius:7px;cursor:pointer;font:inherit;
+  font-size:12.5px;color:var(--text);text-align:left}
+.maismenu button:hover{background:#f2f5fa}
+.maismenu button.perigo{color:#c2384a}
+.maismenu button.perigo:hover{background:#fdf0f2}
+.maismenu .sep{height:1px;background:var(--line);margin:4px 2px}
+.maismenu svg{width:14px;height:14px;flex:0 0 auto}
+
+/* no celular nao ha cabecalho de coluna: a trilha se explica sozinha */
+@media(max-width:820px){
+  .trilha .et{flex-direction:column;gap:4px;min-width:58px;padding:4px 2px}
+  .trilha .rot{display:block;font-size:11px}
+  .trilha .pt{width:26px;height:26px}
+  .trilha .pt svg{width:15px;height:15px}
+  .trilha .lig{width:8px;margin-bottom:15px}
+  .obsced{border-color:var(--line);background:#fff}
+}
+
+/* cabeçalho de seção recolhível */
+.dobra{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.dobra .seta{transition:transform .16s;color:var(--text-3);display:inline-flex}
+.dobra.aberta .seta{transform:rotate(90deg)}
+
 .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;padding:11px 13px;
   border:1px dashed var(--line);border-radius:9px;background:var(--panel);
   font-size:12px;color:var(--text-3)}
@@ -1713,6 +1787,7 @@ function idbAbrir(){
       rq.onupgradeneeded=()=>{
         const db=rq.result;
         if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+        if(!db.objectStoreNames.contains('fotos')) db.createObjectStore('fotos');
       };
       rq.onsuccess=()=>res(rq.result);
       rq.onerror=()=>res(null);
@@ -1783,6 +1858,187 @@ async function carregarDoAparelho(){
     }
   }
   return d;
+}
+
+/* ================== ACERVO DE FOTOS ==================
+   As fotos NÃO moram mais dentro do snapshot. Cada registro guarda só uma
+   referência ("ref:fo_xxx") e a imagem sobe uma única vez, sozinha. Antes,
+   100 fotos faziam cada sincronização carregar 36 MB — inviável no celular
+   e o bastante para travar o navegador.
+   Compatibilidade: registros antigos com a imagem embutida (data:...)
+   continuam funcionando sem conversão. */
+const FOTO_REF='ref:', IDB_FOTOS='fotos', FOTOS_FILA_KEY='grc.fotos.fila';
+const _fotoCache=new Map();        // ref -> dataURL (memória, sob demanda)
+const _fotoBaixando=new Map();     // ref -> Promise
+let _filaFotos=[], _subindoFotos=false;
+
+function ehRef(v){ return typeof v==='string' && v.slice(0,4)===FOTO_REF }
+function ehImagem(v){ return typeof v==='string' && v.slice(0,11)==='data:image/' }
+function novoIdFoto(){
+  return 'fo'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+}
+function idDaRef(r){ return ehRef(r)?r.slice(4):null }
+
+/* ---- IndexedDB: store separado só para imagens ---- */
+function idbFoto(modo){
+  if(!_idb) return null;
+  try{ return _idb.transaction(IDB_FOTOS,modo).objectStore(IDB_FOTOS) }
+  catch(e){ return null }
+}
+function fotoLerLocal(id){
+  return new Promise(res=>{
+    const st=idbFoto('readonly'); if(!st) return res(null);
+    const rq=st.get(id);
+    rq.onsuccess=()=>res(rq.result||null);
+    rq.onerror=()=>res(null);
+  });
+}
+function fotoGravarLocal(id,dados){
+  return new Promise((res,rej)=>{
+    if(!_idb) return rej(new Error('sem armazenamento'));
+    try{
+      const tx=_idb.transaction(IDB_FOTOS,'readwrite');
+      tx.objectStore(IDB_FOTOS).put(dados,id);
+      tx.oncomplete=()=>res(true); tx.onerror=()=>rej(tx.error);
+    }catch(e){ rej(e) }
+  });
+}
+
+/* ---- guardar uma foto nova: devolve a referência ---- */
+async function guardarFoto(dataUrl){
+  if(!ehImagem(dataUrl)) return dataUrl;
+  if(!_idbOk) return dataUrl;            // sem IndexedDB: comportamento antigo
+  const id=novoIdFoto();
+  try{ await fotoGravarLocal(id,dataUrl) }
+  catch(e){ console.warn('foto local:',e); return dataUrl }
+  _fotoCache.set(FOTO_REF+id,dataUrl);
+  _filaFotos.push(id); salvarFilaFotos();
+  enviarFotos();                          // sobe em segundo plano
+  return FOTO_REF+id;
+}
+
+/* ---- resolver para exibir/imprimir ---- */
+async function resolverFoto(v){
+  if(!v) return '';
+  if(ehImagem(v)) return v;               // legado embutido
+  if(!ehRef(v)) return v;
+  if(_fotoCache.has(v)) return _fotoCache.get(v);
+  if(_fotoBaixando.has(v)) return _fotoBaixando.get(v);
+  const id=idDaRef(v);
+  const tarefa=(async()=>{
+    let d=await fotoLerLocal(id);
+    if(!d&&temServidor()&&!estaOffline()){
+      try{
+        const r=await fetchPrazo('/api/foto/'+encodeURIComponent(id),{headers:syncHeaders()},15000);
+        if(r.ok){ const j=await r.json(); d=j.dados; if(d) fotoGravarLocal(id,d).catch(()=>{}) }
+      }catch(e){}
+    }
+    if(d) _fotoCache.set(v,d);
+    _fotoBaixando.delete(v);
+    return d||'';
+  })();
+  _fotoBaixando.set(v,tarefa);
+  return tarefa;
+}
+const PIX_VAZIO='data:image/svg+xml,'+encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="#eef1f6"/></svg>');
+
+/* Usado nos templates: devolve na hora o que já estiver em memória e
+   marca a imagem para ser preenchida assim que o arquivo chegar. */
+function srcFoto(v){
+  if(!v) return PIX_VAZIO;
+  if(ehImagem(v)) return v;
+  if(_fotoCache.has(v)) return _fotoCache.get(v);
+  return PIX_VAZIO;
+}
+function attrFoto(v){ return ehRef(v)?` data-foto="${esc(v)}"`:'' }
+
+/* Depois de desenhar a tela, preenche as imagens que ainda não estavam
+   em memória. */
+function hidratarFotos(raiz){
+  const alvo=raiz||document;
+  let nós;
+  try{ nós=alvo.querySelectorAll('img[data-foto]') }catch(e){ return }
+  nós.forEach(async img=>{
+    const ref=img.getAttribute('data-foto'); if(!ref) return;
+    const d=await resolverFoto(ref);
+    if(d&&img.isConnected){ img.src=d; img.removeAttribute('data-foto') }
+  });
+}
+
+/* ---- fila de envio: uma foto por vez, retoma sozinha ---- */
+function salvarFilaFotos(){
+  try{ localStorage.setItem(FOTOS_FILA_KEY,JSON.stringify(_filaFotos)) }catch(e){}
+}
+function carregarFilaFotos(){
+  try{ _filaFotos=JSON.parse(localStorage.getItem(FOTOS_FILA_KEY)||'[]')||[] }catch(e){ _filaFotos=[] }
+}
+function fotosPendentes(){ return _filaFotos.length }
+
+async function enviarFotos(){
+  if(_subindoFotos||!_filaFotos.length) return;
+  if(!temServidor()||estaOffline()||!SYNC.ligado) return;
+  _subindoFotos=true;
+  while(_filaFotos.length){
+    const id=_filaFotos[0];
+    let dados=_fotoCache.get(FOTO_REF+id)||await fotoLerLocal(id);
+    if(!dados){ _filaFotos.shift(); salvarFilaFotos(); continue }   // sumiu: não trava a fila
+    try{
+      const r=await fetchPrazo('/api/foto/'+encodeURIComponent(id),
+        {method:'PUT',headers:syncHeaders(),body:JSON.stringify({dados})},30000);
+      if(r.status===401){ break }
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      _filaFotos.shift(); salvarFilaFotos();
+      atualizarBadgeConex();
+    }catch(e){
+      marcarOffline(); agendarRetentativa();
+      break;                       // tenta de novo quando a conexão voltar
+    }
+  }
+  _subindoFotos=false;
+}
+
+/* ---- antes de imprimir, as imagens precisam estar resolvidas ---- */
+async function precarregarFotos(refs){
+  const lista=[...new Set((refs||[]).filter(ehRef))];
+  for(let i=0;i<lista.length;i+=6){
+    await Promise.all(lista.slice(i,i+6).map(resolverFoto));
+  }
+}
+function refsDe(obj){
+  const achados=[];
+  const varrer=o=>{
+    if(!o||typeof o!=='object') return;
+    if(Array.isArray(o)) return o.forEach(varrer);
+    Object.keys(o).forEach(k=>{ const v=o[k];
+      if(ehRef(v)) achados.push(v); else if(typeof v==='object') varrer(v) });
+  };
+  varrer(obj); return achados;
+}
+
+/* Fotos que já estavam embutidas nos registros saem do snapshot e passam
+   para o acervo. Roda aos poucos, sem travar a tela, e é idempotente. */
+async function migrarFotosEmbutidas(){
+  if(!_idbOk) return 0;
+  const alvos=[];
+  const visitar=(o,chave,val)=>{ if(ehImagem(val)) alvos.push([o,chave]) };
+  const varrer=o=>{
+    if(!o||typeof o!=='object') return;
+    if(Array.isArray(o)) return o.forEach((v,i)=>{
+      if(ehImagem(v)) alvos.push([o,i]); else varrer(v) });
+    Object.keys(o).forEach(k=>{ const v=o[k];
+      if(ehImagem(v)) visitar(o,k,v); else if(typeof v==='object') varrer(v) });
+  };
+  [brigRondas,brigInsp,apontamentos,tasks,analises,manutObrig,leituras].forEach(varrer);
+  if(!alvos.length) return 0;
+  let n=0;
+  for(const [obj,chave] of alvos){
+    const ref=await guardarFoto(obj[chave]);
+    if(ehRef(ref)){ obj[chave]=ref; n++ }
+    if(n%10===0) await new Promise(r=>setTimeout(r,0));   // devolve a vez à tela
+  }
+  if(n){ save(); console.info('[fotos] '+n+' imagem(ns) movida(s) para o acervo') }
+  return n;
 }
 
 function salvarLocal(){
@@ -2127,6 +2383,7 @@ const ICONS={
  menu:'<path d="M3.5 6h17M3.5 12h17M3.5 18h17"/>',
  chevL:'<path d="m15 5-7 7 7 7"/>', chevR:'<path d="m9 5 7 7-7 7"/>',
  chevUp:'<path d="m5 15 7-7 7 7"/>', chevDown:'<path d="m5 9 7 7 7-7"/>',
+ dots:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
  arrowUp:'<path d="M12 20V4M5.5 10.5 12 4l6.5 6.5"/>',
  arrowDown:'<path d="M12 4v16M5.5 13.5 12 20l6.5-6.5"/>',
  arrowRight:'<path d="M4 12h16M13.5 5.5 20 12l-6.5 6.5"/>',
@@ -2214,6 +2471,8 @@ function go(p,filter){ apEditId=null; apAtual=null; if(p!=='brigada-form') brigA
   buildNav();buildTabbar();buildCondoFilter();render()}
 function render(){
   { const _sb=document.querySelector('#syncBadge'); if(_sb) _sb.outerHTML=badgeSync(); }
+  /* as imagens referenciadas chegam logo depois que a tela aparece */
+  if(typeof hidratarFotos==='function') setTimeout(()=>hidratarFotos(),0);
   save(); if(session)gerarNotificacoes();
   if(dayRef&&document.querySelector('#drawer')&&$('#drawer').classList.contains&&$('#drawer').classList.contains('open')){try{renderDay()}catch(e){}}
   const titles={dashboard:'Dashboard',tarefas:'Gerenciador de Tarefas',
@@ -2564,7 +2823,7 @@ function viewConfig(){
         <div class="field"><label>Chave deste aparelho</label>
           <input id="cfgToken" type="password" placeholder="deixe vazio se o site não usa chave" value="${esc(syncCfg().token||'')}"></div>
         <div class="rowact" style="margin-top:10px">
-          <button class="btn" onclick="salvarToken()">${ic('check')}Salvar chave</button>
+          <button class="btn" onclick="salvarTokenCfg()">${ic('check')}Salvar chave</button>
           <button class="btn ghost" onclick="testarToken()">Testar conexão</button>
         </div>
         <div id="cfgTokenMsg" class="t-sub" style="margin-top:8px"></div>
@@ -2899,6 +3158,7 @@ function openModal(titulo,corpo,rodape){
   $('#modalBody').innerHTML=corpo;
   $('#modalFoot').innerHTML=rodape||`<button class="btn" onclick="closeModal()">Fechar</button>`;
   $('#modal').classList.add('open');
+  if(typeof hidratarFotos==='function') hidratarFotos(document.querySelector('#modal'));
 }
 function closeModal(){ $('#modal').classList.remove('open'); syncLiberar() }
 function editTask(id){
@@ -3599,6 +3859,34 @@ function nfQuick(id){
   }
   quickComplete('nota',id);
 }
+/* Trilha de etapas da nota: Book -> NF -> Lançamento.
+   Ocupa uma coluna só, no lugar das três caixas de marcar. */
+function nfEtapas(n){
+  const p=prestOf(n);
+  return [
+    {k:'book',rot:'Book',usa:!!p.exigeBook,feito:!!p.exigeBook&&!!n.book,
+     dica:p.exigeBook?'Book de medição validado':'Prestador dispensado de book'},
+    {k:'nf',rot:'NF',usa:!!p.exigeNf,feito:!!p.exigeNf&&!!n.nf,
+     dica:p.exigeNf?'Nota fiscal validada':'Concessionária — sem validação contábil'},
+    {k:'lanc',rot:'Lançada',usa:true,feito:!!n.lanc,
+     dica:'Lançamento feito no sistema contábil'}
+  ];
+}
+function nfTrilha(n){
+  const es=nfEtapas(n), pode=P().edit!==false;
+  return '<div class="trilha">'+es.map((e,i)=>{
+    const lig=i?`<span class="lig ${es[i-1].feito?'on':''}"></span>`:'';
+    const cls=!e.usa?'na':(e.feito?'feito':'');
+    const dica=e.rot+' — '+e.dica+(e.usa?(e.feito?' (feito)':' (pendente)'):'');
+    const bt=`<button class="et ${cls}" title="${esc(dica)}"
+      ${!e.usa||!pode?'disabled':''}
+      ${e.usa&&pode?`onclick="nfToggle('${n.id}','${e.k}',${!e.feito})"`:''}>
+      <span class="pt">${e.feito?ic('check'):''}</span>
+      <span class="rot">${e.usa?e.rot:'n/a'}</span></button>`;
+    return lig+bt;
+  }).join('')+'</div>';
+}
+
 function viewNotas(){
   const comp=nfComp||compAtual();
   const disp=condosDo('notas');
@@ -3627,8 +3915,8 @@ function viewNotas(){
       <div class="spacer"></div>
       <button class="btn ghost" onclick="prestPanel=!prestPanel;render()">Prestadores de Serviço ${prestPanel?'':''}</button>
       <button class="btn ghost" onclick="csvNotas()">${ic('download')}Exportar Excel</button>
-      <button class="btn ghost" onclick="modalGerarComp()">Gerar Competência</button>
-      <button class="btn ghost danger" onclick="modalExcluirComp()">Excluir Competência</button>
+      <button class="btn ghost sm" onclick="modalGerarComp()">Gerar Competência</button>
+      <button class="btn ghost sm" style="color:#c2384a" onclick="modalExcluirComp()">Excluir Competência</button>
       <button class="btn green" onclick="nfConcluirMes()">Concluir Mês</button>
     </div>
     ${cnt('Atrasado')?`<div class="alertbar red" style="margin-bottom:14px">
@@ -3648,26 +3936,24 @@ function viewNotas(){
         <div class="lbl">Atrasados</div><div class="val">${cnt('Atrasado')}</div><div class="sub">Passaram do vencimento fixo</div></div>
     </div>
     ${prestPanel?painelPrestadores(cid):''}
-    ${list.length?`<div class="tablewrap"><table><thead><tr>
-      <th>Empresa</th><th>Serviço</th><th>Venc. fixo</th><th>Insumo</th><th>Mês ref.</th>
-      <th>Book validado</th><th>NF validada</th><th>NF lançada</th><th>Status</th><th>Observações</th><th>Ação</th>
+    ${list.length?`<div class="tablewrap"><table class="nf-tb"><thead><tr>
+      <th style="width:220px">Empresa / serviço</th><th style="width:96px">Vencimento</th><th>Insumo</th>
+      <th style="width:124px">Andamento<div class="th-sub">Book · NF · Lançada</div></th><th style="width:116px">Status</th>
+      <th>Observações</th><th class="no-print" style="width:104px;text-align:right">Ação</th>
       </tr></thead><tbody>
       ${list.map(n=>{const st=nfStatus(n);return `<tr>
-        <td class="t-title">${esc(n.empresa)}${prestOf(n).concessionaria?'<div class="t-sub">concessionária</div>':''}</td>
-        <td><div>${esc(n.servico)}</div></td>
-        <td><span class="badge ${st==='Atrasado'?'b-atr':'b-condo'}">dia ${n.dia}</span><div class="t-sub">${fmt(compVenc(n.competencia,n.dia))}</div></td>
-        <td>${esc(n.insumo)}</td><td>${n.competencia}</td>
-        <td style="text-align:center">${prestOf(n).exigeBook
-          ?`<input type="checkbox" style="width:18px;height:18px;accent-color:#2f9e44" ${n.book?'checked':''} onchange="nfToggle('${n.id}','book',this.checked)">`
-          :'<span class="badge b-baixa" title="Prestador dispensado de book">Não se aplica</span>'}</td>
-        <td style="text-align:center">${prestOf(n).exigeNf
-          ?`<input type="checkbox" style="width:18px;height:18px;accent-color:#2f9e44" ${n.nf?'checked':''} onchange="nfToggle('${n.id}','nf',this.checked)">`
-          :'<span class="badge b-baixa" title="Concessionária — sem validação contábil">Não se aplica</span>'}</td>
-        <td style="text-align:center"><input type="checkbox" style="width:18px;height:18px;accent-color:#2f9e44" ${n.lanc?'checked':''} onchange="nfToggle('${n.id}','lanc',this.checked)"></td>
+        <td class="t-title">${esc(n.empresa)}
+          <div class="t-sub">${esc(n.servico)}${prestOf(n).concessionaria?' · concessionária':''}</div></td>
+        <td><span class="badge ${st==='Atrasado'?'b-atr':'b-condo'}">dia ${n.dia}</span>
+          <div class="t-sub">${fmt(compVenc(n.competencia,n.dia))}</div></td>
+        <td>${esc(n.insumo)}</td>
+        <td>${nfTrilha(n)}</td>
         <td>${nfBadge(st)}</td>
-        <td><input value="${esc(n.obs)}" placeholder="—" onchange="nfObs('${n.id}',this.value)" style="border:1px solid var(--gray);border-radius:8px;padding:6px 8px;width:150px"></td>
-        <td class="no-print"><div class="rowact"><button class="btn ${st==='Concluído'?'ghost':'green'} sm" onclick="nfQuick('${n.id}')">${st==='Concluído'?'Reabrir':'Concluir'}</button>
-          <button class="btn ghost sm" onclick="openNfHist('${n.id}')">Hist.</button></div></td>
+        <td><input class="obsced" value="${esc(n.obs)}" placeholder="Anotar..."
+          onchange="nfObs('${n.id}',this.value)"></td>
+        <td class="no-print" style="text-align:right"><div class="rowact nowrap" style="justify-content:flex-end">
+          <button class="btn ${st==='Concluído'?'ghost':'green'} sm" onclick="nfQuick('${n.id}')">${st==='Concluído'?'Reabrir':'Concluir'}</button>
+          <button class="btn ghost sm icon" title="Histórico" onclick="openNfHist('${n.id}')">${ic('history')}</button></div></td>
       </tr>`}).join('')}</tbody></table></div>`
       :'<div class="card empty">Nenhum prestador nesta competência/filtro.</div>'}
     <div class="legend">
@@ -4456,7 +4742,7 @@ function vcFormMedicao(cicloId,unidadeId){
 async function vcAnexarFoto(ev,cicloId){
   const f=ev.target.files&&ev.target.files[0]; if(!f) return;
   if(f.size>8*1024*1024) return toast('Imagem muito grande (máx. 8 MB).');
-  try{ vcFotoTmp=await comprimirImagem(f); }catch(e){ return toast('Não foi possível ler a imagem.') }
+  try{ vcFotoTmp=await guardarFoto(await comprimirImagem(f)); }catch(e){ return toast('Não foi possível ler a imagem.') }
   vcPreview(cicloId);
 }
 function vcPreview(cicloId){
@@ -4464,7 +4750,7 @@ function vcPreview(cicloId){
   const box=$('#vmFotoBox');
   if(box) box.innerHTML=vcFotoTmp
     ? `<div class="card" style="box-shadow:none;padding:8px;margin-bottom:10px">
-         <img src="${vcFotoTmp}" alt="Foto do medidor" style="max-width:100%;border-radius:8px;display:block">
+         <img src="${srcFoto(vcFotoTmp)}"${attrFoto(vcFotoTmp)} alt="Foto do medidor" style="max-width:100%;border-radius:8px;display:block">
          <div class="rowact" style="margin-top:8px"><button class="btn ghost sm" onclick="vcFotoTmp=null;vcPreview('${cicloId}')">Remover foto</button></div></div>`
     : `<div class="feed-item amber" style="margin-bottom:10px"><div class="fi-ic">${ic('image')}</div>
          <div style="flex:1"><div class="ft">Nenhuma foto anexada</div>
@@ -4503,7 +4789,7 @@ function vcVerFoto(cicloId,unidadeId){
   $('#modalBody').innerHTML=`
     <div class="t-sub" style="margin-bottom:8px">${esc(l.nome)} · ${c.competencia} · leitura ${vcFmtM3(l.atual)} ${c.servico==='agua'?'m³':'kWh'}
       ${l.medidoPor?`· por ${esc(l.medidoPor)} em ${esc(l.medidoEm)}`:''}</div>
-    <img src="${l.foto}" alt="Foto do medidor" style="max-width:100%;border-radius:10px;display:block">`;
+    <img src="${srcFoto(l.foto)}"${attrFoto(l.foto)} alt="Foto do medidor" style="max-width:100%;border-radius:10px;display:block">`;
   $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Fechar</button>`;
   $('#modal').classList.add('open');
 }
@@ -6103,7 +6389,7 @@ async function addLaudo(input){
         const b64=await new Promise((ok,er)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=er;r.readAsDataURL(f)});
         _laudosTmp.push({nome:f.name,tipo:'pdf',dados:b64});
       }else if(/^image\//.test(f.type)){
-        _laudosTmp.push({nome:f.name,tipo:'img',dados:await comprimirImagem(f)});
+        _laudosTmp.push({nome:f.name,tipo:'img',dados:await guardarFoto(await comprimirImagem(f))});
       }else toast('Formato não suportado: use PDF ou imagem.');
     }catch(e){ toast('Não foi possível ler "'+f.name+'".') }
   }
@@ -6123,7 +6409,7 @@ function abrirLaudo(mid,ei,li){
   if(!w) return toast('Permita pop-ups para abrir o laudo.');
   w.document.write(l.tipo==='pdf'
     ? `<iframe src="${l.dados}" style="border:0;width:100%;height:100vh"></iframe>`
-    : `<img src="${l.dados}" style="max-width:100%">`);
+    : `<img src="${srcFoto(l.dados)}"${attrFoto(l.dados)} style="max-width:100%">`);
   w.document.title=l.nome||'Laudo';
 }
 /* ---- registrar execução ---- */
@@ -6629,6 +6915,27 @@ function csvManutObrig(){
   baixarCsv('manutencoes_obrigatorias',rows);
 }
 
+/* Menu de ações por linha: mantém a ação principal à vista e recolhe o resto,
+   em vez de repetir um botão vermelho em cada linha. */
+function menuAcoes(id,itens){
+  return `<div class="maisw" id="mw_${id}">
+    <button class="btn ghost sm icon" title="Mais ações"
+      onclick="abrirMais(event,'mw_${id}')">${ic('dots')}</button>
+    <div class="maismenu">${itens.map(it=>it==='-'?'<div class="sep"></div>'
+      :`<button class="${it.perigo?'perigo':''}" onclick="fecharMais();${it.ac}">
+         ${it.ic?ic(it.ic):''}${esc(it.rot)}</button>`).join('')}</div></div>`;
+}
+function fecharMais(){ document.querySelectorAll('.maisw.open').forEach(e=>e.classList.remove('open')) }
+function abrirMais(ev,id){
+  ev.stopPropagation();
+  const el=document.getElementById(id); if(!el) return;
+  const abr=el.classList.contains('open');
+  fecharMais(); if(!abr) el.classList.add('open');
+}
+document.addEventListener('click',e=>{ if(!e.target.closest('.maisw')) fecharMais() });
+
+let pubElevAberto=false;   // bloco de elevadores comeca recolhido
+
 function viewPublicidade(){
   let list=visPub();
   if(pubFStatus) list=list.filter(a=>a.status===pubFStatus);
@@ -6697,8 +7004,12 @@ function viewPublicidade(){
       </div>`;})()}
 
     <div class="card" style="margin-bottom:14px">
-      <div class="section-title" style="margin-top:0"><h3>${ic('building')} Elevadores cadastrados</h3>
-        <span class="t-sub">o cadastro de interessado usa estas opções</span></div>
+      <div class="section-title dobra ${pubElevAberto?'aberta':''}" style="margin-top:0"
+        onclick="pubElevAberto=!pubElevAberto;render()">
+        <span class="seta">${ic('arrowRight')}</span>
+        <h3 style="margin:0">${ic('building')} Elevadores cadastrados</h3>
+        <span class="t-sub">${condosDo('publicidade').reduce((n,c)=>n+pubElevs(c.id).length,0)} espaços · toque para ${pubElevAberto?'recolher':'editar'}</span></div>
+      <div style="display:${pubElevAberto?'block':'none'}">
       ${condosDo('publicidade').map(c=>`
         <div style="margin:10px 0">
           <b style="color:var(--navy)">${c.nome}</b>
@@ -6712,6 +7023,7 @@ function viewPublicidade(){
           ${P().edit?`<div class="rowact"><input id="peNovo_${c.id}" placeholder="ex.: Térreo — E5 (andar — nome)" style="min-width:240px">
             <button class="btn sm" onclick="addPubElev('${c.id}')">${ic('plus')} Adicionar</button></div>`:''}
         </div>`).join('')}
+      </div>
     </div>
     <div class="toolbar no-print">
       <input placeholder="Empresa, CNPJ/CPF, contato..." value="${esc(pubBusca)}" oninput="pubBusca=this.value;render()" style="min-width:210px">
@@ -6724,23 +7036,33 @@ function viewPublicidade(){
       <button class="btn ghost" onclick="pubConfig()">${ic('settings')} Dados do Contrato</button>
       ${P().create?`<button class="btn" onclick="editPub()">+ Novo Interessado</button>`:''}
     </div>
-    ${list.length?`<div class="tablewrap"><table><thead><tr>
-      <th>Empresa / Interessado</th><th>CNPJ/CPF</th><th>Contato</th><th>Condomínio</th><th>Elevador</th>
-      <th>Período</th><th>Valor/mês</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+    ${list.length?`<div class="tablewrap"><table class="pub-tb"><thead><tr>
+      <th style="width:210px">Empresa / Interessado</th><th style="width:150px">Contato</th>
+      <th style="width:112px">Condomínio</th><th style="width:104px">Espaço</th>
+      <th style="width:150px">Período</th><th style="width:96px">Valor/mês</th>
+      <th style="width:112px">Status</th>
+      <th class="no-print" style="width:138px;text-align:right">Ações</th></tr></thead><tbody>
       ${list.map(a=>`<tr>
-        <td class="t-title">${esc(a.empresa)}<div class="t-sub">${esc(a.email||'')}</div></td>
-        <td>${esc(a.doc||'—')}</td>
-        <td>${esc(a.contato||'—')}<div class="t-sub">${esc(a.telefone||'')}</div></td>
+        <td class="t-title">${esc(a.empresa)}
+          ${a.doc||a.email?`<div class="t-sub">${esc(a.doc||a.email)}</div>`:''}</td>
+        <td>${a.contato||a.telefone
+          ?`${esc(a.contato||'')}${a.contato&&a.telefone?'<br>':''}<span class="t-sub">${esc(a.telefone||'')}</span>`
+          :'<span class="na-mini">sem contato</span>'}</td>
         <td>${badgeCondo(a.condoId)}</td>
-        <td><span class="badge b-tag">${esc(a.elevador)}</span></td>
-        <td>${a.inicio?fmt(a.inicio):'—'} → ${a.fim?fmt(a.fim):'—'}</td>
-        <td>${a.valorMensal!=null&&a.valorMensal!==''?brl(Number(a.valorMensal)):'—'}</td>
+        <td>${a.elevador?`<span class="badge b-tag">${esc(a.elevador)}</span>`
+          :'<span class="na-mini" title="Ainda sem elevador — está na fila de espera">na fila</span>'}</td>
+        <td>${a.inicio||a.fim?`${a.inicio?fmt(a.inicio):'—'} → ${a.fim?fmt(a.fim):'—'}`
+          :'<span class="na-mini">—</span>'}</td>
+        <td>${a.valorMensal!=null&&a.valorMensal!==''?brl(Number(a.valorMensal))
+          :'<span class="na-mini">—</span>'}</td>
         <td><span class="badge ${a.status==='Ativo'?'b-conc':a.status==='Encerrado'?'b-pend':'b-and'}">${a.status}</span></td>
-        <td><div class="rowact no-print">
-          <button class="btn sm" onclick="gerarContratoPub('${a.id}')">${ic('contract')} Contrato PDF</button>
-          ${a.status==='Ativo'?`<button class="btn ghost sm" onclick="pubMsgFim('${a.id}')" title="Avisar o fim do prazo">${ic('clock')}Fim de prazo</button>`:''}
-          ${P().edit?`<button class="btn ghost sm" onclick="editPub('${a.id}')">Editar</button>`:''}
-          ${canDelete(a)?`<button class="btn danger sm" onclick="delPub('${a.id}')">Excluir</button>`:''}
+        <td><div class="rowact nowrap no-print" style="justify-content:flex-end">
+          <button class="btn sm" onclick="gerarContratoPub('${a.id}')">${ic('contract')} Contrato</button>
+          ${menuAcoes(a.id,[
+            ...(P().edit?[{rot:'Editar cadastro',ic:'edit',ac:`editPub('${a.id}')`}]:[]),
+            ...(a.status==='Ativo'?[{rot:'Avisar fim de prazo',ic:'clock',ac:`pubMsgFim('${a.id}')`}]:[]),
+            ...(canDelete(a)?['-',{rot:'Excluir',ic:'trash',perigo:1,ac:`delPub('${a.id}')`}]:[])
+          ])}
         </div></td></tr>`).join('')}</tbody></table></div>`
     :'<div class="card empty">'+ic('megaphone','ico-lg')+'<div>Nenhum espaço de publicidade cadastrado ainda.</div><div class="t-sub">Use "+ Novo Interessado" para registrar empresas que querem divulgar nas portas dos elevadores.</div></div>'}
     <div class="legend"><span><b>Como funciona:</b> cadastre o interessado e o elevador; em "Contrato PDF" o sistema gera o instrumento de cessão pronto para assinatura do CEDENTE, do CESSIONÁRIO e de duas testemunhas.</span></div>`;
@@ -8631,7 +8953,7 @@ function viewApontamentos(){
       <p style="margin-top:8px">${esc(a.descricao)}</p>
       ${a.materiais?`<div class="chip-list" style="margin-top:8px"><span class="badge b-tag">${ic('cart')} Materiais: ${esc(a.materiais)}</span></div>`:''}
       ${(a.fotos&&a.fotos.length)?`<div class="fotos" style="margin-top:9px">${a.fotos.map((f,i)=>
-        `<img src="${f}" class="fthumb" onclick="verFoto('${a.id}',${i})" alt="foto ${i+1}">`).join('')}</div>`:''}
+        `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" onclick="verFoto('${a.id}',${i})" alt="foto ${i+1}">`).join('')}</div>`:''}
       <div class="rowact no-print" style="margin-top:10px">
         ${a.status!=='Resolvido'&&P().edit?`<button class="btn green sm" onclick="avancarApont('${a.id}')">${a.status==='Aberto'?'Iniciar':'Marcar como resolvido'}</button>`:''}
         ${P().edit?`<button class="btn ghost sm" onclick="formApont('${a.id}')">Editar</button>`:''}
@@ -8789,7 +9111,7 @@ function comprimirImagem(file){
   });
 }
 function thumbFoto(src,i){
-  return `<div class="fwrap"><img src="${src}" class="fthumb" alt="foto ${i+1}">
+  return `<div class="fwrap"><img src="${srcFoto(src)}"${attrFoto(src)} class="fthumb" alt="foto ${i+1}">
     <button class="fdel" onclick="removerFoto(${i})" title="Remover">${ic('close')}</button></div>`;
 }
 async function addFoto(input){
@@ -8797,7 +9119,7 @@ async function addFoto(input){
   if(_fotosTmp.length+fs.length>6){ toast('Máximo de 6 fotos por apontamento.'); return }
   toast('Processando imagem...');
   for(const f of fs){
-    try{ _fotosTmp.push(await comprimirImagem(f)) }
+    try{ _fotosTmp.push(await guardarFoto(await comprimirImagem(f))) }
     catch(e){ toast('Não foi possível ler a imagem.') }
   }
   input.value='';
@@ -8811,10 +9133,10 @@ function removerFoto(i){
 function verFoto(apId,i){
   const a=apontamentos.find(x=>x.id===apId); if(!a||!a.fotos)return;
   openModal(a.titulo,
-    `<img src="${a.fotos[i]}" style="width:100%;border-radius:8px">
+    `<img src="${srcFoto(a.fotos[i])}"${attrFoto(a.fotos[i])} style="width:100%;border-radius:8px">
      <div class="t-sub" style="margin-top:8px">${esc(a.local)} · ${fmt(a.data)} · foto ${i+1} de ${a.fotos.length}</div>
      ${a.fotos.length>1?`<div class="fotos" style="margin-top:10px">${a.fotos.map((f,j)=>
-       `<img src="${f}" class="fthumb ${j===i?'sel':''}" onclick="verFoto('${apId}',${j})">`).join('')}</div>`:''}`,
+       `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb ${j===i?'sel':''}" onclick="verFoto('${apId}',${j})">`).join('')}</div>`:''}`,
     `<button class="btn" onclick="closeModal()">Fechar</button>`);
 }
 
@@ -9910,7 +10232,7 @@ function csvPublicidade(){
   baixarCsv('publicidade',rows);
 }
 /* ---------- Chave de acesso do site (SITE_TOKEN) ---------- */
-function salvarToken(){
+function salvarTokenCfg(){
   const v=($('#cfgToken')&&$('#cfgToken').value||'').trim();
   salvaSyncCfg({token:v});
   audit('Chave de acesso alterada','Sincronização','','','Configurações');
@@ -10098,6 +10420,7 @@ async function tentarReconectar(){
     const n=pendentesSync();
     await syncVerificar();
     await syncEnviar(true);
+    await enviarFotos();           /* o acervo também retoma sozinho */
     if(n&&SYNC.estado==='ok'&&session){
       toast('Conexão de volta: '+n+' alteração'+(n>1?'ões enviadas':' enviada')+'.');
     }
@@ -10231,7 +10554,7 @@ function syncEstado(e,erro){
 function badgeSync(){
   /* offline tem prioridade: é a informação que o usuário precisa ver */
   if(estaOffline()&&temServidor()){
-    const n=pendentesSync();
+    const n=pendentesSync()+fotosPendentes();
     return `<span id="syncBadge" class="badge b-avencer" style="cursor:pointer"
       title="Sem internet. Tudo que você fizer fica guardado neste aparelho e sobe sozinho quando a conexão voltar."
       onclick="abrirSync()">${ic('alert')}Offline${n?' · '+n+' a enviar':''}</span>`;
@@ -11003,7 +11326,7 @@ function viewBrigForm(){
         <div style="margin-top:8px">
           ${fechado?'':`<button class="btn sm" onclick="brigFoto('${i.id}',${k})">${ic('camera')} Anexar foto</button>`}
           <div class="bg-fotos">${(p.fotos||[]).map((f,fi)=>`<div class="fwrap">
-            <img src="${f}" class="fthumb" onclick="brigVerFoto('${i.id}',${k},${fi})" alt="foto">
+            <img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" onclick="brigVerFoto('${i.id}',${k},${fi})" alt="foto">
             ${fechado?'':`<button class="fdel" onclick="brigDelFoto('${i.id}',${k},${fi})">${ic('close')}</button>`}
           </div>`).join('')}</div>
         </div>
@@ -11096,7 +11419,7 @@ async function brigFotoSel(e){
   const p=i.pontos[brigFotoAlvo.k];
   if((p.fotos||[]).length>=3) return toast('Máximo de 3 fotos por ponto.');
   toast('Processando imagem...');
-  try{ p.fotos=p.fotos||[]; p.fotos.push(await comprimirImagem(f)); save(); render(); toast('Foto anexada.') }
+  try{ p.fotos=p.fotos||[]; p.fotos.push(await guardarFoto(await comprimirImagem(f))); save(); render(); toast('Foto anexada.') }
   catch(err){ toast('Não foi possível ler a imagem.') }
 }
 function brigDelFoto(id,k,fi){
@@ -11106,7 +11429,7 @@ function brigDelFoto(id,k,fi){
 function brigVerFoto(id,k,fi){
   const i=_bi(id); if(!i)return;
   openModal('Foto — '+i.pontos[k].desc,
-    `<img src="${i.pontos[k].fotos[fi]}" style="width:100%;border-radius:8px">`,'');
+    `<img src="${srcFoto(i.pontos[k].fotos[fi])}"${attrFoto(i.pontos[k].fotos[fi])} style="width:100%;border-radius:8px">`,'');
 }
 
 /* ============ RELATÓRIOS EM PDF — BRIGADA ============ */
@@ -11185,7 +11508,7 @@ function brigTabela(i,soNC){
         <td class="st ${stc}">${p.sit==='NÃO CONFORME'?'NÃO CONFORME':p.sit}</td>
         <td>${falhas.length?`<div class="fal">Falhou: ${esc(falhas.join('; '))}</div>`:''}
             ${p.obs?`<div class="obs">${esc(p.obs)}</div>`:''}
-            ${(p.fotos||[]).length?`<div class="fts">${p.fotos.map(f=>`<img src="${f}">`).join('')}</div>`:''}
+            ${(p.fotos||[]).length?`<div class="fts">${p.fotos.map(f=>`<img src="${srcFoto(f)}">`).join('')}</div>`:''}
             ${!falhas.length&&!p.obs&&!(p.fotos||[]).length?'—':''}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
@@ -11205,8 +11528,9 @@ function brigBlocoInsp(i,soNC){
   </div>`;
 }
 /* 1 — um check-list */
-function brigPdfInsp(id){
+async function brigPdfInsp(id){
   const i=_bi(id); if(!i) return toast('Check-list não encontrado.');
+  await precarregarFotos(refsDe(i));
   brigAbrirPdf('Check-list '+brigSis(i.sistema).nome,
     brigCab('Relatório de Inspeção — '+brigSis(i.sistema).nome,
       condoName(i.condoId)+' · '+brigAndarNome(i.andar)+' · '+fmt(i.data))+
@@ -11214,9 +11538,10 @@ function brigPdfInsp(id){
   audit('Gerou PDF de check-list da brigada',brigSis(i.sistema).nome+' · '+brigAndarNome(i.andar),'',i.condoId);
 }
 /* 2 — por andar (todos os sistemas) */
-function brigPdfAndar(cid,andar,mes){
+async function brigPdfAndar(cid,andar,mes){
   const is=brigInsp.filter(x=>x.condoId===cid&&x.andar===andar&&String(x.data).slice(0,7)===mes)
     .sort((a,b)=>a.sistema.localeCompare(b.sistema));
+  await precarregarFotos(refsDe(is));
   if(!is.length) return toast('Nenhum check-list deste andar no mês.');
   brigAbrirPdf('Brigada — '+brigAndarNome(andar),
     brigCab('Relatório da Brigada — '+brigAndarNome(andar),
@@ -11225,9 +11550,10 @@ function brigPdfAndar(cid,andar,mes){
   audit('Gerou PDF da brigada por andar',brigAndarNome(andar),'',cid);
 }
 /* 3 — por sistema */
-function brigPdfSistema(cid,sis,mes){
+async function brigPdfSistema(cid,sis,mes){
   const is=brigInsp.filter(x=>x.condoId===cid&&x.sistema===sis&&String(x.data).slice(0,7)===mes)
     .sort((a,b)=>brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
+  await precarregarFotos(refsDe(is));
   if(!is.length) return toast('Nenhum check-list de '+brigSis(sis).nome+' no mês.');
   brigAbrirPdf('Brigada — '+brigSis(sis).nome,
     brigCab('Relatório de Inspeção — '+brigSis(sis).nome,
@@ -11318,9 +11644,10 @@ function brigPdfAtividade(cid,mes){
     `<div class="rod">Emitido por ${esc(session?session.nome:'')} em ${nowStamp()}</div>`);
 }
 
-function brigPdfGeral(cid,mes){
+async function brigPdfGeral(cid,mes){
   const is=brigInsp.filter(x=>x.condoId===cid&&String(x.data).slice(0,7)===mes)
     .sort((a,b)=>a.sistema.localeCompare(b.sistema)||brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
+  await precarregarFotos(refsDe(is));
   if(!is.length) return toast('Nenhum check-list neste mês.');
   brigAbrirPdf('Brigada — geral '+mes,
     brigCab('Relatório Geral da Brigada',condoName(cid)+' · '+mesExtenso(mes))+
@@ -11330,9 +11657,10 @@ function brigPdfGeral(cid,mes){
   audit('Gerou PDF geral da brigada',mesExtenso(mes),'',cid);
 }
 /* 5 — só não conformidades */
-function brigPdfNC(cid,mes){
+async function brigPdfNC(cid,mes){
   const is=brigInsp.filter(x=>x.condoId===cid&&String(x.data).slice(0,7)===mes&&brigNC(x).length)
     .sort((a,b)=>a.sistema.localeCompare(b.sistema)||brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
+  await precarregarFotos(refsDe(is));
   if(!is.length) return toast('Nenhuma não conformidade no mês — tudo conforme.');
   brigAbrirPdf('Brigada — não conformidades',
     brigCab('Relatório de Não Conformidades',
@@ -11603,7 +11931,7 @@ function abrirTriagemChamados(lista){
     const local=r.andar?brigAndarNome(r.andar):'';
     const quando=r.data?fmt(r.data)+' às '+(r.hora||'—'):fmt(t.vencimento);
     return `<div class="rc-item ${t.prioridade==='Alta'?'urg':''}">
-      ${t.anexo?`<img src="${t.anexo}" class="rc-foto" onclick="verFotoChamado('${t.id}')" alt="foto">`
+      ${t.anexo?`<img src="${srcFoto(t.anexo)}"${attrFoto(t.anexo)} class="rc-foto" onclick="verFotoChamado('${t.id}')" alt="foto">`
               :`<div class="rc-foto vazio">${ic('camera')}</div>`}
       <div class="rc-txt">
         <div class="rc-t">${esc(local||t.titulo)}
@@ -11667,7 +11995,7 @@ function abrirPainelChamadosRonda(lista){
     const r=brigRondas.find(x=>x.id===t.rondaId)||{};
     const quando=r.data?fmt(r.data)+' às '+(r.hora||'—'):fmt(t.vencimento);
     return `<div class="rc-item ${t.prioridade==='Alta'?'urg':''}">
-      ${t.anexo?`<img src="${t.anexo}" class="rc-foto" onclick="verFotoChamado('${t.id}')" alt="foto">`
+      ${t.anexo?`<img src="${srcFoto(t.anexo)}"${attrFoto(t.anexo)} class="rc-foto" onclick="verFotoChamado('${t.id}')" alt="foto">`
               :`<div class="rc-foto vazio">${ic('camera')}</div>`}
       <div class="rc-txt">
         <div class="rc-t">${esc(brigAndarNome(r.andar)||t.titulo)}
@@ -11689,7 +12017,7 @@ function abrirPainelChamadosRonda(lista){
 }
 function verFotoChamado(id){
   const t=tasks.find(x=>x.id===id); if(!t||!t.anexo)return;
-  openModal('Foto do chamado',`<img src="${t.anexo}" style="width:100%;border-radius:8px">`,
+  openModal('Foto do chamado',`<img src="${srcFoto(t.anexo)}"${attrFoto(t.anexo)} style="width:100%;border-radius:8px">`,
     `<button class="btn" onclick="closeModal();abrirPainelChamadosRonda()">Voltar</button>`);
 }
 function abrirChamadoRonda(id){
@@ -11866,9 +12194,9 @@ async function brigRondaFotoSel(e){
   const f=(e.target.files||[])[0]; if(!f) return;
   toast('Processando imagem...');
   try{
-    _rondaFoto=await comprimirImagem(f);
+    _rondaFoto=await guardarFoto(await comprimirImagem(f));
     const box=$('#brFoto');
-    if(box) box.innerHTML=`<div class="fwrap"><img src="${_rondaFoto}" class="fthumb" alt="foto">
+    if(box) box.innerHTML=`<div class="fwrap"><img src="${srcFoto(_rondaFoto)}"${attrFoto(_rondaFoto)} class="fthumb" alt="foto">
       <button class="fdel" onclick="_rondaFoto=null;$('#brFoto').innerHTML='';">${ic('close')}</button></div>`;
     toast('Foto anexada.');
   }catch(err){ toast('Não foi possível ler a imagem.') }
@@ -13746,6 +14074,7 @@ async function ligarSync(silencioso){
     // busca novidades a cada 45s (leve: só o snapshot quando muda a versão)
     SYNC.autoTimer=setInterval(()=>{ if(!SYNC.enviando) syncVerificar() },45000);
     ligarEscutaConexao();
+    enviarFotos();                 /* retoma fotos que ficaram da sessão anterior */
     return true;
   }catch(e){
     /* Começou sem internet: o app funciona do mesmo jeito e fica
@@ -13857,6 +14186,7 @@ function abrirSync(){
      <div class="f2">
        <div><div class="t-sub">Estado</div><b>${off?'Offline':(SYNC.ligado?'Ativo':'Somente neste aparelho')}</b></div>
        <div><div class="t-sub">Aguardando envio</div><b>${pend||'nenhuma alteração'}</b></div>
+       <div><div class="t-sub">Fotos a enviar</div><b>${fotosPendentes()||'nenhuma'}</b></div>
        <div><div class="t-sub">Versão dos dados</div><b>${SYNC.versao}</b></div>
        <div><div class="t-sub">Última sincronização</div><b>${SYNC.ultimo||'—'}</b></div>
        <div><div class="t-sub">Este aparelho</div><b>${esc(nomeDispositivo())}</b></div>
@@ -13873,6 +14203,7 @@ function abrirSync(){
 function iniciarCom(guardado){
   if(!load(guardado)) seed();
   carregarBaseIdx();      /* o que o servidor já conhecia na última conversa */
+  carregarFilaFotos();    /* fotos que ainda não subiram */
   _booting=false;
   aplicarMarca();
   buildProfiles();        /* monta a lista de acesso antes de escolher o perfil */
@@ -13880,6 +14211,7 @@ function iniciarCom(guardado){
   /* Conecta ao servidor depois de pintar a tela: o app abre offline-first */
   setTimeout(()=>{ ligarSync().then(ok=>{ if(ok&&session) render(); }); },300);
   ligarEscutaConexao();   /* vigia a conexão desde o primeiro segundo */
+  setTimeout(()=>{ migrarFotosEmbutidas().catch(()=>{}) },1500);
 }
 /* Sem IndexedDB (navegação privada antiga, ambiente de teste) o app abre
    pelo caminho síncrono de sempre; com ele, espera a leitura do disco. */
