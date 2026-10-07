@@ -15230,7 +15230,17 @@ function aplicarSnapshot(d){
   creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
   if(!prestadores.length) seedPrestadores();
   migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig(); migrarVendasCustas(); migrarFilaPub(); migrarRevisoesAp(); migrarMarcaEbiz(); migrarSalas();
+  /* Mesmo motivo do laudo: esta migracao so existia no load(), entao o plano
+     de manutencoes nunca nascia em quem recebe a base pelo servidor. */
+  const _migCat=migrarCatalogo2610();
   _booting=false;
+  if(_migCat) save();
+  /* Tambem aqui, e nao so no load(): o snapshot que chega do servidor passa
+     por aplicarSnapshot, nao por load. Sem esta linha a migracao rodava na
+     base local e logo em seguida era sobrescrita pelo dado do servidor, que
+     continuava com os PDFs embutidos -- foi exatamente o que aconteceu na
+     primeira tentativa de publicacao. */
+  migrarLaudosParaFora();
 }
 function agendarSync(){
   if(!SYNC.ligado) return;
@@ -15407,5 +15417,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a46dea191e246348',t:'MTc5MTM4NjY4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
