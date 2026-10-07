@@ -406,6 +406,13 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 .viewtabs button:hover{color:var(--navy)}
 .viewtabs button.active{background:#fff;color:var(--navy);box-shadow:var(--shadow-xs)}
 .viewtabs button .ico{width:13px;height:13px}
+/* No celular as abas nao cabem lado a lado: viram uma faixa rolavel,
+   em vez de empurrar a pagina inteira para o lado. */
+@media(max-width:820px){
+  .viewtabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .viewtabs::-webkit-scrollbar{display:none}
+  .viewtabs button{flex:0 0 auto;white-space:nowrap}
+}
 .check{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line-2);
   border-radius:7px;margin-bottom:6px;background:#fff;transition:.13s}
 .check:hover{border-color:#cfd8e4;box-shadow:var(--shadow-xs)}
@@ -854,6 +861,63 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 #brBox textarea{width:100%;display:block}
 #brBox .rowact{display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap}
 #brBox .bg-fotos{margin-top:9px}
+/* aviso de ocorrencia repetida no mesmo andar */
+.av-rep{background:#fff8e8;border:1px solid #e7cf9a;border-radius:10px;padding:11px 12px;margin-bottom:13px}
+.av-rep-tit{display:flex;align-items:center;gap:7px;font-weight:700;color:#7a5a10;font-size:13.5px}
+.av-rep-tit svg{width:16px;height:16px;flex:none}
+.av-rep-sub{font-size:11.5px;color:#8a6a24;margin:5px 0 9px;line-height:1.45}
+.av-rep-it{background:#fff;border:1px solid #ecd9ae;border-radius:8px;padding:9px 10px;margin-bottom:7px}
+.av-rep-it:last-of-type{margin-bottom:0}
+.av-rep-cab{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11.5px}
+.av-rep-obs{font-size:13px;color:var(--text);margin-top:5px;line-height:1.4}
+.av-rep-it .fthumb{width:48px;height:48px}
+.av-rep-fim{font-size:11.5px;color:#8a6a24;margin-top:9px;font-style:italic}
+/* relatorio da ronda: feito x nao feito */
+.rel-aviso{display:flex;align-items:center;gap:10px;background:#eef3fc;border:1px solid #c7d7f2;
+  border-radius:10px;padding:10px 12px;margin-bottom:11px}
+.rel-aviso-ic{flex:none;color:var(--accent);display:flex}
+.rel-aviso-ic svg{width:19px;height:19px}
+.rel-aviso-t{font-weight:700;font-size:13.5px;color:#15325e}
+.rel-aviso-s{font-size:11.5px;color:#4a6a98;margin-top:2px}
+.rel-topo{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
+.rel-topo .rel-box{padding:9px 5px}
+.rel-box{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px;text-align:center}
+.rel-n{font-size:21px;font-weight:800;color:var(--navy);line-height:1.1}
+.rel-l{font-size:11px;color:#6b7686;margin-top:3px}
+.rel-placar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.rel-placar-l{border-radius:10px;padding:12px;text-align:center;border:1px solid}
+.rel-placar-l:first-child{background:#e6f6ea;border-color:#9ad3ab}
+.rel-placar-l:last-child{background:#fdeaea;border-color:#edaab0}
+.rel-placar-n{font-size:27px;font-weight:800;line-height:1}
+.rel-placar-l:first-child .rel-placar-n{color:#1d7a4c}
+.rel-placar-l:last-child .rel-placar-n{color:#8d2b38}
+.rel-placar-t{font-size:11px;font-weight:800;letter-spacing:.07em;margin-top:4px}
+.rel-placar-l:first-child .rel-placar-t{color:#1d7a4c}
+.rel-placar-l:last-child .rel-placar-t{color:#8d2b38}
+.rel-placar-s{font-size:11px;color:#6b7686;margin-top:2px}
+.rel-frase{font-size:13px;color:var(--text);background:var(--bg);border-radius:8px;padding:9px 11px;margin-bottom:9px}
+.rel-alerta{display:flex;align-items:center;gap:7px;font-size:12.5px;background:#fdeaea;border:1px solid #edaab0;
+  color:#8d2b38;border-radius:8px;padding:8px 10px;margin-bottom:7px}
+.rel-alerta.ambar{background:#fff8e8;border-color:#e7cf9a;color:#7a5a10}
+.rel-alerta svg{width:15px;height:15px;flex:none}
+.rel-nota{font-size:11.5px;color:#6b7686;line-height:1.5;margin-bottom:7px}
+.rel-it{border:1px solid var(--line);border-left-width:3px;border-radius:8px;padding:9px 11px;margin-bottom:7px;background:#fff}
+.rel-it.aberto{border-left-color:#c2384a}
+.rel-it.feito{border-left-color:#1d7a4c}
+.rel-it-cab{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px}
+.rel-it-ob{font-size:13px;color:var(--text);margin-top:4px;line-height:1.4}
+.rel-it-st{font-size:11.5px;color:#6b7686;margin-top:4px}
+/* lembrete de backup */
+.bkp-aviso{display:flex;align-items:center;gap:10px;background:#fff8e8;border:1px solid #e7cf9a;
+  border-radius:10px;padding:10px 12px;margin-bottom:11px}
+.bkp-ic{flex:none;color:#b9872a;display:flex}
+.bkp-ic svg{width:19px;height:19px}
+.bkp-t{font-weight:700;font-size:13.5px;color:#7a5a10}
+.bkp-s{font-size:11.5px;color:#8a6a24;margin-top:2px;line-height:1.45}
+.bkp-botoes{display:grid;gap:7px}
+.bkp-botoes>*{width:100%;justify-content:center}
+@media(min-width:720px){.bkp-botoes{grid-template-columns:repeat(3,auto);justify-content:start}
+  .bkp-botoes>*{width:auto}}
 
 .conv-ref{display:inline-block;background:var(--navy);color:#fff;font-size:10px;font-weight:700;
   padding:2px 7px;border-radius:4px;margin-right:7px;vertical-align:1px;letter-spacing:.3px}
@@ -1178,6 +1242,18 @@ body.crit-open{overflow:hidden}
   .crit-rod .rowact{display:flex;gap:8px}
   .crit-rod .rowact .btn{flex:1}
 }
+
+/* ===== Ajustes finais de celular (varredura pre-publicacao) ===== */
+@media(max-width:820px){
+  /* Linhas de lista com botoes de acao (ex.: usuarios em Configuracoes):
+     sem quebra de linha os botoes empurravam a pagina para o lado. */
+  .feed-item{flex-wrap:wrap}
+  .feed-item>.btn,.feed-item>.badge{margin-top:2px}
+  /* Nenhum campo de arquivo pode ser maior que a tela. */
+  input[type=file]{max-width:100%}
+  /* Rede de seguranca: nada dentro do conteudo rola para o lado. */
+  .content{overflow-x:hidden}
+}
 </style>
 </head>
 <body>
@@ -1334,10 +1410,10 @@ function audit(acao,alvo,detalhe,condoId,motivo){
 }
 const USERS=[
   {id:'u1',nome:'Maciel',login:'maciel',role:'Gestor',
-   perms:{condos:['c1','c2'],tipos:['Administrativo','Gestor'],manutencao:true,estoque:true,estoqueTotal:true,
+   perms:{condos:['c1','c2'],tipos:['Administrativo','Gestor'],manutencao:true,manutobrig:true,estoque:true,estoqueTotal:true,
           apontamentos:true,brigada:true,ia:true,create:true,edit:true,complete:true,delete:true}},
   {id:'u2',nome:'Alef',login:'alef',role:'Coordenador Administrativo',
-   perms:{condos:['c1','c2'],tipos:['Administrativo'],manutencao:false,estoque:true,estoqueTotal:false,
+   perms:{condos:['c1','c2'],tipos:['Administrativo'],manutencao:false,manutobrig:true,estoque:true,estoqueTotal:false,
           apontamentos:false,ia:true,create:true,edit:true,complete:true,delete:false}},
   {id:'u3',nome:'Cleiton',login:'cleiton',role:'Oficial de Manutenção',
    perms:{condos:['c1'],tipos:[],manutencao:true,estoque:true,estoqueTotal:true,
@@ -1362,7 +1438,35 @@ const USERS=[
           apontamentos:false,brigada:true,create:true,edit:false,complete:false,delete:false}},
   {id:'b4',nome:'Alana',login:'brigada4',role:'Brigadista',
    perms:{condos:['c1'],tipos:[],manutencao:false,estoque:false,estoqueTotal:false,
-          apontamentos:false,brigada:true,create:true,edit:false,complete:false,delete:false}}
+          apontamentos:false,brigada:true,create:true,edit:false,complete:false,delete:false}},
+  /* Portaria: 6 contas prontas para serem renomeadas em Configuracoes.
+     Registram a leitura diaria de agua e energia e consultam o historico
+     do que ja foi lancado. Nao veem consumo, grafico, valor em R$ nem
+     qualquer outra tela do sistema. */
+  {id:'p1',nome:'Portaria 1',login:'portaria1',role:'Portaria',
+   perms:{condos:['c1'],tipos:[],manutencao:false,manutobrig:false,estoque:false,estoqueTotal:false,
+          apontamentos:false,brigada:false,leituras:true,leiturasSimples:true,ronda:false,ia:false,
+          create:true,edit:false,complete:false,delete:false}},
+  {id:'p2',nome:'Portaria 2',login:'portaria2',role:'Portaria',
+   perms:{condos:['c1'],tipos:[],manutencao:false,manutobrig:false,estoque:false,estoqueTotal:false,
+          apontamentos:false,brigada:false,leituras:true,leiturasSimples:true,ronda:false,ia:false,
+          create:true,edit:false,complete:false,delete:false}},
+  {id:'p3',nome:'Portaria 3',login:'portaria3',role:'Portaria',
+   perms:{condos:['c1'],tipos:[],manutencao:false,manutobrig:false,estoque:false,estoqueTotal:false,
+          apontamentos:false,brigada:false,leituras:true,leiturasSimples:true,ronda:false,ia:false,
+          create:true,edit:false,complete:false,delete:false}},
+  {id:'p4',nome:'Portaria 4',login:'portaria4',role:'Portaria',
+   perms:{condos:['c1'],tipos:[],manutencao:false,manutobrig:false,estoque:false,estoqueTotal:false,
+          apontamentos:false,brigada:false,leituras:true,leiturasSimples:true,ronda:false,ia:false,
+          create:true,edit:false,complete:false,delete:false}},
+  {id:'p5',nome:'Portaria 5',login:'portaria5',role:'Portaria',
+   perms:{condos:['c1'],tipos:[],manutencao:false,manutobrig:false,estoque:false,estoqueTotal:false,
+          apontamentos:false,brigada:false,leituras:true,leiturasSimples:true,ronda:false,ia:false,
+          create:true,edit:false,complete:false,delete:false}},
+  {id:'p6',nome:'Portaria 6',login:'portaria6',role:'Portaria',
+   perms:{condos:['c1'],tipos:[],manutencao:false,manutobrig:false,estoque:false,estoqueTotal:false,
+          apontamentos:false,brigada:false,leituras:true,leiturasSimples:true,ronda:false,ia:false,
+          create:true,edit:false,complete:false,delete:false}}
 ];
 let session=null, condoFilter='all', taskView='lista', calRef=new Date(), tipoLock=null;
 let CFG={retroativas:false,coordPodeExcluirPrestador:false,
@@ -1385,19 +1489,13 @@ function ajustaRetro(d,per){
 }
 
 const SEED_TASKS=[
-  ['Planilha de Ocupação','Administrativo','Mensal','Alta','Atualizar planilha de ocupação das unidades e salas, conferindo entradas e saídas do mês.'],
   ['Leitura de água/luz','Administrativo','Diária','Alta','Registrar leitura diária dos hidrômetros e medidores de energia; lançar no controle.'],
-  ['Docs Portal ABL','Administrativo','Semanal','Média','Upload e conferência semanal de documentos no Portal ABL.'],
   ['Pedido de descartáveis','Administrativo','Mensal','Média','Levantar estoque e emitir pedido mensal de material descartável e limpeza.'],
   ['Cobrança inadimplência','Administrativo','Mensal','Alta','Emitir relatório de inadimplentes, notificar e registrar tratativas.'],
   ['Prestação de contas','Administrativo','Mensal','Alta','Montar prestação de contas mensal com anexos e enviar ao conselho.'],
-  ['Transf. de contas','Administrativo','Semanal','Média','Realizar transferências entre contas conforme fluxo aprovado.'],
   ['Controle de notas fiscais','Administrativo','Mensal','Média','Conferir, arquivar e lançar notas fiscais do período.'],
-  ['Fluxo de caixa','Gestor','Semanal','Alta','Consolidar entradas e saídas semanais e projetar caixa.'],
-  ['Aprovação de pagamentos','Gestor','Semanal','Alta','Revisar e aprovar lote semanal de pagamentos.'],
+  ['Aprovação do síndico para pagamentos','Administrativo','Semanal','Alta','Encaminhar o lote semanal de pagamentos ao síndico, obter a aprovação e registrá-la.'],
   ['Faturamento','Gestor','Mensal','Alta','Gerar faturamento mensal do condomínio e conferir rateios.'],
-  ['Convocação de conselho','Gestor','Trimestral','Média','Convocar reunião trimestral do conselho e enviar pauta.'],
-  ['Manutenção de gerador/bombas','Gestor','Mensal','Alta','Acompanhar manutenção mensal de gerador e bombas com a empresa contratada.'],
   ['Orçamento anual','Gestor','Anual','Alta','Elaborar e aprovar a peça orçamentária anual.']
 ];
 
@@ -1568,20 +1666,15 @@ function seed(){
 
   /* --- MENSAIS: vencem no dia definido do mês corrente --- */
   const MENSAIS=[
-    ['Planilha de Ocupação','Administrativo','Alta',3,'Atualizar planilha de ocupação das unidades e salas, conferindo entradas e saídas do mês.'],
     ['Cobrança inadimplência','Administrativo','Alta',20,'Emitir relatório de inadimplentes, notificar e registrar tratativas.'],
     ['Prestação de contas','Administrativo','Alta',22,'Montar prestação de contas mensal com anexos e enviar ao conselho.'],
     ['Controle de notas fiscais','Administrativo','Média',27,'Conferir, arquivar e lançar notas fiscais do período.'],
     ['Pedido de descartáveis','Administrativo','Média',15,'Levantar estoque e emitir pedido mensal de material descartável e limpeza.'],
-    ['Faturamento','Gestor','Alta',14,'Gerar faturamento mensal do condomínio e conferir rateios.'],
-    ['Manutenção de gerador/bombas','Gestor','Alta',10,'Acompanhar manutenção mensal de gerador e bombas com a empresa contratada.']
+    ['Faturamento','Gestor','Alta',14,'Gerar faturamento mensal do condomínio e conferir rateios.']
   ];
   /* --- SEMANAIS: geradas em todas as ocorrências do mês --- */
   const SEMANAIS=[
-    ['Docs Portal ABL','Administrativo','Média',2,'Upload e conferência semanal de documentos no Portal ABL.'],       // terça
-    ['Transf. de contas','Administrativo','Média',3,'Realizar transferências entre contas conforme fluxo aprovado.'],  // quarta
-    ['Fluxo de caixa','Gestor','Alta',5,'Consolidar entradas e saídas semanais e projetar caixa.'],                    // sexta
-    ['Aprovação de pagamentos','Gestor','Alta',4,'Revisar e aprovar lote semanal de pagamentos.']                      // quinta
+    ['Aprovação do síndico para pagamentos','Administrativo','Alta',4,'Encaminhar o lote semanal de pagamentos ao síndico, obter a aprovação e registrá-la.']  // quinta
   ];
   /* --- DIÁRIA --- */
   const DIARIAS=[
@@ -1589,7 +1682,6 @@ function seed(){
   ];
   /* --- PERIÓDICAS LONGAS: só entram se caírem neste mês --- */
   const LONGAS=[
-    ['Convocação de conselho','Gestor','Trimestral','Média',[0,3,6,9],18,'Convocar reunião trimestral do conselho e enviar pauta.'],
     ['Orçamento anual','Gestor','Anual','Alta',[10],25,'Elaborar e aprovar a peça orçamentária anual.']
   ];
 
@@ -1638,6 +1730,11 @@ function seed(){
   });
 
   seedEstoque();
+  /* Plano de manutencoes obrigatorias ja cadastrado. Entram sem historico
+     (ultima/proxima nulas), entao nada nasce vencido; o gerador e as bombas
+     de recalque sao acompanhados aqui, nao como tarefa do Gestor. */
+  manutObrig=[];
+  CONDOS.filter(c=>condoNoModulo(c.id,'manutobrig')).forEach(c=>seedManutObrig(c.id));
   apontamentos=[];      // sem ocorrências fictícias: a equipe registra as reais
   seedLeituras();       // mantém o histórico de água importado
   seedPrestadores();
@@ -1697,13 +1794,15 @@ function visibleMaints(){ return []; }
 /* ============ LOGIN ============ */
 let pickedUser='u1';
 const PROFILE_UI={u1:{icon:'briefcase'},u2:{icon:'clipboardCheck'},u3:{icon:'helmet'},u4:{icon:'sparkles'},
-  b1:{icon:'flame'},b2:{icon:'flame'},b3:{icon:'flame'},b4:{icon:'flame'}};
+  b1:{icon:'flame'},b2:{icon:'flame'},b3:{icon:'flame'},b4:{icon:'flame'},
+  p1:{icon:'water'},p2:{icon:'water'},p3:{icon:'water'},p4:{icon:'water'},p5:{icon:'water'},p6:{icon:'water'}};
 /* Lista suspensa de acesso, agrupada por função — cresce bem conforme a
    equipe aumenta, sem ocupar a tela toda com cartões. */
 function buildProfiles(){
   const box=document.querySelector('#loginSel'); if(!box)return;
   const grupos=[['Administração',u=>u.perms.tipos&&u.perms.tipos.length],
                 ['Manutenção',u=>u.perms.manutencao&&!(u.perms.tipos||[]).length],
+                ['Portaria',u=>u.role==='Portaria'],
                 ['Limpeza e Portaria',u=>u.perms.leituras||u.perms.ronda&&!u.perms.brigada],
                 ['Brigada de Incêndio',u=>u.role==='Brigadista']];
   const usados=new Set();
@@ -1903,6 +2002,13 @@ let _filaFotos=[], _subindoFotos=false;
 
 function ehRef(v){ return typeof v==='string' && v.slice(0,4)===FOTO_REF }
 function ehImagem(v){ return typeof v==='string' && v.slice(0,11)==='data:image/' }
+/* Laudo de manutencao obrigatoria tambem vem em PDF. Ate out/2026 o PDF ia
+   embutido no snapshot: 5 laudos somavam 3,3 MB dos 3,6 MB da base, e cada
+   aparelho rebaixava isso inteiro a cada alteracao de qualquer pessoa. Foi o
+   que estourou a banda do plano gratuito. Agora o PDF segue o mesmo caminho
+   da foto: fica no servidor e no snapshot entra so a referencia. */
+function ehPdf(v){ return typeof v==='string' && v.slice(0,20)==='data:application/pdf' }
+function ehAnexo(v){ return ehImagem(v)||ehPdf(v) }
 function novoIdFoto(){
   return 'fo'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 }
@@ -1935,7 +2041,7 @@ function fotoGravarLocal(id,dados){
 
 /* ---- guardar uma foto nova: devolve a referência ---- */
 async function guardarFoto(dataUrl){
-  if(!ehImagem(dataUrl)) return dataUrl;
+  if(!ehAnexo(dataUrl)) return dataUrl;
   if(!_idbOk) return dataUrl;            // sem IndexedDB: comportamento antigo
   const id=novoIdFoto();
   try{ await fotoGravarLocal(id,dataUrl) }
@@ -1949,7 +2055,7 @@ async function guardarFoto(dataUrl){
 /* ---- resolver para exibir/imprimir ---- */
 async function resolverFoto(v){
   if(!v) return '';
-  if(ehImagem(v)) return v;               // legado embutido
+  if(ehAnexo(v)) return v;                // legado embutido
   if(!ehRef(v)) return v;
   if(_fotoCache.has(v)) return _fotoCache.get(v);
   if(_fotoBaixando.has(v)) return _fotoBaixando.get(v);
@@ -2101,15 +2207,23 @@ function load(d){
     migrarPrestadoresEB();
     if(d.CFG) CFG=Object.assign(CFG,d.CFG);
     creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
-  aplicarNomesUsuarios(); aplicarPermsUsuarios();
     aplicarNomesUsuarios(); aplicarPermsUsuarios();
     let mig=migrarLeiturasAgua(); if(migrarTarifaCaesb()) mig=true; migrarManutObrig(); migrarVendasCustas();
-    if(migrarFilaPub()) mig=true; if(migrarRevisoesAp()) mig=true; if(migrarMarcaEbiz()) mig=true; if(migrarSalas()) mig=true; if(mig) save();
+    if(migrarFilaPub()) mig=true; if(migrarRevisoesAp()) mig=true; if(migrarMarcaEbiz()) mig=true; if(migrarSalas()) mig=true;
+    if(migrarCatalogo2610()) mig=true;
+    if(mig) save();
+    migrarLaudosParaFora();   // assincrona: salva sozinha quando terminar
     return true;
   }catch(e){ console.warn('Base corrompida:',e); return false }
 }
 function resetDB(){
-  if(!confirm('Isso apaga TODOS os dados salvos neste aparelho e recarrega os dados de exemplo. Continuar?'))return;
+  /* Pedir para digitar a palavra evita o clique sem querer: um OK distraido
+     num aviso nao pode apagar o trabalho de todo mundo. */
+  const r=prompt('Isso apaga TODOS os dados deste aparelho e recarrega o cadastro inicial.\n\n'+
+    'Lançamentos ainda não sincronizados serão perdidos. Exporte um backup antes.\n\n'+
+    'Para confirmar, digite ZERAR:');
+  if(r===null) return;
+  if(String(r).trim().toUpperCase()!=='ZERAR'){ toast('Reinício cancelado.'); return }
   const st=store(); if(st) try{ st.removeItem(DB_KEY) }catch(e){}
   location.reload();
 }
@@ -2451,7 +2565,9 @@ function ic(name,cls){
 }
 
 function buildNav(){
-  const items=[['dashboard','dashboard','Dashboard']];
+  /* A portaria faz uma coisa so. O painel geral traz tarefas, avisos e
+     numeros que nao sao da alcada dela -- fica de fora do menu. */
+  const items=P().leiturasSimples?[]:[['dashboard','dashboard','Dashboard']];
   if(P().tipos.length){
     items.push(['#','','Operação']);
     items.push(['hoje','today','Tarefas de Hoje'],['rotina','route','Minha Rotina'],
@@ -2475,8 +2591,10 @@ function buildNav(){
   if(P().brigada){ if(!P().tipos.length) items.push(['#','','Brigada de Incêndio']);
     items.push(['brigada-inicio','play','Iniciar Check-list'],
       ['brigada','flame','Check-list por Andar'],['brigada-ronda','route','Ronda Diária']); }
-  if(P().manutencao){ if(!P().tipos.length&&!P().brigada) items.push(['#','','Predial']);
-    items.push(['apontamentos','wrench','Apontamentos'],['manutobrig','shieldCheck','Manutenções Obrigatórias']); }
+  if(P().manutencao||P().manutobrig){
+    if(!P().tipos.length&&!P().brigada) items.push(['#','','Predial']);
+    if(P().manutencao) items.push(['apontamentos','wrench','Apontamentos']);
+    if(P().manutobrig) items.push(['manutobrig','shieldCheck','Manutenções Obrigatórias']); }
   if(P().estoque) items.push(['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material']);
   if(P().tipos.length) items.push(['#','','Gestão'],['relatorios','chart','Relatórios'],['relmensal','doc','Relatório Mensal']);
   items.push(['config','settings','Configurações']);
@@ -2509,6 +2627,15 @@ function render(){
     hoje:'Tarefas de Hoje — Planejamento Diário',leituras:'Leituras / Água e Energia',notas:'Controle de Notas Fiscais',
     estoque:'Controle de Estoque',pedidos:'Pedidos de Material',relmensal:'Relatório Mensal de Gestão',
     apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',analises:'Análise de Projetos — Check-list de Aprovação',ocupacao:'Taxa de Ocupação — Mapa de Salas','brigada-inicio':'Brigada — Iniciar Check-list',brigada:'Brigada de Incêndio — Check-list por Andar','brigada-ronda':(session&&!P().brigada&&P().ronda)?'Ronda Diária e Chamados':'Brigada — Ronda Diária','brigada-form':'Brigada — Check-list',relatorios:'Relatórios',config:'Configurações'};
+  /* A portaria so tem duas telas. Travar aqui, no roteador, cobre tambem
+     as telas que nunca tiveram verificacao propria (brigada, ronda, mapa
+     de salas), em vez de depender de cada uma lembrar de conferir. */
+  if(session&&P().leiturasSimples&&!['leituras','config'].includes(page)){
+    page='leituras';
+    $('#pageTitle').textContent=titles.leituras;
+    buildNav(); buildTabbar();
+    return viewLeituras();
+  }
   $('#pageTitle').textContent=titles[page];
   if(page==='analises'){ return (apAtual&&apEditId!==null)?apRender(apAtual):viewAnalises() }
   if(page==='ocupacao'){ return viewOcupacao() }
@@ -2542,6 +2669,8 @@ function metrics(){
   return {hoje,atras,prox,conc,pct,mv,semanaTot,semanaConc,pend};
 }
 function viewDashboard(){
+  /* se a portaria chegar aqui por um link antigo, volta para o lugar dela */
+  if(P().leiturasSimples){ page='leituras'; return viewLeituras(); }
   /* Cada perfil operacional tem o seu painel: o do brigadista fala de
      check-list e ronda; o da limpeza/portaria, de leitura e chamados. */
   if(!P().tipos.length){
@@ -2619,7 +2748,7 @@ function viewDashboard(){
   m.hoje.filter(t=>t.prioridade==='Alta').slice(0,4).forEach(t=>
     avisos.push(['blue',ic('clock'),`Prioridade alta hoje: ${t.titulo}`,`${condoName(t.condoId)} · ${t.responsavel||'sem responsável'}`,t.id]));
 
-  html+=`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));margin-top:18px">
+  html+=`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));margin-top:18px">
     <div class="card"><div class="section-title" style="margin-top:0"><h3>Avisos Importantes</h3>
       <span class="spacer badge b-atr">${avisos.filter(a=>a[0]==='red').length} críticos</span></div>
       ${avisos.length?avisos.map(a=>`<div class="feed-item ${a[0]}" ${a[5]?`style="cursor:pointer" onclick="${a[5]}"`:(a[4]?`style="cursor:pointer" onclick="openTask('${a[4]}')"`:'')}>
@@ -2717,7 +2846,7 @@ function viewConfig(){
      backup, auditoria ou senhas da equipe. */
   const soSenha=!P().tipos.length&&!P().manutencao&&!P().estoque;
   $('#content').innerHTML=`
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))">
       <div class="card">
         <div class="section-title" style="margin-top:0"><h3>${ic('lock')}Minha Senha</h3></div>
         <div class="userbox" style="margin-bottom:12px">
@@ -2745,10 +2874,10 @@ function viewConfig(){
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
           <div id="logoPrev" style="width:64px;height:64px;border:1px solid var(--line);border-radius:10px;
             display:grid;place-items:center;background:var(--panel);overflow:hidden;flex:none">
-            <img src="${marcaLogo()}" style="max-width:100%;max-height:100%;object-fit:contain"></div>
+            <img src="${marcaLogo()}" alt="Logo do condomínio" style="max-width:100%;max-height:100%;object-fit:contain"></div>
           <div style="flex:1">
             <input type="file" id="logoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp"
-              onchange="subirLogo(this)" style="font-size:12px">
+              onchange="subirLogo(this)" style="font-size:12px;max-width:100%">
             <div class="t-sub" style="margin-top:4px">PNG, JPG, SVG ou WebP · até 400 KB</div></div>
           ${CFG.logo?`<button class="iconact del" title="Remover logo" onclick="removerLogo()">${ic('trash')}</button>`:''}
         </div>
@@ -2814,19 +2943,36 @@ function viewConfig(){
 
       <div class="card">
         <div class="section-title" style="margin-top:0"><h3>${ic('shield')}Dados e Backup</h3></div>
-        <div class="t-sub" style="margin-bottom:10px">Os dados sincronizam pela nuvem. Ainda assim, gere um backup periódico: é a sua garantia caso algo seja apagado por engano.</div>
+        <div class="t-sub" style="margin-bottom:10px">Os dados sincronizam pela nuvem. Ainda assim, gere um backup a cada ${BACKUP_DIAS} dias e guarde no seu computador: é a sua garantia caso algo seja apagado por engano.</div>
+        ${backupAviso()}
         <div class="feed-item blue" style="margin-bottom:10px">
           <div class="fi-ic">${ic('box')}</div>
           <div style="flex:1"><div class="ft">${tasks.length} tarefas · ${apontamentos.length} apontamentos · ${estoque.length} materiais</div>
             <div class="fd">${notas.length} NFs · ${leituras.length} leituras · ${pedidos.length} pedidos</div></div></div>
         <button class="btn accent block hidden" id="btnInstalar" style="margin-bottom:10px"
           onclick="instalarApp()">${ic('download')}Instalar no celular</button>
-        <div class="rowact">
-          <button class="btn ghost" onclick="exportBackup()">${ic('download')}Exportar backup</button>
+        <div class="bkp-botoes">
+          <button class="btn primary" onclick="backupGerar()">${ic('download')}Gerar backup completo</button>
+          <button class="btn ghost" onclick="exportBackup()">${ic('download')}Só o arquivo de restauração</button>
           <label class="btn ghost" style="cursor:pointer">${ic('upload')}Importar
             <input type="file" accept="application/json" onchange="importBackup(this)" style="display:none"></label>
-          <button class="btn danger" onclick="resetDB()">${ic('trash')}Zerar dados</button>
         </div>
+        <div class="t-sub" style="margin-top:7px;line-height:1.5">
+          O backup completo baixa dois arquivos: um <b>.json</b>, que serve para repor o
+          sistema, e uma planilha <b>.xlsx</b> com uma aba por assunto, para você consultar
+          no computador sem precisar do app.</div>
+        ${ultimoBackup()?`<div class="t-sub" style="margin-top:6px">Último backup:
+          <b>${fmt(ultimoBackup())}</b>${diasDesdeBackup()===0?' (hoje)'
+            :diasDesdeBackup()===1?' (ontem)':' (há '+diasDesdeBackup()+' dias)'}.</div>`:''}
+        ${bkpLimpezaCartao()}
+        ${session.role==='Gestor'?`
+        <div style="margin-top:16px;padding:12px;border:1px solid #edaab0;border-radius:8px;background:#fdf6f6">
+          <div style="font-weight:700;color:#8d2b38;font-size:12.5px;margin-bottom:3px">Zona de risco</div>
+          <div class="t-sub" style="margin-bottom:10px;line-height:1.5">
+            Apaga todos os dados deste aparelho e recarrega o cadastro inicial.
+            Faça o backup antes.</div>
+          <button class="btn danger sm" onclick="resetDB()">${ic('trash')}Zerar dados deste aparelho</button>
+        </div>`:''}
       </div>
 
       <div class="card">
@@ -2872,7 +3018,7 @@ function viewConfig(){
             </div>
             ${session.role==='Gestor'
               ? `<button class="btn ghost sm" onclick="abrirPermissoes('${u.id}')" title="Liberar ou bloquear funções">${ic('lock')}Permissões</button>`:''}
-            ${u.role==='Brigadista'&&session.role==='Gestor'
+            ${(u.role==='Brigadista'||u.role==='Portaria')&&session.role==='Gestor'
               ? `<button class="btn ghost sm" onclick="renomearUsuario('${u.id}')">${ic('edit')}Renomear</button>`:''}
             ${u.id===session.id
               ? `<span class="badge b-pend">você</span>`
@@ -3746,7 +3892,7 @@ function viewRotinaMensal(){
     ${todasMes.length?'':`<div class="feed-item amber" style="margin-bottom:14px"><div class="fi-ic">${ic('inbox')}</div><div>
       <div class="ft">Nenhuma tarefa gerada para ${mesNome} / ${my}</div>
       <div class="fd">Use o botão <b>Gerar rotina de ${mesNome}</b> para instanciar as tarefas deste mês.</div></div></div>`}
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">${blocos}</div>`;
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))">${blocos}</div>`;
 }
 function moverMesRotina(n){
   let [y,m]=mesRotina.split('-').map(Number);
@@ -4988,6 +5134,83 @@ function apNovaRevisao(id){
 /* Junta o que já existe: registros separados da mesma unidade viram um só. */
 /* A marca do app passou a ser a do E-Business; bases antigas guardavam
    o nome genérico em CFG e continuariam exibindo o texto anterior. */
+/* ====== Atualizacao do catalogo revisado (outubro/2026) ======
+   Quem ja usava o sistema tem base salva, e base salva nao passa pelo
+   cadastro inicial. Sem esta rotina, as rotinas que tiramos do catalogo
+   continuariam aparecendo e o plano de manutencoes nunca chegaria.
+   Roda uma vez so, marcada por CFG.catalogo2610. */
+const CAT_REMOVIDAS=['Planilha de Ocupação','Docs Portal ABL','Transf. de contas',
+  'Fluxo de caixa','Convocação de conselho','Manutenção de gerador/bombas'];
+/* Tira do snapshot os PDFs de laudo que foram gravados embutidos antes de
+   out/2026. Sobe cada um para o servidor e deixa so a referencia no lugar.
+   E assincrona de proposito: nao pode segurar a abertura do app. Se algo
+   falhar no meio, o laudo continua embutido e a proxima abertura tenta de
+   novo -- nunca se perde arquivo. */
+async function migrarLaudosParaFora(){
+  if(CFG.laudosFora==='v1') return false;
+  if(!_idbOk) return false;              // sem IndexedDB nao da para referenciar
+  let movidos=0, bytes=0;
+  try{
+    for(const m of (manutObrig||[])){
+      for(const ex of (m.execucoes||[])){
+        for(const l of (ex.laudos||[])){
+          if(!ehAnexo(l.dados)) continue;       // ja e referencia
+          const original=l.dados;
+          const ref=await guardarFoto(original);
+          if(ref===original) continue;          // nao deu: deixa como estava
+          l.dados=ref; movidos++; bytes+=original.length;
+        }
+      }
+    }
+    /* So marca como concluida quando NAO sobrou nenhum PDF embutido. Se
+       alguma gravacao falhou, fica sem marcar e a proxima abertura tenta de
+       novo -- marcar aqui deixaria o arquivo preso na base para sempre. */
+    const sobrou=(manutObrig||[]).some(m=>(m.execucoes||[])
+      .some(ex=>(ex.laudos||[]).some(l=>ehAnexo(l.dados))));
+    if(movidos){
+      audit('Laudos movidos para fora da base','Manutenções obrigatórias',
+        movidos+' arquivo(s), '+Math.round(bytes/1024)+' KB','','');
+      console.log('[laudos] '+movidos+' laudo(s) movidos, '+Math.round(bytes/1024)+' KB fora do snapshot');
+    }
+    if(!sobrou) CFG.laudosFora='v1';
+    if(movidos||!sobrou) save();
+  }catch(e){ console.warn('migracao de laudos:',e); return false }
+  return movidos>0;
+}
+
+function migrarCatalogo2610(){
+  if(CFG.catalogo2610==='v1') return false;
+  let mudou=false, apagadas=0;
+
+  /* As que foram tiradas do catalogo. O que ja foi concluido fica, para nao
+     apagar historico de trabalho feito -- sai so o que estava em aberto. */
+  const antes=tasks.length;
+  tasks=tasks.filter(t=>!(CAT_REMOVIDAS.includes(t.titulo)&&t.status!=='Concluída'));
+  apagadas=antes-tasks.length;
+  if(apagadas) mudou=true;
+
+  /* A aprovacao de pagamentos deixou de ser do Gestor: quem conduz e o
+     Administrativo, que leva o lote ao sindico. */
+  tasks.forEach(t=>{
+    if(t.titulo==='Aprovação de pagamentos'){
+      t.titulo='Aprovação do síndico para pagamentos';
+      t.tipo='Administrativo';
+      t.procedimento='Encaminhar o lote semanal de pagamentos ao síndico, obter a aprovação e registrá-la.';
+      if(t.responsavel==='Maciel') t.responsavel='Alef';
+      mudou=true;
+    }
+  });
+
+  /* Plano de manutencoes obrigatorias onde ainda nao existe nenhum item. */
+  CONDOS.filter(c=>condoNoModulo(c.id,'manutobrig')).forEach(c=>{
+    if(!manutObrig.some(m=>m.condoId===c.id)){ seedManutObrig(c.id); mudou=true }
+  });
+
+  CFG.catalogo2610='v1';
+  if(mudou&&typeof audit==='function') audit('Sistema',
+    'Catálogo atualizado: '+apagadas+' rotina(s) descontinuada(s) removida(s) e plano de manutenções disponibilizado.');
+  return true;
+}
 function migrarMarcaEbiz(){
   if(CFG.marcaEbiz==='v1') return false;
   if(!CFG.nomeEmpresa||CFG.nomeEmpresa==='Rotinas Condominiais') CFG.nomeEmpresa='E-Business';
@@ -6363,7 +6586,23 @@ function moBadge(st){
   const c={'Vencida':'b-atr','Próxima':'b-pend','Em dia':'b-conc','Sem histórico':'b-baixa'}[st]||'b-tag';
   return `<span class="badge ${c}">${st}</span>`;
 }
-function visMO(){ return manutObrig.filter(m=>P().condos.includes(m.condoId)) }
+/* Manutencoes obrigatorias ficam restritas ao Gestor e ao Coordenador
+   Administrativo. Como esta funcao e a origem de tudo -- tela, avisos de
+   vencimento no painel, alerta de abertura e busca --, travar aqui faz o
+   assunto desaparecer por inteiro para quem nao responde por ele. */
+function podeManutObrig(){ return !!P().manutobrig }
+/* Uma tela em branco escrito "Sem acesso." parece defeito. Aqui o bloqueio
+   se explica e oferece uma saida, em vez de deixar a pessoa travada. */
+function cardSemAcesso(titulo,explica){
+  return `<div class="card" style="text-align:center;padding:36px 24px;max-width:520px;margin:0 auto">
+    <div style="width:52px;height:52px;border-radius:50%;background:var(--slate-soft);
+      display:grid;place-items:center;margin:0 auto 14px;color:var(--text-3)">${ic('lock')}</div>
+    <h3 style="margin:0 0 8px;font-size:16px;color:var(--navy)">${esc(titulo)}</h3>
+    <p class="t-sub" style="margin:0 0 18px;line-height:1.55">${explica}</p>
+    <button class="btn ghost" onclick="go(paginaInicial())">${ic('arrowLeft')}Voltar ao início</button>
+  </div>`;
+}
+function visMO(){ return podeManutObrig() ? manutObrig.filter(m=>P().condos.includes(m.condoId)) : [] }
 function moVencendo(dias){
   const lim=(dias==null?30:dias);
   return visMO().map(m=>({...m,_pr:moProxima(m),_dias:moProxima(m)?diasAte(moProxima(m)):null}))
@@ -6416,7 +6655,7 @@ async function addLaudo(input){
     try{
       if(f.type==='application/pdf'){
         const b64=await new Promise((ok,er)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=er;r.readAsDataURL(f)});
-        _laudosTmp.push({nome:f.name,tipo:'pdf',dados:b64});
+        _laudosTmp.push({nome:f.name,tipo:'pdf',dados:await guardarFoto(b64)});
       }else if(/^image\//.test(f.type)){
         _laudosTmp.push({nome:f.name,tipo:'img',dados:await guardarFoto(await comprimirImagem(f))});
       }else toast('Formato não suportado: use PDF ou imagem.');
@@ -6431,14 +6670,21 @@ function pintaLaudos(){
       <a href="#" onclick="event.preventDefault();_laudosTmp.splice(${i},1);pintaLaudos()" title="remover">${ic('close')}</a></span>`).join('')
     :'<span class="t-sub">nenhum arquivo anexado</span>';
 }
-function abrirLaudo(mid,ei,li){
+async function abrirLaudo(mid,ei,li){
   const m=manutObrig.find(x=>x.id===mid); if(!m) return;
   const l=((m.execucoes[ei]||{}).laudos||[])[li]; if(!l) return;
   const w=window.open('','_blank');
   if(!w) return toast('Permita pop-ups para abrir o laudo.');
+  w.document.write('<p style="font:15px system-ui;padding:16px">Abrindo o laudo…</p>');
+  /* O arquivo pode estar so no servidor: busca antes de desenhar. */
+  const dados=await resolverFoto(l.dados);
+  if(!dados){ w.document.body.innerHTML=
+    '<p style="font:15px system-ui;padding:16px">Não foi possível carregar este laudo. '+
+    'Verifique a conexão e tente de novo.</p>'; return }
+  w.document.open();
   w.document.write(l.tipo==='pdf'
-    ? `<iframe src="${l.dados}" style="border:0;width:100%;height:100vh"></iframe>`
-    : `<img src="${srcFoto(l.dados)}"${attrFoto(l.dados)} style="max-width:100%">`);
+    ? `<iframe src="${dados}" style="border:0;width:100%;height:100vh"></iframe>`
+    : `<img src="${dados}" alt="Laudo" style="max-width:100%">`);
   w.document.title=l.nome||'Laudo';
 }
 /* ---- registrar execução ---- */
@@ -6832,6 +7078,8 @@ function pubDataExtenso(iso){
   return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
 }
 function viewManutObrig(){
+  if(!podeManutObrig()){$('#content').innerHTML=cardSemAcesso('Manutenções Obrigatórias',
+    'O plano de manutenções obrigatórias e seus laudos são acompanhados pelo Gestor e pelo Coordenador Administrativo, que respondem pelo condomínio em fiscalização.');return}
   const cids=condosDo('manutobrig').filter(c=>condoFilter==='all'||c.id===condoFilter).map(c=>c.id);
   let list=visMO().filter(m=>cids.includes(m.condoId));
   if(moBusca) list=list.filter(m=>((m.servico||'')+(m.prestador||'')+(m.base||'')).toLowerCase().includes(moBusca.toLowerCase()));
@@ -7839,6 +8087,14 @@ function farol(l){
   return {cor:'vermelho',media:m,
     txt:'Atenção: consumo acima de 1.5x da média. Verificar vazamento, leitura incorreta ou anomalia'};
 }
+/* Leitura menor que a anterior. Derivamos do consumo em vez de confiar num
+   campo gravado, assim os lancamentos antigos tambem ficam sinalizados. */
+function leitRegressiva(l){ return !!l && l.consumo!=null && l.consumo<0 }
+function badgeRegressiva(l){
+  return leitRegressiva(l)
+    ? `<span class="badge b-atr" title="O número informado é menor que o da leitura anterior. Conferir possível erro de digitação.">Número menor que o anterior</span>`
+    : '';
+}
 function badgeFarol(f){
   if(!f) return '<span class="t-sub">—</span>';
   if(f.cor==='cinza') return `<span class="badge b-baixa" title="${esc(f.txt)}">Justificado</span>`;
@@ -7851,7 +8107,108 @@ function leitScope(){
     .filter(l=>P().condos.includes(l.condoId))
     .filter(l=>condoFilter==='all'||l.condoId===condoFilter);
 }
+/* ====== LEITURAS — VERSÃO DA PORTARIA ======
+   A portaria faz uma coisa só: anotar o número do relógio de água e de
+   energia todo dia. Esta tela mostra exatamente isso e o histórico do que
+   já foi lançado. Consumo acumulado, gráficos, projeção de conta e valores
+   em R$ ficam de fora — não são da alçada dela e só atrapalhariam. */
+let ltpMes='';
+/* Na agua valem so os 5 digitos pretos: os dois decimais do relogio sao
+   variaveis demais e nao entram na conta. Aqui mostramos o numero do jeito
+   que a pessoa le no equipamento. */
+function ltpNum(valor,tipo){
+  if(valor==null) return '—';
+  return Number(valor).toLocaleString('pt-BR',
+    tipo==='agua'?{maximumFractionDigits:0}:{maximumFractionDigits:2});
+}
+function ltpEscopo(){
+  return leituras.filter(l=>P().condos.includes(l.condoId)&&condoNoModulo(l.condoId,'leituras'));
+}
+function ltpCartao(tipo){
+  const nome=tipo==='agua'?'Água':'Energia';
+  const icone=tipo==='agua'?'water':'bolt';
+  const regs=ltpEscopo().filter(l=>l.tipo===tipo&&l.status==='Registrada')
+    .sort((a,b)=>b.data.localeCompare(a.data));
+  const ult=regs[0];
+  const hoje=today();
+  const feito=regs.find(l=>l.data===hoje);
+  const atrasada=ltpEscopo().some(l=>l.tipo===tipo&&l.status!=='Registrada'&&diffDays(l.data,hoje)<0);
+  const cor=feito?'#e6f6ea':(atrasada?'#fdeaea':'#fff');
+  const borda=feito?'#9ad3ab':(atrasada?'#edaab0':'var(--line-2)');
+  return `<div class="card" style="background:${cor};border-color:${borda}">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="width:38px;height:38px;border-radius:9px;background:var(--slate-soft);
+        display:grid;place-items:center;color:var(--navy);flex:none">${ic(icone)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;color:var(--navy);font-size:15px">${nome}</div>
+        <div class="t-sub">${feito?'Leitura de hoje já registrada'
+          :(atrasada?'Há leitura em atraso':'Ainda não lançada hoje')}</div>
+      </div>
+      ${feito?`<span class="badge b-conc">Feita</span>`
+        :(atrasada?`<span class="badge b-atr">Atrasada</span>`:`<span class="badge b-and">Pendente</span>`)}
+    </div>
+    <div style="background:#fff;border:1px solid var(--line-2);border-radius:8px;padding:10px;margin-bottom:10px">
+      <div class="lbl">Último número anotado</div>
+      <div style="font-size:22px;font-weight:800;color:var(--navy);white-space:nowrap">
+        ${ltpNum(ult&&ult.medidor,tipo)}</div>
+      <div class="t-sub">${ult?('em '+fmt(ult.data)+(ult.responsavel?' por '+esc(ult.responsavel):'')):'nenhuma leitura registrada ainda'}</div>
+    </div>
+    <button class="btn" style="width:100%" onclick="leitTab='${tipo}';formLeitura()">
+      ${ic('plus')}Registrar leitura de ${nome.toLowerCase()}</button>
+  </div>`;
+}
+function viewLeiturasPortaria(){
+  const todas=ltpEscopo().filter(l=>l.status==='Registrada');
+  const meses=[...new Set(todas.map(l=>l.data.slice(0,7)))].sort().reverse();
+  let lista=todas.slice();
+  if(ltpMes) lista=lista.filter(l=>l.data.slice(0,7)===ltpMes);
+  lista.sort((a,b)=>b.data.localeCompare(a.data)||a.tipo.localeCompare(b.tipo));
+  const corte=lista.slice(0,120);
+  $('#content').innerHTML=`
+    <div class="card" style="background:var(--navy);color:#fff;border:0;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:700;margin-bottom:3px">Leitura do dia — ${fmt(today())}</div>
+      <div style="opacity:.82;font-size:12.5px;line-height:1.5">
+        Anote o número que aparece no relógio, igual ao que está lá.
+        No hidrômetro de água use os <b>5 dígitos pretos</b>; os dois últimos
+        números, em vermelho, não entram.</div>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));margin-bottom:18px">
+      ${ltpCartao('agua')}
+      ${ltpCartao('energia')}
+    </div>
+    ${(()=>{const sus=todas.filter(leitRegressiva)
+        .sort((a,b)=>b.data.localeCompare(a.data)).slice(0,3);
+      if(!sus.length) return '';
+      return `<div class="card" style="background:#fdeaea;border-color:#edaab0;margin-bottom:14px">
+        <div style="display:flex;gap:9px;align-items:flex-start">
+          <span style="color:#c2384a;flex:none;margin-top:1px">${ic('alert')}</span>
+          <div style="min-width:0">
+            <div style="font-weight:700;color:#8d2b38;margin-bottom:4px">
+              ${sus.length===1?'Uma leitura precisa de conferência':sus.length+' leituras precisam de conferência'}</div>
+            <div class="t-sub" style="line-height:1.55">O número anotado ficou menor que o da leitura anterior:
+              ${sus.map(l=>`<b>${l.tipo==='agua'?'água':'energia'} em ${fmt(l.data)}</b>`).join(', ')}.
+              Avise o Maciel ou o Alef para corrigir.</div>
+          </div></div></div>`})()}
+    <div class="section-title"><h3>${ic('list')}Leituras já registradas</h3>
+      <div class="spacer"></div>
+      <select onchange="ltpMes=this.value;render()">
+        <option value="">Todos os meses</option>
+        ${meses.map(m=>`<option value="${m}" ${ltpMes===m?'selected':''}>${m.slice(5)}/${m.slice(0,4)}</option>`).join('')}
+      </select></div>
+    ${corte.length?`<div class="tablewrap"><table>
+      <thead><tr><th>Data</th><th>Tipo</th><th style="text-align:right">Número do relógio</th><th>Quem anotou</th><th></th></tr></thead>
+      <tbody>${corte.map(l=>`<tr>
+        <td style="white-space:nowrap">${fmt(l.data)}</td>
+        <td><span class="badge b-tag">${l.tipo==='agua'?'Água':'Energia'}</span></td>
+        <td style="text-align:right;font-weight:700;white-space:nowrap;${leitRegressiva(l)?'color:#c2384a':''}">${ltpNum(l.medidor,l.tipo)}</td>
+        <td>${esc(l.responsavel||'—')}</td>
+        <td>${badgeRegressiva(l)}</td></tr>`).join('')}</tbody></table></div>
+      ${lista.length>120?`<div class="t-sub" style="margin-top:8px">Mostrando as 120 mais recentes de ${lista.length}.</div>`:''}`
+      : `<div class="card empty">Nenhuma leitura registrada${ltpMes?' neste mês':''} ainda.</div>`}`;
+}
+
 function viewLeituras(){
+  if(P().leiturasSimples) return viewLeiturasPortaria();
   let l=leitScope();
   if(leitMes) l=l.filter(x=>x.data.slice(0,7)===leitMes);
   if(leitStatus) l=l.filter(x=>leitStatusAuto(x)===leitStatus);
@@ -7871,7 +8228,7 @@ function viewLeituras(){
     <div class="section-title" style="margin-top:0"><h3>${ic('money')}Projeção da Conta — ${(()=>{const d=new Date();
       return ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][d.getMonth()]+'/'+d.getFullYear()})()}</h3>
       <div class="spacer no-print"><button class="btn ghost sm" onclick="go('config')">${ic('settings')}Ajustar tarifas</button></div></div>
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(330px,1fr));margin-bottom:6px">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));margin-bottom:6px">
       ${condosProj.map(c=>cicloCard(c.id,leitTab)).join('')}
       ${condosProj.map(c=>cardProjecao(leitTab,c.id)).join('')}
     </div>
@@ -7924,9 +8281,9 @@ function viewLeituras(){
         ${leitTab==='energia'?`<td>${x.fator}</td>`:''}
         <td><b>${x.leitura!=null?fmtLeit(x.leitura,x.tipo):'—'}</b></td>
         <td>${x.anterior!=null?fmtLeit(x.anterior,x.tipo):'—'}</td>
-        <td>${x.consumo!=null?`<b>${fmtLeit(x.consumo,x.tipo)}</b>`:'—'}</td>
+        <td>${x.consumo!=null?`<b style="${leitRegressiva(x)?'color:#c2384a':''}">${fmtLeit(x.consumo,x.tipo)}</b>`:'—'}</td>
         <td>${f&&f.media!=null?Math.round(f.media).toLocaleString('pt-BR'):'—'}</td>
-        <td>${badgeFarol(f)}</td><td>${badgeLeit(st)}</td>
+        <td>${badgeRegressiva(x)||badgeFarol(f)}</td><td>${badgeLeit(st)}</td>
         <td>${x.anexo?`<span class="badge b-tag">${ic('paperclip')} ${esc(x.anexo)}</span>`:'<span class="t-sub">—</span>'}</td>
         <td><div class="rowact no-print">
           ${st!=='Registrada'&&P().complete?`<button class="btn green sm" onclick="formLeitura('${x.id}')">Registrar Leitura</button>`:''}
@@ -7943,7 +8300,7 @@ function viewLeituras(){
 }
 function graficoLeituras(){
   const cids=condosDo('leituras').filter(c=>condoFilter==='all'||c.id===condoFilter);
-  return `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(460px,1fr));margin-bottom:6px">
+  return `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(460px,100%),1fr));margin-bottom:6px">
   ${cids.map(c=>{
     const todas=leituras.filter(x=>x.tipo===leitTab&&x.condoId===c.id&&x.status==='Registrada'&&x.consumo!=null)
       .sort((a,b)=>a.data.localeCompare(b.data));
@@ -8052,10 +8409,35 @@ function calcLeit(){
   const cid=(document.querySelector('#ltCondo')||{}).value;
   const det=mediaDetalhe(leitTab,cid,null);
   const m=det.media;
+  /* O relogio de agua e o de energia so andam para a frente. Numero menor
+     que o da leitura anterior e quase sempre digito trocado -- avisamos na
+     hora, enquanto a pessoa ainda esta com o equipamento na frente. */
+  const regressiva = cons!=null && cons<0;
   let cor='verde',txt='Dentro da média';
-  if(cons!=null&&m){ if(cons>=1.5*m){cor='vermelho';txt='Atenção: consumo acima de 1.5x da média. Verificar vazamento, leitura incorreta ou anomalia'}
+  if(regressiva){ cor='vermelho'; txt='Número menor que o da leitura anterior'; }
+  else if(cons!=null&&m){ if(cons>=1.5*m){cor='vermelho';txt='Atenção: consumo acima de 1.5x da média. Verificar vazamento, leitura incorreta ou anomalia'}
     else if(cons>m){cor='amarelo';txt='Acima da média'} }
   const bg={verde:'#e6f6ea',amarelo:'#fff3e0',vermelho:'#fdeaea'}[cor];
+  if(regressiva){
+    box.innerHTML=`<div class="card" style="box-shadow:none;background:#fdeaea;border:1px solid #edaab0;padding:12px;margin-bottom:12px">
+      <div style="display:flex;gap:9px;align-items:flex-start">
+        <span style="color:#c2384a;flex:none;margin-top:1px">${ic('alert')}</span>
+        <div style="min-width:0">
+          <div style="font-weight:700;color:#8d2b38;margin-bottom:3px">Confira o número: está menor que o da leitura anterior</div>
+          <div class="t-sub" style="line-height:1.55">
+            Você digitou <b>${ltpNum(leitura,leitTab)}</b> e a leitura anterior foi
+            <b>${ltpNum(ant,leitTab)}</b> — uma diferença de
+            <b>${ltpNum(Math.abs(cons),leitTab)} ${unid(leitTab)}</b> para baixo.
+            O relógio não anda para trás, então quase sempre é dígito trocado.
+          </div>
+          <div class="t-sub" style="margin-top:7px;line-height:1.55">
+            Se o número está certo mesmo (troca de medidor ou o relógio virou de
+            99999 para zero), explique na observação antes de salvar.
+          </div>
+        </div>
+      </div></div>`;
+    return;
+  }
   box.innerHTML=`<div class="card" style="box-shadow:none;background:${bg};padding:12px;margin-bottom:12px">
     <div class="t-sub">Leitura calculada</div>
     <div style="font-size:20px;font-weight:800;color:var(--navy)">${fmtLeit(leitura,leitTab)} ${unid(leitTab)}</div>
@@ -8104,7 +8486,24 @@ function saveLeitura(id,tipo){
   const medN=arred2(med);
   const leitura=arred2(medN*fat);
   const consumo=isNaN(ant)?null:arred2(leitura-ant);
+  /* Numero menor que o anterior: o relogio nao volta. Antes de gravar,
+     pedimos uma conferencia explicita -- so um aviso na tela seria lido no
+     automatico. Nao bloqueamos de vez porque existe caso legitimo: troca
+     de medidor e a virada de 99999 para zero. */
+  if(consumo!=null&&consumo<0){
+    const dif=ltpNum(Math.abs(consumo),tipo)+' '+unid(tipo);
+    const segue=confirm(
+      'ATENÇÃO: o número digitado é MENOR que o da leitura anterior.\n\n'+
+      'Agora: '+ltpNum(leitura,tipo)+'\n'+
+      'Anterior: '+ltpNum(ant,tipo)+'\n'+
+      'Diferença: '+dif+' para baixo\n\n'+
+      'O relógio não anda para trás — confira se não houve dígito trocado.\n\n'+
+      'Se o número estiver correto mesmo (troca de medidor ou virada do relógio), '+
+      'confirme para salvar assim mesmo.');
+    if(!segue) return;
+  }
   const o={condoId:cid,data,medidor:medN,fator:fat,leitura,anterior:isNaN(ant)?null:ant,consumo,
+    regressiva:(consumo!=null&&consumo<0)||undefined,
     status:'Registrada',obs:$('#ltObs').value.trim(),anexo:$('#ltAnexo').value.trim(),responsavel:$('#ltResp').value.trim()};
   /* dia justificado fica fora da média — a marcação manual vence o texto */
   const _mk=$('#ltAtipico')?$('#ltAtipico').value:'';
@@ -8117,8 +8516,12 @@ function saveLeitura(id,tipo){
     else { o.atipico=undefined; o.atipicoMotivo=''; o.atipicoEfeito='' } }
   let alvo;
   if(id){ alvo=leituras.find(x=>x.id===id); const era=alvo.status; Object.assign(alvo,o);
-    alvo.historico.push({q:session.nome,w:nowStamp(),t:era==='Registrada'?'Leitura editada':'Leitura registrada',obs:o.obs,anexo:o.anexo}); }
+    alvo.historico.push({q:session.nome,w:nowStamp(),t:era==='Registrada'?'Leitura editada':'Leitura registrada',obs:o.obs,anexo:o.anexo});
+    if(o.regressiva) alvo.historico.push({q:session.nome,w:nowStamp(),
+      t:'Número menor que o da leitura anterior, confirmado pelo responsável'}); }
   else{ alvo=Object.assign({id:uid('lt'),tipo,historico:[{q:session.nome,w:nowStamp(),t:'Leitura registrada',obs:o.obs,anexo:o.anexo}]},o);
+    if(o.regressiva) alvo.historico.push({q:session.nome,w:nowStamp(),
+      t:'Número menor que o da leitura anterior, confirmado pelo responsável'});
     leituras.push(alvo); }
   // consome a leitura programada daquela data (evita duplicar/ficar atrasada)
   if(!id){
@@ -8182,7 +8585,12 @@ function histLeitura(id){
   const l=leituras.find(x=>x.id===id); const f=farol(l);
   $('#modalTitle').textContent=`Leitura ${l.tipo==='agua'?'de água':'de energia'} — ${fmt(l.data)}`;
   $('#modalBody').innerHTML=`<div class="chip-list" style="margin-bottom:12px">${badgeCondo(l.condoId)}
-    ${badgeLeit(leitStatusAuto(l))}${badgeFarol(f)}</div>
+    ${badgeLeit(leitStatusAuto(l))}${badgeFarol(f)}${badgeRegressiva(l)}</div>
+    ${leitRegressiva(l)?`<div class="card" style="box-shadow:none;background:#fdeaea;border:1px solid #edaab0;padding:11px;margin-bottom:12px">
+      <div class="t-sub" style="line-height:1.55;color:#8d2b38">
+        <b>Conferir:</b> o número desta leitura (${ltpNum(l.leitura,l.tipo)}) é menor que o da anterior
+        (${ltpNum(l.anterior,l.tipo)}). O relógio não anda para trás — pode ser dígito trocado,
+        troca de medidor ou virada do relógio.</div></div>`:''}
     <div class="f2">
       <div><div class="t-sub">Medidor</div><b>${l.medidor!=null?fmtLeit(l.medidor,l.tipo):'—'}</b></div>
       <div><div class="t-sub">Fator</div><b>${l.fator}</b></div>
@@ -8438,7 +8846,7 @@ function dashManutencao(){
         <div class="lbl">Resolvidos</div><div class="val">${resolvidos.length}</div><div class="sub">histórico</div></div>
     </div>
 
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(380px,1fr))">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr))">
       <div class="card">
         <div class="section-title" style="margin-top:0"><h3>Minhas prioridades</h3>
           <span class="spacer badge ${urgentes.length?'b-atr':'b-conc'}">${urgentes.length} urgente(s)</span></div>
@@ -8538,7 +8946,8 @@ function badgeEst(st){
 }
 let estBusca='', estCat='', estFiltro='';
 function viewEstoque(){
-  if(!P().estoque){$('#content').innerHTML='<div class="card empty">Sem acesso ao Controle de Estoque.</div>';return}
+  if(!P().estoque){$('#content').innerHTML=cardSemAcesso('Controle de Estoque',
+    'Seu acesso não inclui o estoque. Se precisar consultar ou movimentar material, peça a liberação ao Maciel em Configurações › Usuários.');return}
   let l=estoque.slice();
   if(estBusca) l=l.filter(i=>(i.nome+i.categoria+i.local).toLowerCase().includes(estBusca.toLowerCase()));
   if(estCat) l=l.filter(i=>i.categoria===estCat);
@@ -8744,7 +9153,8 @@ function exportEstoque(){
 /* ============ PEDIDOS DE MATERIAL ============ */
 let pedItens=[];
 function viewPedidos(){
-  if(!P().estoque){$('#content').innerHTML='<div class="card empty">Sem acesso.</div>';return}
+  if(!P().estoque){$('#content').innerHTML=cardSemAcesso('Pedidos de Material',
+    'Os pedidos de material fazem parte do módulo de estoque, que não está liberado para o seu acesso. Peça a liberação ao Maciel em Configurações › Usuários.');return}
   const l=pedidos.slice().sort((a,b)=>b.data.localeCompare(a.data));
   const st=x=>({'Aberto':'b-and','Aprovado':'b-conc','Recusado':'b-atr','Recebido':'b-conc'})[x]||'b-pend';
   $('#content').innerHTML=`
@@ -8954,7 +9364,8 @@ function receberPedido(id){
 const AP_STATUS=['Aberto','Em Andamento','Resolvido'];
 let apFiltro='';
 function viewApontamentos(){
-  if(!P().manutencao){$('#content').innerHTML='<div class="card empty">Módulo restrito à manutenção.</div>';return}
+  if(!P().manutencao){$('#content').innerHTML=cardSemAcesso('Apontamentos de Manutenção',
+    'Esta tela é da equipe de manutenção, que registra aqui os serviços executados no prédio.');return}
   let l=apontamentos.filter(a=>P().condos.includes(a.condoId));
   if(apFiltro) l=l.filter(a=>a.status===apFiltro);
   l.sort((a,b)=>(a.status==='Resolvido')-(b.status==='Resolvido')
@@ -9162,10 +9573,10 @@ function removerFoto(i){
 function verFoto(apId,i){
   const a=apontamentos.find(x=>x.id===apId); if(!a||!a.fotos)return;
   openModal(a.titulo,
-    `<img src="${srcFoto(a.fotos[i])}"${attrFoto(a.fotos[i])} style="width:100%;border-radius:8px">
+    `<img src="${srcFoto(a.fotos[i])}"${attrFoto(a.fotos[i])} alt="Foto do apontamento" style="width:100%;border-radius:8px">
      <div class="t-sub" style="margin-top:8px">${esc(a.local)} · ${fmt(a.data)} · foto ${i+1} de ${a.fotos.length}</div>
      ${a.fotos.length>1?`<div class="fotos" style="margin-top:10px">${a.fotos.map((f,j)=>
-       `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb ${j===i?'sel':''}" onclick="verFoto('${apId}',${j})">`).join('')}</div>`:''}`,
+       `<img src="${srcFoto(f)}"${attrFoto(f)} alt="Miniatura da foto ${j+1}" class="fthumb ${j===i?'sel':''}" onclick="verFoto('${apId}',${j})">`).join('')}</div>`:''}`,
     `<button class="btn" onclick="closeModal()">Fechar</button>`);
 }
 
@@ -9178,6 +9589,10 @@ function tabsDoPerfil(){
     if(P().brigada) return [['dashboard','gauge','Início'],
       ['brigada-inicio','play','Check-list'],['brigada','flame','Andares'],
       ['brigada-ronda','route','Ronda'],['config','settings','Ajustes']];
+    /* Portaria: so a leitura. Sem painel e sem ronda -- a barra de baixo
+       precisa refletir o mesmo acesso restrito do menu lateral. */
+    if(P().leiturasSimples) return [['leituras','water','Leituras'],
+      ['config','settings','Ajustes']];
     /* Limpeza e portaria: leitura e ronda */
     if(P().leituras||P().ronda) return [['dashboard','gauge','Início'],
       ['leituras','water','Leituras'],['brigada-ronda','route','Ronda'],
@@ -9240,6 +9655,9 @@ function atualizaFab(){
     else if(P().leituras||P().ronda) cfg=['water','irLeituras'];
     else cfg=['wrench','formApont'];
   }
+  /* Na tela da portaria os dois botoes de lancamento ja estao grandes e
+     visiveis; o botao flutuante so cobriria o historico. */
+  if(session&&P().leiturasSimples) cfg=null;
   const pode = cfg && (page!=='estoque'||P().estoqueTotal);
   if(!pode||!ehMobile()){ f.classList.add('hidden'); return }
   f.classList.remove('hidden');
@@ -9851,7 +10269,13 @@ function cardProjecao(tipo,cid){
   const nome=condoName(cid), rot=tipo==='agua'?'Água':'Energia';
   if(!p) return `<div class="card"><div class="section-title" style="margin-top:0">
     <h3>${ic(tipo==='agua'?'water':'bolt')}${rot} — ${esc(nome)}</h3></div>
-    <div class="empty">${ic('inbox','ico-lg')}<div>Sem leituras registradas neste mês.</div></div></div>`;
+    <div class="empty">${ic('inbox','ico-lg')}
+      <div>Sem leituras registradas neste mês.</div>
+      <div class="t-sub" style="margin-top:6px;max-width:300px;line-height:1.5">
+        A projeção começa a ser calculada assim que a primeira leitura do mês for lançada.</div>
+      ${P().create?`<button class="btn ghost sm" style="margin-top:12px"
+        onclick="leitTab='${tipo}';formLeitura()">${ic('plus')}Registrar a primeira leitura</button>`:''}
+    </div></div>`;
   const alerta = p.varPct!=null && p.varPct>=25;
   const queda  = p.varPct!=null && p.varPct<=-15;
   return `<div class="card">
@@ -9946,7 +10370,7 @@ function relatorioMensal(){
   <div class="rel-doc">
     <div class="rel-head">
       <div class="rel-brand">
-        ${CFG.logo?`<img src="${CFG.logo}" class="rel-logo">`:`<div class="rel-logo ph">${ic('building','ico-lg')}</div>`}
+        ${CFG.logo?`<img src="${CFG.logo}" alt="Logo do condomínio" class="rel-logo">`:`<div class="rel-logo ph">${ic('building','ico-lg')}</div>`}
         <div><div class="rel-emp">${esc(CFG.nomeEmpresa)}</div>
           <div class="rel-sub">${esc(CFG.slogan)}</div></div></div>
       <div class="rel-meta">
@@ -10188,11 +10612,11 @@ function viewReports(){
     ${(()=>{const cs=CONDOS.filter(c=>P().condos.includes(c.id)&&(condoFilter==='all'||condoFilter===c.id)&&condoNoModulo(c.id,'leituras'));
       if(!cs.length) return '';
       return `<div class="section-title" style="margin-top:0"><h3>${ic('water')}Consumo de Água — últimos 10 dias</h3></div>
-      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(420px,1fr))">
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr))">
         ${cs.map(c=>graficoConsumo10('agua',c.id)).join('')}
       </div>`;})()}
     <div class="section-title"><h3>Panorama de Tarefas</h3></div>
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))">
       <div class="card"><div class="section-title" style="margin-top:0"><h3>Tarefas por Status</h3></div>
         ${byStatus.map(([s,v])=>`<div class="bar-row"><span>${s}</span>
           <div class="bar" style="width:${v/max*100}%;background:${cols[s]}"></div><b>${v}</b></div>`).join('')}
@@ -11388,7 +11812,9 @@ function viewBrigForm(){
         placeholder="algo que valha registrar">${esc(i.obs||'')}</textarea></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         <button class="btn" onclick="brigVoltar()">${ic('arrowLeft')} Voltar</button>
-        ${fechado?`<button class="btn" onclick="brigPdfInsp('${i.id}')">${ic('doc')} PDF deste check-list</button>
+        ${fechado?`${nc?`<button class="btn primary" onclick="brigAcompanharInsp('${i.id}')"
+            title="Ver em que pé está o chamado dos não conformes">${ic('search')} Como ficaram os não conformes</button>`:''}
+          <button class="btn" onclick="brigPdfInsp('${i.id}')">${ic('doc')} PDF deste check-list</button>
           <button class="btn danger ghost" onclick="brigReabrir('${i.id}')">Reabrir</button>
           ${brigPodeExcluir(i)?`<button class="btn danger" onclick="brigExcluirInsp('${i.id}')">${ic('trash')}Excluir</button>`:''}`
         :`<button class="btn primary" onclick="brigConcluir('${i.id}')">${ic('checkCircle')} Concluir check-list</button>`}
@@ -11463,7 +11889,7 @@ function brigDelFoto(id,k,fi){
 function brigVerFoto(id,k,fi){
   const i=_bi(id); if(!i)return;
   openModal('Foto — '+i.pontos[k].desc,
-    `<img src="${srcFoto(i.pontos[k].fotos[fi])}"${attrFoto(i.pontos[k].fotos[fi])} style="width:100%;border-radius:8px">`,'');
+    `<img src="${srcFoto(i.pontos[k].fotos[fi])}"${attrFoto(i.pontos[k].fotos[fi])} alt="Foto do ponto de ronda" style="width:100%;border-radius:8px">`,'');
 }
 
 /* ============ RELATÓRIOS EM PDF — BRIGADA ============ */
@@ -11512,9 +11938,9 @@ h2.sec{font-size:12px;color:#1f3864;margin:16px 0 6px;text-transform:uppercase;l
  thead{display:table-header-group}}
 `;
 function brigCab(tit,sub){
-  return `<div class="cab">${typeof LOGO_EBIZ!=='undefined'&&LOGO_EBIZ?`<img src="${LOGO_EBIZ}">`:''}
+  return `<div class="cab">${typeof LOGO_EBIZ!=='undefined'&&LOGO_EBIZ?`<img src="${LOGO_EBIZ}" alt="E-Business Águas Claras">`:''}
     <div class="t"><h1>${esc(tit)}</h1><div class="sub">${esc(sub)}</div></div>
-    ${typeof LOGO_ABL!=='undefined'&&LOGO_ABL?`<img src="${LOGO_ABL}">`:''}</div>`;
+    ${typeof LOGO_ABL!=='undefined'&&LOGO_ABL?`<img src="${LOGO_ABL}" alt="ABL Gestão Condominial">`:''}</div>`;
 }
 function brigAbrirPdf(titulo,corpo){
   const w=window.open('','_blank');
@@ -11542,7 +11968,7 @@ function brigTabela(i,soNC){
         <td class="st ${stc}">${p.sit==='NÃO CONFORME'?'NÃO CONFORME':p.sit}</td>
         <td>${falhas.length?`<div class="fal">Falhou: ${esc(falhas.join('; '))}</div>`:''}
             ${p.obs?`<div class="obs">${esc(p.obs)}</div>`:''}
-            ${(p.fotos||[]).length?`<div class="fts">${p.fotos.map(f=>`<img src="${srcFoto(f)}">`).join('')}</div>`:''}
+            ${(p.fotos||[]).length?`<div class="fts">${p.fotos.map(f=>`<img src="${srcFoto(f)}" alt="Foto anexada">`).join('')}</div>`:''}
             ${!falhas.length&&!p.obs&&!(p.fotos||[]).length?'—':''}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
@@ -12051,7 +12477,7 @@ function abrirPainelChamadosRonda(lista){
 }
 function verFotoChamado(id){
   const t=tasks.find(x=>x.id===id); if(!t||!t.anexo)return;
-  openModal('Foto do chamado',`<img src="${srcFoto(t.anexo)}"${attrFoto(t.anexo)} style="width:100%;border-radius:8px">`,
+  openModal('Foto do chamado',`<img src="${srcFoto(t.anexo)}"${attrFoto(t.anexo)} alt="Anexo da tarefa" style="width:100%;border-radius:8px">`,
     `<button class="btn" onclick="closeModal();abrirPainelChamadosRonda()">Voltar</button>`);
 }
 function abrirChamadoRonda(id){
@@ -12087,8 +12513,9 @@ function viewBrigRonda(){
     <div class="card" style="margin-bottom:14px">
       <div class="ap-faixa">${ic('route')} RONDA DE HOJE — ${fmt(hoje).toUpperCase()}</div>
       <div style="padding:12px">
-        <div class="muted" style="margin-bottom:8px">Toque no andar ao passar por ele. Se encontrar algo, registre a ocorrência com foto —
+        <div class="muted" style="margin-bottom:8px">Toque no andar ao passar por ele. Se encontrar algo, registre a ocorrência —
           ${P().brigada?'ela abre o chamado da manutenção na hora.':'o Gestor recebe o chamado e direciona para a manutenção.'}</div>
+        ${relAvisoRonda(cid)}
         ${brigQuemCobriu(cid,hoje)}
         <div class="bg-grade">${grade}</div>
       </div>
@@ -12102,9 +12529,13 @@ function viewBrigRonda(){
           <td>${fmt(r.data)}</td><td>${esc(r.hora)}</td><td>${esc(brigAndarNome(r.andar))}</td>
           <td>${r.ok?'<span class="badge green">Sem novidade</span>':'<span class="badge red">Ocorrência</span>'}</td>
           <td>${esc(r.obs||'—')}</td><td class="muted">${esc(r.autor||'—')}</td>
-          <td style="text-align:right">${brigPodeExcluir(r)
-            ?`<button class="btn danger ghost sm" onclick="brigExcluirRonda('${r.id}')" title="Excluir registro">${ic('trash')}</button>`
-            :'<span class="t-sub">—</span>'}</td></tr>`).join('')
+          <td style="text-align:right"><div class="rowact" style="justify-content:flex-end">
+            ${!r.ok?`<button class="btn ghost sm" onclick="brigAcompanhar('${r.id}')"
+              title="Ver em que pé está o chamado">${ic('search')}Como ficou</button>`:''}
+            ${brigPodeExcluir(r)
+              ?`<button class="btn danger ghost sm" onclick="brigExcluirRonda('${r.id}')" title="Excluir registro">${ic('trash')}</button>`
+              :''}
+          </div></td></tr>`).join('')
           ||'<tr><td colspan="7" class="muted">Nenhuma ronda registrada ainda.</td></tr>'}
       </tbody></table></div>
     </div>`;
@@ -12159,7 +12590,16 @@ function brigExcluirInsp(id){
 }
 
 /* ---- Ocorrência na ronda: foto + descrição viram chamado ---- */
-let _rondaFoto=null;
+/* A ronda aceita mais de uma foto: um problema raramente se explica num
+   angulo so (o vazamento e a mancha no teto, a luminaria e o corredor). */
+const RONDA_MAX_FOTOS=4;
+let _rondaFotos=[];
+/* registros antigos guardavam uma foto unica em r.foto */
+function fotosDaRonda(r){
+  if(!r) return [];
+  if(Array.isArray(r.fotos)&&r.fotos.length) return r.fotos;
+  return r.foto?[r.foto]:[];
+}
 /* Dois brigadistas dividem o prédio sem divisão fixa: o quadro mostra
    quem já cobriu o quê e o que ainda falta, para ninguém repetir andar. */
 function brigQuemCobriu(cid,dia){
@@ -12175,8 +12615,667 @@ function brigQuemCobriu(cid,dia){
     ${falta?` &nbsp;|&nbsp; faltam <b>${falta}</b> andar(es)`:' &nbsp;|&nbsp; <b>prédio todo coberto</b>'}
   </div>`;
 }
+/* ====== ACOMPANHAR O CHAMADO ABERTO ======
+   Quem aponta o problema na ronda ou no check-list nao enxerga o
+   gerenciador de tarefas, entao o chamado sumia da vista e nunca se sabia
+   se foi resolvido. Esta tela devolve o retorno a quem apontou: em que pe
+   esta, quem pegou e, no fim, como ficou. */
+function chamadoDaRonda(r){
+  if(!r) return null;
+  return tasks.find(t=>t.id===r.chamadoId) || tasks.find(t=>t.rondaId===r.id) || null;
+}
+function chamadosDaInspecao(id){ return tasks.filter(t=>t.brigInspId===id) }
+
+function chStatusCartao(t){
+  if(!t) return `<div class="card" style="box-shadow:none;background:var(--slate-soft);padding:13px">
+    <div class="t-sub">O chamado deste registro não foi encontrado. Pode ter sido excluído pelo Gestor.</div></div>`;
+  const fim = t.status==='Concluída';
+  const triagem = t.origem==='ronda' && t.triagem==='pendente';
+  const cor = fim?'#e6f6ea':(t.status==='Atrasada'?'#fdeaea':'#fff8e8');
+  const borda= fim?'#9ad3ab':(t.status==='Atrasada'?'#edaab0':'#e7cf9a');
+  let frase;
+  if(fim) frase='Resolvido'+(t.concluidoPor?' por '+esc(t.concluidoPor):'')+
+    (t.concluidoEm?' em '+fmt(t.concluidoEm):'')+'.';
+  else if(triagem) frase='Aguardando o Gestor direcionar para a manutenção.';
+  else if(t.responsavel) frase='Com '+esc(t.responsavel)+'. Previsto para '+fmt(t.vencimento)+'.';
+  else frase='Aberto, ainda sem responsável definido.';
+  return `<div class="card" style="box-shadow:none;background:${cor};border-color:${borda};padding:13px;margin-bottom:12px">
+    <div class="chip-list" style="margin-bottom:6px">${badgeStatus(t.status)}${badgePrio(t.prioridade)}</div>
+    <div style="font-weight:700;color:var(--navy);line-height:1.45">${frase}</div>
+    ${fim&&t.obsConclusao?`<div class="t-sub" style="margin-top:7px;line-height:1.55">
+      <b>O que foi feito:</b> ${esc(t.obsConclusao)}</div>`:''}
+    ${!fim?`<div class="t-sub" style="margin-top:5px">Aberto em ${fmt(t.dataProgramada||t.vencimento)}.</div>`:''}
+  </div>`;
+}
+function chFotos(lista,rot){
+  const l=(lista||[]).filter(Boolean);
+  if(!l.length) return '';
+  return `<div class="t-sub" style="margin-top:10px;margin-bottom:5px">${rot}</div>
+    <div class="bg-fotos">${l.map((f,i)=>
+      `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" alt="Foto ${i+1}"
+        style="cursor:zoom-in" onclick="chAmpliar('${f}')">`).join('')}</div>`;
+}
+function chAmpliar(ref){
+  const d=document.querySelector('#chZoom');
+  if(d) d.innerHTML=`<img src="${srcFoto(ref)}"${attrFoto(ref)} alt="Foto ampliada"
+    style="width:100%;border-radius:10px;display:block;margin-top:10px">`;
+  if(typeof hidratarFotos==='function') setTimeout(()=>hidratarFotos(),0);
+}
+function chLinhaTempo(t){
+  const h=(t&&t.historico)||[];
+  if(!h.length) return '';
+  return `<div class="section-title" style="margin-top:14px"><h3>Andamento</h3></div>
+    ${h.slice().reverse().map(x=>`<div class="feed-item" style="margin-bottom:6px">
+      <div class="fi-ic">${ic('clock')}</div>
+      <div style="flex:1;min-width:0">
+        <div class="ft">${esc(x.t||'')}</div>
+        <div class="fd">${esc(x.q||'')} · ${esc(x.w||'')}</div>
+        ${x.obs?`<div class="fd">${esc(x.obs)}</div>`:''}
+      </div></div>`).join('')}`;
+}
+/* Entrada a partir de um registro da ronda */
+function brigAcompanhar(rondaId){
+  const r=brigRondas.find(x=>x.id===rondaId); if(!r) return;
+  const t=chamadoDaRonda(r);
+  const fotos=fotosDaRonda(r);
+  openModal('Ocorrência — '+brigAndarNome(r.andar),
+    chStatusCartao(t)+
+    `<div class="section-title" style="margin-top:0"><h3>O que foi registrado</h3></div>
+     <div class="ap-grid" style="padding:0 0 4px">
+       <div class="rot">Quando</div><div class="val">${fmt(r.data)} às ${esc(r.hora||'—')}</div>
+       <div class="rot">Local</div><div class="val">${esc(brigAndarNome(r.andar))}</div>
+       <div class="rot">Quem registrou</div><div class="val">${esc(r.autor||'—')}</div>
+     </div>
+     <div class="t-sub" style="margin-top:8px;line-height:1.55">${esc(r.obs||'—')}</div>
+     ${chFotos(fotos,fotos.length>1?fotos.length+' fotos do problema':'Foto do problema')}
+     ${(t&&t.status==='Concluída'&&t.anexo&&!fotos.includes(t.anexo))?chFotos([t.anexo],'Como ficou'):''}
+     <div id="chZoom"></div>
+     ${chLinhaTempo(t)}`,
+    `<button class="btn ghost" onclick="closeModal()">Fechar</button>`);
+  if(typeof hidratarFotos==='function') setTimeout(()=>hidratarFotos(),0);
+}
+/* Entrada a partir do check-list do andar */
+function brigAcompanharInsp(inspId){
+  const i=brigInsp.find(x=>x.id===inspId); if(!i) return;
+  const ts=chamadosDaInspecao(inspId);
+  const ncs=brigNC(i);
+  openModal('Não conformes — '+brigAndarNome(i.andar),
+    (ts.length?ts.map(chStatusCartao).join(''):chStatusCartao(null))+
+    `<div class="section-title" style="margin-top:0"><h3>O que foi apontado</h3></div>
+     <div class="ap-grid" style="padding:0 0 4px">
+       <div class="rot">Quando</div><div class="val">${fmt(i.data)} às ${esc(i.hora||'—')}</div>
+       <div class="rot">Sistema</div><div class="val">${esc(brigSis(i.sistema).nome)}</div>
+       <div class="rot">Quem verificou</div><div class="val">${esc(i.responsavel||'—')}</div>
+     </div>
+     ${ncs.map(p=>{
+        const fts=(p.fotos||[]).filter(Boolean);
+        return `<div class="feed-item" style="margin-top:8px;align-items:flex-start">
+         <div class="fi-ic">${ic('alert')}</div>
+         <div style="flex:1;min-width:0">
+           <div class="ft">${esc(p.desc)}</div>
+           ${p.obs?`<div class="fd">${esc(p.obs)}</div>`:''}
+           ${fts.length?`<div class="bg-fotos" style="margin-top:6px">${fts.map((f,fi)=>
+             `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" alt="Foto ${fi+1}"
+               style="cursor:zoom-in" onclick="chAmpliar('${f}')">`).join('')}</div>`:''}
+         </div></div>`}).join('')}
+     <div id="chZoom"></div>
+     ${ts.length===1?chLinhaTempo(ts[0]):''}`,
+    `<button class="btn ghost" onclick="closeModal()">Fechar</button>`);
+  if(typeof hidratarFotos==='function') setTimeout(()=>hidratarFotos(),0);
+}
+
+/* ============================================================
+   BACKUP DE 30 EM 30 DIAS  +  LIMPEZA DAS FOTOS ANTIGAS
+   Dois assuntos que andam juntos de proposito: a foto de um servico
+   encerrado so pode sair do banco depois de ter saido num backup.
+   A trava esta em fotoJaSalvaEmBackup() -- enquanto nao houver backup
+   cobrindo a data, nada e apagado.
+   ============================================================ */
+const BACKUP_DIAS   = 30;   // de quanto em quanto tempo lembrar
+const FOTO_DIAS_FIM = 60;   // quarentena da foto depois de concluido
+
+function ultimoBackup(){ return CFG.ultimoBackup||'' }
+function diasDesdeBackup(){ const u=ultimoBackup(); return u?diffDays(today(),u):null }
+function backupVencido(){ const d=diasDesdeBackup(); return d===null||d>=BACKUP_DIAS }
+
+/* ---------- a planilha legivel ---------- */
+/* Monta um .xlsx com varias abas a partir de tabelas simples.
+   abas: [{nome, colunas:['A','B'], linhas:[[v,v],...]}] */
+function xlsxAbas(abas){
+  const enc=new TextEncoder();
+  const folhas=abas.map((ab,i)=>{
+    const larg=ab.colunas.map((c,j)=>{
+      const maior=Math.max(String(c).length,
+        ...ab.linhas.slice(0,400).map(l=>String(l[j]==null?'':l[j]).length));
+      return `<col min="${j+1}" max="${j+1}" width="${Math.min(60,Math.max(10,maior+3))}" customWidth="1"/>`;
+    }).join('');
+    const cab=`<row r="1" ht="22" customHeight="1">${ab.colunas.map((c,j)=>
+      `<c r="${_col(j)}1" t="inlineStr" s="1"><is><t>${_xe(c)}</t></is></c>`).join('')}</row>`;
+    const corpo=ab.linhas.map((l,li)=>`<row r="${li+2}">${l.map((v,j)=>{
+      const num=typeof v==='number'&&isFinite(v);
+      return num?`<c r="${_col(j)}${li+2}" s="3"><v>${v}</v></c>`
+                :`<c r="${_col(j)}${li+2}" t="inlineStr" s="5"><is><t>${_xe(v)}</t></is></c>`;
+    }).join('')}</row>`).join('');
+    return {i,nome:ab.nome,xml:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetViews><sheetView ${i===0?'tabSelected="1" ':''}workbookViewId="0">
+<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+<cols>${larg}</cols><sheetData>${cab}${corpo}</sheetData>
+<autoFilter ref="A1:${_col(ab.colunas.length-1)}${ab.linhas.length+1}"/></worksheet>`};
+  });
+
+  const estilos=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font>
+<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>
+<fills count="3"><fill><patternFill patternType="none"/></fill>
+<fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF0D1B2E"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>
+<border><left style="thin"><color rgb="FFD9DEE7"/></left><right style="thin"><color rgb="FFD9DEE7"/></right>
+<top style="thin"><color rgb="FFD9DEE7"/></top><bottom style="thin"><color rgb="FFD9DEE7"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="6">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
+</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+
+  const arqs=[
+    {nome:'[Content_Types].xml',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${
+      folhas.map(f=>`<Override PartName="/xl/worksheets/sheet${f.i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')
+    }<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`)},
+    {nome:'_rels/.rels',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`)},
+    {nome:'xl/workbook.xml',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${
+      folhas.map(f=>`<sheet name="${_xe(f.nome)}" sheetId="${f.i+1}" r:id="rId${f.i+1}"/>`).join('')}</sheets></workbook>`)},
+    {nome:'xl/_rels/workbook.xml.rels',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${
+      folhas.map(f=>`<Relationship Id="rId${f.i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${f.i+1}.xml"/>`).join('')
+    }<Relationship Id="rId${folhas.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`)},
+    {nome:'xl/styles.xml',dados:enc.encode(estilos)},
+    ...folhas.map(f=>({nome:`xl/worksheets/sheet${f.i+1}.xml`,dados:enc.encode(f.xml)}))
+  ];
+  return _zip(arqs);
+}
+
+/* Nome do condominio sem depender de outra tela. */
+function _bkCondo(id){ const c=CONDOS.find(x=>x.id===id); return c?c.nome:(id||'—') }
+function _bkSimNao(v){ return v?'Sim':'Não' }
+
+/* As abas do backup legivel. */
+function backupAbas(){
+  const abas=[];
+  abas.push({nome:'Tarefas',colunas:['Condomínio','Título','Área','Tipo','Prioridade','Status',
+      'Responsável','Vencimento','Concluído em','Concluído por','O que foi feito','Origem','Criado por'],
+    linhas:(tasks||[]).map(t=>[_bkCondo(t.condoId),t.titulo||'',t.tipo||'',t.tipoTarefa||'',
+      t.prioridade||'',t.status||'',t.responsavel||'',fmt(t.vencimento),
+      t.concluidoEm?fmt(t.concluidoEm):'',t.concluidoPor||'',t.obsConclusao||'',
+      t.origem||'',t.criadoPor||''])});
+
+  abas.push({nome:'Ronda',colunas:['Condomínio','Data','Hora','Local','Situação','O que foi encontrado',
+      'Brigadista','Fotos','Chamado resolvido','Resolvido em','O que foi feito'],
+    linhas:(brigRondas||[]).map(r=>{
+      const t=(tasks||[]).find(x=>x.id===r.chamadoId);
+      return [_bkCondo(r.condoId),fmt(r.data),r.hora||'',brigAndarNome(r.andar),
+        r.ok?'Sem novidade':(r.repeteDe?'Ocorrência já conhecida':'Ocorrência'),
+        r.obs||'',r.autor||'',fotosDaRonda(r).filter(Boolean).length,
+        t?_bkSimNao(t.status==='Concluída'):'',
+        t&&t.concluidoEm?fmt(t.concluidoEm):'',t?(t.obsConclusao||''):''];
+    })});
+
+  abas.push({nome:'Check-list brigada',colunas:['Condomínio','Data','Local','Sistema','Status',
+      'Pontos','Não conformes','Responsável'],
+    linhas:(brigInsp||[]).map(i=>[_bkCondo(i.condoId),fmt(i.data),brigAndarNome(i.andar),
+      (brigSis(i.sistema)||{}).nome||i.sistema,i.status||'',
+      (i.pontos||[]).length,brigNC(i).length,i.responsavel||i.autor||''])});
+
+  abas.push({nome:'Leituras',colunas:['Condomínio','Data','Tipo','Medidor','Leitura','Consumo','Quem registrou'],
+    linhas:(leituras||[]).map(l=>[_bkCondo(l.condoId),fmt(l.data),l.tipo||'',l.medidor||'',
+      l.valor!=null?l.valor:'',l.consumo!=null?l.consumo:'',l.autor||''])});
+
+  abas.push({nome:'Estoque',colunas:['Condomínio','Item','Unidade','Saldo','Mínimo','Atualizado em'],
+    linhas:(estoque||[]).map(e=>[_bkCondo(e.condoId),e.nome||'',e.unidade||'',
+      e.saldo!=null?e.saldo:'',e.minimo!=null?e.minimo:'',e.atualizadoEm?fmt(e.atualizadoEm):''])});
+
+  abas.push({nome:'Pedidos',colunas:['Condomínio','Data','Fornecedor','Situação','Valor','Observação'],
+    linhas:(pedidos||[]).map(p=>[_bkCondo(p.condoId),fmt(p.data),p.fornecedor||'',
+      p.status||'',p.valor!=null?p.valor:'',p.obs||''])});
+
+  abas.push({nome:'Notas fiscais',colunas:['Condomínio','Competência','Prestador','Número','Valor','Situação'],
+    linhas:(notas||[]).map(n=>[_bkCondo(n.condoId),n.competencia||'',n.prestador||'',
+      n.numero||'',n.valor!=null?n.valor:'',n.status||''])});
+
+  abas.push({nome:'Apontamentos',colunas:['Condomínio','Data','Local','Descrição','Situação','Responsável'],
+    linhas:(apontamentos||[]).map(a=>[_bkCondo(a.condoId),fmt(a.data),a.local||'',
+      a.descricao||a.titulo||'',a.status||'',a.responsavel||''])});
+
+  return abas.filter(a=>a.linhas.length);
+}
+
+function _baixar(nome,blob){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=nome; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+
+/* Gera os dois arquivos e carimba a data do backup. */
+function backupGerar(){
+  const dia=today();
+  const snap=dbSnapshot();
+  _baixar('backup-rotinas-'+dia+'.json',
+    new Blob([JSON.stringify(snap,null,2)],{type:'application/json'}));
+
+  const abas=backupAbas();
+  let linhas=0;
+  if(abas.length){
+    abas.forEach(a=>linhas+=a.linhas.length);
+    _baixar('backup-rotinas-'+dia+'.xlsx',
+      new Blob([xlsxAbas(abas)],
+        {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  }
+
+  CFG.ultimoBackup=dia;
+  CFG.backups=(CFG.backups||[]).concat([{data:dia,por:session?session.nome:'',
+    tarefas:(tasks||[]).length,rondas:(brigRondas||[]).length,linhas}]).slice(-24);
+  audit('Backup gerado','Sistema',linhas+' linhas em '+abas.length+' abas','','');
+  save();
+  toast('Backup gerado: 2 arquivos baixados.');
+  if(typeof render==='function') render();
+  return {abas:abas.length,linhas};
+}
+
+/* Aviso na tela quando passou dos 30 dias. */
+function backupAviso(){
+  if(!backupVencido()) return '';
+  const d=diasDesdeBackup();
+  return `<div class="bkp-aviso">
+    <div class="bkp-ic">${ic('shield')}</div>
+    <div style="flex:1;min-width:0">
+      <div class="bkp-t">${d===null?'Nenhum backup foi gerado ainda'
+        :'O último backup foi há '+d+' dias'}</div>
+      <div class="bkp-s">Baixe a cópia para o seu computador. São dois arquivos: um para
+        repor o sistema, e uma planilha para consultar.</div>
+    </div>
+    <button class="btn sm primary" onclick="backupGerar()">Gerar backup</button>
+  </div>`;
+}
+
+/* Cartao da limpeza, na tela de Configuracoes. Deixa explicito o que sai,
+   quanto libera e por que ainda nao da (quando nao da). */
+function bkpLimpezaCartao(){
+  const {alvos,ids}=fotosParaLimpar();
+  const temBackup=!!ultimoBackup();
+  const concluidasVelhas=(tasks||[]).filter(t=>t.status==='Concluída'&&t.concluidoEm&&
+    diffDays(today(),t.concluidoEm)>=FOTO_DIAS_FIM).length;
+  return `<div style="margin-top:16px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)">
+    <div style="font-weight:700;font-size:12.5px;margin-bottom:3px">Liberar espaço das fotos antigas</div>
+    <div class="t-sub" style="margin-bottom:9px;line-height:1.5">
+      Serviço concluído há mais de ${FOTO_DIAS_FIM} dias não precisa mais carregar a foto no
+      banco. A foto só é apagada depois de ter saído num backup — o registro do que
+      aconteceu continua no sistema, apenas a imagem sai.</div>
+    ${!temBackup
+      ? `<div class="t-sub" style="color:#8d2b38">Gere um backup primeiro. Enquanto não houver
+          uma cópia no seu computador, nada é apagado.</div>`
+      : ids.length
+        ? `<div class="t-sub" style="margin-bottom:9px"><b>${ids.length} foto(s)</b> de
+             ${alvos.length} serviço(s) encerrado(s) já saíram no backup de
+             ${fmt(ultimoBackup())} e podem ser liberadas.</div>
+           <button class="btn danger sm" onclick="fotosLimpar()">${ic('trash')}Liberar ${ids.length} foto(s)</button>`
+        : `<div class="t-sub">Nada a liberar por enquanto.${concluidasVelhas?
+             ' Há '+concluidasVelhas+' serviço(s) antigo(s), mas as fotos deles ainda não saíram num backup.':''}</div>`}
+  </div>`;
+}
+
+/* ---------- limpeza das fotos de servico encerrado ---------- */
+
+/* So e apagavel o que ja saiu num backup: a data de conclusao precisa ser
+   anterior ao ultimo backup. Sem backup, nada e apagavel. */
+function fotoJaSalvaEmBackup(dataConclusao){
+  const u=ultimoBackup();
+  return !!(u&&dataConclusao&&dataConclusao<=u);
+}
+function _refsDe(v){
+  return (Array.isArray(v)?v:[v]).filter(x=>typeof x==='string'&&x.startsWith(FOTO_REF))
+    .map(x=>x.slice(FOTO_REF.length));
+}
+
+/* O que esta maduro para limpar, sem apagar nada ainda. */
+function fotosParaLimpar(){
+  const alvos=[], ids=new Set();
+  (tasks||[]).forEach(t=>{
+    if(t.status!=='Concluída'||!t.concluidoEm) return;
+    if(diffDays(today(),t.concluidoEm)<FOTO_DIAS_FIM) return;
+    if(!fotoJaSalvaEmBackup(t.concluidoEm)) return;
+    const refs=[].concat(_refsDe(t.fotos||[]),_refsDe(t.anexo||''),
+      ..._colHist(t));
+    const r=(brigRondas||[]).find(x=>x.id===t.rondaId||x.chamadoId===t.id);
+    if(r) refs.push(..._refsDe(r.fotos||[]),..._refsDe(r.foto||''));
+    const unicos=[...new Set(refs)].filter(x=>x&&!ids.has(x));
+    if(!unicos.length) return;
+    unicos.forEach(x=>ids.add(x));
+    alvos.push({tarefa:t,ronda:r||null,refs:unicos,concluidoEm:t.concluidoEm});
+  });
+  return {alvos,ids:[...ids]};
+}
+function _colHist(t){
+  return (t.historico||[]).map(h=>_refsDe(h.anexo||''));
+}
+
+/* Executa a limpeza: tira as referencias do app e apaga no servidor. */
+async function fotosLimpar(){
+  const {alvos,ids}=fotosParaLimpar();
+  if(!ids.length) return toast('Nenhuma foto está madura para limpeza.');
+  if(!confirm('Apagar '+ids.length+' foto(s) de serviços concluídos há mais de '+
+    FOTO_DIAS_FIM+' dias?\n\nElas já saíram no backup de '+fmt(ultimoBackup())+
+    '.\nEsta ação não pode ser desfeita.')) return;
+
+  let servidor={apagadas:0};
+  try{
+    const r=await fetch('/api/fotos/apagar',{method:'POST',
+      headers:syncHeaders(),
+      body:JSON.stringify({ids})});
+    if(r.ok) servidor=await r.json();
+  }catch(e){ /* offline: limpa no app e o servidor fica para a proxima */ }
+
+  alvos.forEach(({tarefa:t,ronda:r})=>{
+    t.fotos=[]; t.anexo='';
+    (t.historico||[]).forEach(h=>{ if(h.anexo) h.anexo='' });
+    t.fotosArquivadas=ultimoBackup();
+    if(r){ r.fotos=[]; r.foto=''; r.fotosArquivadas=ultimoBackup() }
+  });
+  CFG.ultimaLimpezaFotos=today();
+  audit('Fotos arquivadas','Sistema',ids.length+' foto(s) de serviços encerrados','','');
+  save(); render();
+  toast(ids.length+' foto(s) liberadas do banco.');
+  return {pedidas:ids.length,apagadas:servidor.apagadas||0};
+}
+
+/* ============================================================
+   NAO REGISTRAR DUAS VEZES A MESMA COISA
+   O forro quebrado do 8o andar que o Anderson registrou ontem continua
+   quebrado hoje. Sem isso o Wesley abre um segundo chamado do mesmo
+   problema: a manutencao recebe repetido e o banco engorda de foto a
+   toa. Entao, antes de deixar registrar, o app mostra o que ja esta em
+   aberto naquele andar e pergunta se e a mesma coisa.
+   ============================================================ */
+const RONDA_DIAS_REPETE = 90;   // mais velho que isso ja nao se compara
+
+/* Ocorrencias daquele andar com chamado ainda sem solucao. */
+function rondaAbertasNoAndar(cid,andar){
+  return brigRondas
+    .filter(r=>!r.ok && r.condoId===cid && String(r.andar)===String(andar))
+    .filter(r=>r.data && diasEntre(r.data,today())<=RONDA_DIAS_REPETE)
+    .map(r=>({r,t:chamadoDaRonda(r)}))
+    .filter(x=>x.t && x.t.status!=='Concluída' && !x.t.arquivada)
+    .sort((a,b)=>String(b.r.data+b.r.hora).localeCompare(String(a.r.data+a.r.hora)));
+}
+/* Quantas vezes a ronda ja confirmou que este chamado continua. */
+function rondaCobrancas(t){ return (t&&t.vistoDeNovo)||0 }
+
+function rondaAvisoRepete(cid,andar){
+  const abertas=rondaAbertasNoAndar(cid,andar);
+  if(!abertas.length) return '';
+  return `<div class="av-rep">
+    <div class="av-rep-tit">${ic('alert')} Já existe ocorrência em aberto neste andar</div>
+    <div class="av-rep-sub">Confira se não é a mesma coisa. Se for, confirme abaixo em vez de
+      registrar de novo — assim a manutenção não recebe o mesmo problema duas vezes.</div>
+    ${abertas.map(({r,t})=>{
+      const fts=fotosDaRonda(r).filter(Boolean);
+      const cob=rondaCobrancas(t);
+      return `<div class="av-rep-it">
+        <div class="av-rep-cab">${badgeStatus(t.status)} <span class="muted">${fmt(r.data)} às ${r.hora} · ${esc(r.autor||'—')}</span></div>
+        <div class="av-rep-obs">${esc(r.obs||'(sem descrição)')}</div>
+        ${t.responsavel?`<div class="muted" style="font-size:11.5px">Com ${esc(t.responsavel)}</div>`
+                       :`<div class="muted" style="font-size:11.5px">Ainda aguardando direcionamento</div>`}
+        ${cob?`<div class="muted" style="font-size:11.5px">Já confirmado ${cob===1?'1 vez':cob+' vezes'} em ronda posterior</div>`:''}
+        ${fts.length?`<div class="bg-fotos" style="margin-top:6px">${fts.map((f,i)=>
+          `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" alt="Foto ${i+1} do registro anterior">`).join('')}</div>`:''}
+        <button class="btn sm" style="margin-top:7px" onclick="brigRondaMesmo('${cid}','${andar}','${r.id}')">
+          ${ic('checkCircle')} É esse mesmo — continua assim</button>
+      </div>`}).join('')}
+    <div class="av-rep-fim">Não é nenhum desses? Descreva o problema novo abaixo.</div>
+  </div>`;
+}
+
+/* "E esse mesmo": nao abre chamado novo. Registra a passagem da ronda e
+   carimba no chamado existente que o problema continua de pe. */
+function brigRondaMesmo(cid,andar,rondaId){
+  const r0=brigRondas.find(x=>x.id===rondaId);
+  if(!r0) return toast('Registro anterior não encontrado.');
+  const t=chamadoDaRonda(r0);
+  if(!t) return toast('O chamado deste registro não existe mais.');
+  const hoje=today();
+  if(brigRondas.some(x=>x.repeteDe===rondaId&&x.data===hoje))
+    return toast('Este problema já foi confirmado hoje.');
+
+  const r={id:uid('br'),condoId:cid,andar,data:hoje,hora:nowHora(),ok:false,
+    obs:r0.obs,fotos:[],foto:'',prioridade:r0.prioridade||'Média',
+    autor:session.nome,userId:session.id,chamadoId:t.id,repeteDe:rondaId};
+  brigRondas.push(r);
+
+  t.vistoDeNovo=rondaCobrancas(t)+1;
+  t.vistoPorUltimo=hoje;
+  t.historico=t.historico||[];
+  t.historico.push({q:session.nome,w:nowStamp(),
+    t:'Continua sem solução — conferido na ronda de '+fmt(hoje)+' (cobrança '+t.vistoDeNovo+')'});
+  audit('Ocorrência confirmada na ronda',brigAndarNome(andar),
+    'Sem chamado novo — '+t.titulo,cid,'Ronda diária');
+  save(); closeModal(); render();
+  toast('Confirmado que o problema continua. Nenhum chamado novo foi aberto.');
+}
+
+
+/* ============================================================
+   RELATORIO DA RONDA — O QUE FOI FEITO E O QUE NAO FOI
+   A brigada registra todo dia, mas ninguem conseguia responder a
+   pergunta simples: do que apontamos, o que a manutencao resolveu?
+   Este relatorio fecha sozinho a semana (segunda, referente a semana
+   anterior) e o mes (no primeiro dia, referente ao mes anterior), e
+   fica avisando na tela da ronda ate alguem abrir.
+   ============================================================ */
+
+/* Somar dias numa data 'AAAA-MM-DD' sem esbarrar em fuso. */
+function dMais(d,n){ const x=parse(d); x.setDate(x.getDate()+n); return iso(x) }
+
+/* Semana cheia anterior, de segunda a domingo. */
+function relSemanaAnterior(base){
+  const hoje=base||today(), dow=parse(hoje).getDay();      // 0=domingo
+  const segDestaSemana=dMais(hoje,-((dow+6)%7));
+  const ini=dMais(segDestaSemana,-7);
+  return {tipo:'semana',ini,fim:dMais(ini,6),
+    rotulo:'Semana de '+fmt(ini)+' a '+fmt(dMais(ini,6))};
+}
+/* Mes cheio anterior. */
+function relMesAnterior(base){
+  const hoje=base||today();
+  const prim=hoje.slice(0,8)+'01';
+  const fimAnt=dMais(prim,-1);
+  const ini=fimAnt.slice(0,8)+'01';
+  return {tipo:'mes',ini,fim:fimAnt,rotulo:mesExtenso(ini.slice(0,7))};
+}
+
+/* O levantamento em si. Nao depende de tela nenhuma. */
+function relRonda(cid,ini,fim){
+  const dentro=r=>r.condoId===cid&&r.data>=ini&&r.data<=fim;
+  const passagens=brigRondas.filter(dentro);
+  const ocorr=passagens.filter(r=>!r.ok&&!r.repeteDe);     // apontamentos novos
+  const confirm=passagens.filter(r=>!r.ok&&r.repeteDe);    // "continua assim"
+  const dias=[...new Set(passagens.map(r=>r.data))].sort();
+  const equipe=[...new Set(passagens.map(r=>r.autor).filter(Boolean))];
+
+  const linhas=ocorr.map(r=>{
+    const t=chamadoDaRonda(r);
+    const feito=!!t&&t.status==='Concluída';
+    const prazo=(feito&&t.concluidoEm)?diffDays(t.concluidoEm,r.data):null;
+    return {
+      ronda:r, chamado:t, feito,
+      andar:brigAndarNome(r.andar),
+      oque:r.obs||'(sem descrição)',
+      quem:r.autor||'—',
+      situacao: !t ? 'Chamado não encontrado'
+               : feito ? 'Resolvido'
+               : t.status==='Atrasada' ? 'Em aberto e fora do prazo'
+               : t.responsavel ? 'Em aberto com '+t.responsavel
+               : 'Em aberto, aguardando direcionamento',
+      resolvidoPor: feito?(t.concluidoPor||'—'):'',
+      resolvidoEm: feito?(t.concluidoEm||''):'',
+      oQueFoiFeito: feito?(t.obsConclusao||''):'',
+      diasParaResolver: prazo,
+      cobrancas: t?rondaCobrancas(t):0,
+      urgente: !!(t&&t.prioridade==='Alta')
+    };
+  }).sort((a,b)=>String(a.ronda.data).localeCompare(String(b.ronda.data)));
+
+  const feitos=linhas.filter(l=>l.feito);
+  const pend=linhas.filter(l=>!l.feito);
+  const prazos=feitos.map(l=>l.diasParaResolver).filter(n=>n!==null&&n>=0);
+
+  /* onde mais aparece problema */
+  const porAndar={};
+  linhas.forEach(l=>{ porAndar[l.andar]=porAndar[l.andar]||{total:0,abertos:0};
+    porAndar[l.andar].total++; if(!l.feito) porAndar[l.andar].abertos++ });
+  const ranking=Object.entries(porAndar)
+    .map(([andar,v])=>({andar,...v})).sort((a,b)=>b.total-a.total).slice(0,5);
+
+  return {
+    cid, ini, fim, linhas, feitos, pendentes:pend, ranking, equipe,
+    passagens: passagens.length,
+    diasComRonda: dias.length,
+    andaresCobertos: new Set(passagens.map(r=>r.andar)).size,
+    totalAndares: BRIG_ANDARES.length,
+    apontamentos: ocorr.length,
+    confirmacoes: confirm.length,
+    resolvidos: feitos.length,
+    emAberto: pend.length,
+    foraDoPrazo: pend.filter(l=>l.chamado&&l.chamado.status==='Atrasada').length,
+    semDirecionamento: pend.filter(l=>l.chamado&&!l.chamado.responsavel).length,
+    pctResolvido: ocorr.length?Math.round(feitos.length*100/ocorr.length):null,
+    prazoMedio: prazos.length?Math.round(prazos.reduce((a,b)=>a+b,0)/prazos.length):null
+  };
+}
+
+/* Chave do periodo, para lembrar qual relatorio ja foi aberto. */
+function relChave(p){ return p.tipo+':'+p.ini }
+function relPendentes(){
+  const fora=[];
+  const sem=relSemanaAnterior(), mes=relMesAnterior();
+  if((CFG.relRondaVisto||{})[relChave(sem)]!==true) fora.push(sem);
+  if((CFG.relRondaVisto||{})[relChave(mes)]!==true) fora.push(mes);
+  return fora;
+}
+function relMarcarVisto(p){
+  CFG.relRondaVisto=CFG.relRondaVisto||{};
+  CFG.relRondaVisto[relChave(p)]=true; save();
+}
+
+/* Faixa na tela da ronda: "o relatorio da semana passada esta pronto". */
+function relAvisoRonda(cid){
+  const pend=relPendentes().filter(p=>relRonda(cid,p.ini,p.fim).passagens>0);
+  if(!pend.length) return '';
+  return pend.map(p=>`<div class="rel-aviso">
+    <div class="rel-aviso-ic">${ic('clipboard')}</div>
+    <div style="flex:1;min-width:0">
+      <div class="rel-aviso-t">Relatório pronto — ${esc(p.rotulo)}</div>
+      <div class="rel-aviso-s">O que foi apontado na ronda e o que a manutenção já resolveu.</div>
+    </div>
+    <button class="btn sm primary" onclick="relAbrir('${p.tipo}')">Ver</button>
+  </div>`).join('');
+}
+
+function relAbrir(tipo,cidForcado){
+  const cid=cidForcado||(condoFilter==='all'?'c1':condoFilter);
+  const p=tipo==='mes'?relMesAnterior():relSemanaAnterior();
+  const d=relRonda(cid,p.ini,p.fim);
+  relMarcarVisto(p);
+  openModal('Relatório da ronda — '+p.rotulo, relCorpo(d,p),
+    `<button class="btn ghost" onclick="closeModal()">Fechar</button>
+     <button class="btn" onclick="relAbrir('${tipo==='mes'?'semana':'mes'}')">
+       Ver o ${tipo==='mes'?'da semana':'do mês'}</button>`);
+  if(typeof hidratarFotos==='function') setTimeout(()=>hidratarFotos(),0);
+}
+
+function relCorpo(d,p){
+  if(!d.passagens) return `<div class="muted">Nenhuma ronda registrada entre
+    ${fmt(p.ini)} e ${fmt(p.fim)}.</div>`;
+  const pct=d.pctResolvido;
+  const cor=pct===null?'':pct>=80?'verde':pct>=50?'ambar':'vermelho';
+  return `
+  <div class="rel-topo">
+    <div class="rel-box"><div class="rel-n">${d.passagens}</div><div class="rel-l">passagens registradas</div></div>
+    <div class="rel-box"><div class="rel-n">${d.diasComRonda}</div><div class="rel-l">dias com ronda</div></div>
+    <div class="rel-box"><div class="rel-n">${d.apontamentos}</div><div class="rel-l">problemas apontados</div></div>
+  </div>
+
+  <div class="rel-placar ${cor}">
+    <div class="rel-placar-l">
+      <div class="rel-placar-n">${d.resolvidos}</div>
+      <div class="rel-placar-t">FEITO</div>
+      <div class="rel-placar-s">a manutenção resolveu</div>
+    </div>
+    <div class="rel-placar-l">
+      <div class="rel-placar-n">${d.emAberto}</div>
+      <div class="rel-placar-t">NÃO FEITO</div>
+      <div class="rel-placar-s">continua em aberto</div>
+    </div>
+  </div>
+  ${pct!==null?`<div class="rel-frase">${pct}% do que a brigada apontou no período já foi resolvido${
+    d.prazoMedio!==null?`, em média ${d.prazoMedio===0?'no mesmo dia':d.prazoMedio===1?'em 1 dia':'em '+d.prazoMedio+' dias'}`:''}.</div>`:''}
+  ${d.foraDoPrazo?`<div class="rel-alerta">${ic('alert')} ${d.foraDoPrazo===1
+      ?'1 chamado está em aberto e fora do prazo.'
+      :d.foraDoPrazo+' chamados estão em aberto e fora do prazo.'}</div>`:''}
+  ${d.semDirecionamento?`<div class="rel-alerta ambar">${ic('clock')} ${d.semDirecionamento===1
+      ?'1 chamado ainda não foi direcionado a ninguém.'
+      :d.semDirecionamento+' chamados ainda não foram direcionados a ninguém.'}</div>`:''}
+  ${d.confirmacoes?`<div class="rel-nota">${d.confirmacoes===1
+      ?'1 vez a ronda confirmou que um problema já conhecido continuava, sem abrir chamado novo.'
+      :d.confirmacoes+' vezes a ronda confirmou que um problema já conhecido continuava, sem abrir chamado novo.'}</div>`:''}
+
+  ${d.emAberto?`
+  <div class="section-title"><h3>${ic('alert')}O que ainda não foi feito</h3></div>
+  ${d.pendentes.map(l=>`<div class="rel-it aberto">
+     <div class="rel-it-cab"><b>${esc(l.andar)}</b>
+       <span class="muted">${fmt(l.ronda.data)} · ${esc(l.quem)}</span>
+       ${l.urgente?'<span class="badge red">Urgente</span>':''}</div>
+     <div class="rel-it-ob">${esc(l.oque)}</div>
+     <div class="rel-it-st">${esc(l.situacao)}${l.cobrancas?' · já cobrado '+l.cobrancas+'x na ronda':''}</div>
+   </div>`).join('')}`:''}
+
+  ${d.resolvidos?`
+  <div class="section-title"><h3>${ic('checkCircle')}O que foi feito</h3></div>
+  ${d.feitos.map(l=>`<div class="rel-it feito">
+     <div class="rel-it-cab"><b>${esc(l.andar)}</b>
+       <span class="muted">${fmt(l.ronda.data)} · ${esc(l.quem)}</span></div>
+     <div class="rel-it-ob">${esc(l.oque)}</div>
+     <div class="rel-it-st">Resolvido por ${esc(l.resolvidoPor)}${
+       l.resolvidoEm?' em '+fmt(l.resolvidoEm):''}${
+       l.diasParaResolver!==null?' · '+(l.diasParaResolver===0?'no mesmo dia'
+         :l.diasParaResolver===1?'em 1 dia':'em '+l.diasParaResolver+' dias'):''}</div>
+     ${l.oQueFoiFeito?`<div class="rel-it-ob" style="font-style:italic">${esc(l.oQueFoiFeito)}</div>`:''}
+   </div>`).join('')}`:''}
+
+  ${d.ranking.length>1?`
+  <div class="section-title"><h3>${ic('route')}Onde mais apareceu problema</h3></div>
+  <div class="tablewrap"><table class="ap-tb"><thead><tr><th>LOCAL</th>
+    <th style="text-align:center">APONTAMENTOS</th><th style="text-align:center">AINDA ABERTOS</th>
+  </tr></thead><tbody>${d.ranking.map(x=>`<tr><td>${esc(x.andar)}</td>
+    <td style="text-align:center">${x.total}</td>
+    <td style="text-align:center">${x.abertos||'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
+
+  ${d.equipe.length?`<div class="rel-nota" style="margin-top:12px">Rondas registradas por:
+    ${d.equipe.map(e=>esc(e)).join(', ')}. Cobertura de ${d.andaresCobertos} dos
+    ${d.totalAndares} locais no período.</div>`:''}`;
+}
+
 function brigRondaMarcar(cid,andar){
-  _rondaFoto=null;
+  _rondaFotos=[];
   openModal('Ronda — '+brigAndarNome(andar),
     `<div class="muted" style="margin-bottom:11px">Como encontrou o andar?</div>
      <div class="rd-esc">
@@ -12185,22 +13284,24 @@ function brigRondaMarcar(cid,andar){
          <em>nada a relatar neste andar</em></button>
        <button type="button" class="rd-op nc" id="rdNc" onclick="brigRondaTipo('0')">
          ${ic('alert')}<b>Encontrei uma ocorrência</b>
-         <em>abre o registro com foto</em></button>
+         <em>abre o registro do problema</em></button>
      </div>
      <input type="hidden" id="brOk" value="1">
      <div id="brBox" style="display:none;margin-top:12px">
+       ${rondaAvisoRepete(cid,andar)}
        <label>O que você encontrou <span style="color:#c2384a">*</span></label>
        <textarea id="brObs" rows="3" placeholder="ex.: luminária da escada lado B apagada"></textarea>
        <div style="margin-top:10px">
-         <label>Foto do problema <span style="color:#c2384a">*</span></label>
+         <label>Fotos do problema <span class="muted" style="font-weight:400">(opcional)</span></label>
          <div class="muted" style="font-size:11.5px;margin:2px 0 7px">
-           A foto é obrigatória para abrir o chamado — é ela que mostra à manutenção o que houve.
-           Você pode tirar na hora ou anexar uma já salva no celular.</div>
+           A foto ajuda a manutenção a entender o que houve sem precisar subir até o andar.
+           Pode anexar até ${RONDA_MAX_FOTOS}, mas o registro é aceito sem nenhuma.</div>
          <div class="rowact">
            <button class="btn sm" onclick="brigRondaFoto('camera')">${ic('camera')} Tirar foto</button>
            <button class="btn sm ghost" onclick="brigRondaFoto('galeria')">${ic('paperclip')} Anexar foto</button>
          </div>
          <div id="brFoto" class="bg-fotos"></div>
+         <div id="brFotoCont" class="muted" style="font-size:11.5px;margin-top:4px"></div>
        </div>
        <div class="muted" style="font-size:11.5px;margin-top:8px">
          ${P().brigada?'O chamado vai direto para a manutenção.':'O chamado será enviado ao Gestor, que direciona para a manutenção.'}</div>
@@ -12233,34 +13334,56 @@ function brigRondaPrio(v){
 }
 /* modo: 'camera' abre a camera; 'galeria' deixa escolher uma foto ja salva. */
 function brigRondaFoto(modo){
+  if(_rondaFotos.length>=RONDA_MAX_FOTOS)
+    return toast('Máximo de '+RONDA_MAX_FOTOS+' fotos por ocorrência.');
   let inp=document.querySelector('#brFile');
   if(!inp){ inp=document.createElement('input'); inp.type='file'; inp.id='brFile';
     inp.accept='image/*'; inp.style.display='none';
     inp.onchange=brigRondaFotoSel; document.body.appendChild(inp); }
-  if(modo==='galeria') inp.removeAttribute('capture');
-  else inp.setAttribute('capture','environment');
+  if(modo==='galeria'){ inp.removeAttribute('capture'); inp.multiple=true }
+  else { inp.setAttribute('capture','environment'); inp.multiple=false }
   inp.value=''; inp.click();
 }
+/* Desenha as miniaturas e o contador. Chamado a cada foto que entra ou sai,
+   para o quadro refletir o que esta guardado de fato. */
+function brigRondaFotosBox(){
+  const box=document.querySelector('#brFoto'); if(!box) return;
+  box.innerHTML=_rondaFotos.map((f,i)=>`<div class="fwrap">
+      <img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" alt="Foto ${i+1} do problema">
+      <button class="fdel" onclick="brigRondaDelFoto(${i})" title="Remover esta foto">${ic('close')}</button>
+    </div>`).join('');
+  const c=document.querySelector('#brFotoCont');
+  if(c) c.textContent=_rondaFotos.length
+    ? _rondaFotos.length+' de '+RONDA_MAX_FOTOS+' foto'+(_rondaFotos.length>1?'s':'')
+    : '';
+}
+function brigRondaDelFoto(i){ _rondaFotos.splice(i,1); brigRondaFotosBox() }
 async function brigRondaFotoSel(e){
-  const f=(e.target.files||[])[0]; if(!f) return;
-  toast('Processando imagem...');
-  try{
-    _rondaFoto=await guardarFoto(await comprimirImagem(f));
-    const box=$('#brFoto');
-    if(box) box.innerHTML=`<div class="fwrap"><img src="${srcFoto(_rondaFoto)}"${attrFoto(_rondaFoto)} class="fthumb" alt="foto">
-      <button class="fdel" onclick="_rondaFoto=null;$('#brFoto').innerHTML='';">${ic('close')}</button></div>`;
-    toast('Foto anexada.');
-  }catch(err){ toast('Não foi possível ler a imagem.') }
+  const arquivos=[...(e.target.files||[])];
+  if(!arquivos.length) return;
+  const cabem=RONDA_MAX_FOTOS-_rondaFotos.length;
+  if(cabem<=0) return toast('Máximo de '+RONDA_MAX_FOTOS+' fotos por ocorrência.');
+  const lote=arquivos.slice(0,cabem);
+  toast(lote.length>1?'Processando '+lote.length+' imagens...':'Processando imagem...');
+  let entraram=0;
+  for(const f of lote){
+    try{ _rondaFotos.push(await guardarFoto(await comprimirImagem(f))); entraram++ }
+    catch(err){ /* uma imagem ruim nao pode derrubar as outras */ }
+  }
+  brigRondaFotosBox();
+  if(!entraram) return toast('Não foi possível ler a imagem.');
+  if(arquivos.length>cabem) toast('Anexadas '+entraram+'. O limite é '+RONDA_MAX_FOTOS+' fotos.');
+  else toast(entraram>1?entraram+' fotos anexadas.':'Foto anexada.');
 }
 
 function brigRondaSalvar(cid,andar){
   const ok=$('#brOk').value==='1';
   const obs=ok?'':($('#brObs').value||'').trim();
   if(!ok&&!obs) return toast('Descreva o que você encontrou.');
-  if(!ok&&!_rondaFoto) return toast('Tire ou anexe uma foto do problema para abrir o chamado.');
   const prio=(!ok&&$('#brPrio'))?$('#brPrio').value:'Média';
+  const fotos=ok?[]:_rondaFotos.slice();
   const r={id:uid('br'),condoId:cid,andar,data:today(),hora:nowHora(),ok,obs,
-    foto:ok?'':_rondaFoto,prioridade:ok?'':prio,
+    fotos,foto:fotos[0]||'',prioridade:ok?'':prio,
     autor:session.nome,userId:session.id,chamadoId:null};
   brigRondas.push(r);
   if(!ok){
@@ -12270,21 +13393,27 @@ function brigRondaSalvar(cid,andar){
     const t=mkTask({titulo:'Ronda — '+brigAndarNome(andar)+': '+obs.slice(0,60),
       condoId:cid,tipo:'Gestor',periodicidade:'Sob Demanda',repetitiva:false,
       tipoTarefa:'Avulsa do dia',prioridade:prio,vencimento:today(),
-      responsavel:direto?'Cleiton':'',origem:'ronda',rondaId:r.id,anexo:_rondaFoto,
+      responsavel:direto?'Cleiton':'',origem:'ronda',rondaId:r.id,
+      anexo:fotos[0]||'',fotos:fotos.slice(),
       triagem:direto?'direcionado':'pendente',
       criadoPor:session.nome,
       procedimento:'Registrado na ronda diária da brigada em '+fmt(r.data)+' às '+r.hora+
         ' por '+session.nome+'.\n\nLocal: '+brigAndarNome(andar)+
-        '\nOcorrência: '+obs+'\n\nA foto do problema está anexada ao chamado.'});
+        '\nOcorrência: '+obs+
+        (!fotos.length ?'\n\nRegistrado sem foto.'
+         :fotos.length>1?'\n\n'+fotos.length+' fotos do problema estão anexadas ao chamado.'
+                        :'\n\nA foto do problema está anexada ao chamado.')});
+    const nf=!fotos.length?'sem foto':fotos.length>1?'com '+fotos.length+' fotos':'com foto';
     t.historico=[{q:session.nome,w:nowStamp(),
-      t:direto?'Chamado aberto pela ronda da brigada (com foto)'
-             :'Chamado aberto na ronda (com foto) — aguardando direcionamento do Gestor'}];
+      t:direto?'Chamado aberto pela ronda da brigada ('+nf+')'
+             :'Chamado aberto na ronda ('+nf+') — aguardando direcionamento do Gestor'}];
     tasks.push(t); r.chamadoId=t.id;
     audit('Ocorrência na ronda',brigAndarNome(andar),obs,cid,'Ronda diária');
-    toast(direto?'Chamado aberto para a manutenção com a foto.'
-                :'Chamado registrado com a foto. O Gestor vai direcionar.');
+    const qf=!fotos.length?'sem foto.':fotos.length>1?'com '+fotos.length+' fotos.':'com a foto.';
+    toast(direto?'Chamado aberto para a manutenção '+qf
+                :'Chamado registrado '+qf+' O Gestor vai direcionar.');
   } else toast('Ronda registrada.');
-  _rondaFoto=null;
+  _rondaFotos=[];
   save(); closeModal(); render();
 }
 
@@ -14278,6 +15407,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a467b89b28af181b',t:'MTc5MTMyMTc0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
