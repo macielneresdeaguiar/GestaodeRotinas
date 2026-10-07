@@ -1,8 +1,11 @@
 import express from 'express';
 import path from 'node:path';
+import zlib from 'node:zlib';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { migrate, lerWorkspace, gravarWorkspace, historico,
-         gravarFoto, lerFoto, fotosQueFaltam, estatisticaFotos } from './db.js';
+         gravarFoto, lerFoto, fotosQueFaltam, estatisticaFotos,
+         apagarFotos } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -11,6 +14,34 @@ const WS = 'default';
 
 // O snapshot com fotos em base64 pode passar de 1 MB.
 app.use(express.json({ limit: '60mb' }));   // fotos de ronda/check-list
+
+/* ---------- compressao das respostas da API ----------
+   O /api/dados devolve o snapshot inteiro, e todo aparelho aberto baixa
+   esse snapshot cada vez que alguem salva qualquer coisa. Em texto puro
+   sao ~150 KB por vez; em gzip caem para ~18 KB. Era essa a conta que
+   estourou os 5 GB de banda do plano gratuito em uma semana.
+   Abaixo de 1 KB nao compensa: o cabecalho custa mais que a economia. */
+const MIN_GZIP = 1024;
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api/')) return next();
+  if (!/\bgzip\b/.test(req.get('accept-encoding') || '')) return next();
+  const jsonOriginal = res.json.bind(res);
+  res.json = (corpo) => {
+    let texto;
+    try { texto = JSON.stringify(corpo) } catch { return jsonOriginal(corpo) }
+    if (texto === undefined || Buffer.byteLength(texto) < MIN_GZIP) {
+      return jsonOriginal(corpo);
+    }
+    let buf;
+    try { buf = zlib.gzipSync(texto, { level: 6 }) } catch { return jsonOriginal(corpo) }
+    res.setHeader('Content-Encoding', 'gzip');
+    res.setHeader('Vary', 'Accept-Encoding');
+    res.setHeader('Content-Length', buf.length);
+    res.type('application/json');
+    return req.method === 'HEAD' ? res.end() : res.end(buf);
+  };
+  next();
+});
 app.disable('x-powered-by');
 
 /* ---------- senha única de acesso ao site (opcional) ----------
@@ -36,9 +67,10 @@ app.put('/api/foto/:id', async (req, res) => {
     const id = String(req.params.id || '');
     const dados = req.body && req.body.dados;
     if (!/^[A-Za-z0-9_-]{3,80}$/.test(id)) return res.status(400).json({ erro: 'id inválido' });
-    if (typeof dados !== 'string' || !dados.startsWith('data:image/')) {
-      return res.status(400).json({ erro: 'conteúdo inválido' });
-    }
+    // imagem (foto de ronda/check-list) ou PDF (laudo de manutencao obrigatoria)
+    const aceito = typeof dados === 'string' &&
+      (dados.startsWith('data:image/') || dados.startsWith('data:application/pdf'));
+    if (!aceito) return res.status(400).json({ erro: 'conteúdo inválido' });
     const r = await gravarFoto(id, dados);
     res.json({ ok: true, ...r });
   } catch (e) {
@@ -69,6 +101,24 @@ app.post('/api/fotos/faltam', async (req, res) => {
   } catch (e) {
     console.error('[foto:faltam]', e);
     res.status(500).json({ erro: 'falha ao conferir as fotos' });
+  }
+});
+
+/* Limpeza das fotos de servicos ja encerrados. Exige o token do site,
+   porque e a unica chamada que apaga conteudo de verdade. O app so
+   manda ids que ja sairam num backup -- a trava de verdade esta la. */
+app.post('/api/fotos/apagar', exigeToken, async (req, res) => {
+  const ids = (req.body && req.body.ids) || [];
+  if (!Array.isArray(ids)) return res.status(400).json({ erro: 'ids_invalidos' });
+  const limpos = ids.map(String).filter((x) => /^[A-Za-z0-9_-]{3,80}$/.test(x));
+  if (!limpos.length) return res.json({ ok: true, apagadas: 0, bytes: 0 });
+  try {
+    const r = await apagarFotos(limpos);
+    console.log('[foto:apagar]', r.apagadas, 'fotos,', r.bytes, 'bytes');
+    res.json({ ok: true, ...r });
+  } catch (e) {
+    console.error('[foto:apagar]', e);
+    res.status(500).json({ erro: 'falha ao apagar as fotos' });
   }
 });
 
@@ -133,6 +183,66 @@ app.get('/api/historico', exigeToken, async (_req, res) => {
   }
 });
 
+/* ---------- compressao dos arquivos de texto ----------
+   O index.html passa de 950 KB e era enviado cru: no celular em 4G isso
+   custa segundos a cada abertura. Comprimido cai para cerca de 290 KB.
+   Feito com o zlib do proprio Node, sem dependencia nova -- assim a
+   publicacao continua sendo so os arquivos de sempre.
+   O resultado fica em memoria e so e refeito quando o arquivo muda. */
+const PUBLICO = path.join(__dirname, '..', 'public');
+const COMPRIMIVEL = /\.(html|js|css|json|webmanifest|svg|map)$/i;
+const cacheGz = new Map();   // caminho -> { mtime, tamanho, buf }
+
+function pacoteGz(arquivo) {
+  let st;
+  try { st = fs.statSync(arquivo) } catch { return null }
+  const guardado = cacheGz.get(arquivo);
+  if (guardado && guardado.mtime === st.mtimeMs && guardado.tamanho === st.size) {
+    return guardado;
+  }
+  let buf;
+  try { buf = zlib.gzipSync(fs.readFileSync(arquivo), { level: 6 }) }
+  catch { return null }
+  /* A etiqueta nasce do arquivo (data da ultima alteracao + tamanho): muda
+     sozinha a cada publicacao e so nela. Sem isso o 'no-cache' obrigava o
+     navegador a baixar os 290 KB inteiros em TODA abertura do app, mesmo
+     quando nada tinha mudado. Com ela a resposta vira um 304 de ~200 bytes. */
+  const etag = '"' + st.size.toString(36) + '-' + Math.round(st.mtimeMs).toString(36) + '"';
+  const pac = { mtime: st.mtimeMs, tamanho: st.size, buf, etag };
+  cacheGz.set(arquivo, pac);
+  return pac;
+}
+function gzipDoArquivo(arquivo) { const p = pacoteGz(arquivo); return p ? p.buf : null }
+
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  if (req.path.startsWith('/api/')) return next();
+  if (!/\bgzip\b/.test(req.get('accept-encoding') || '')) return next();
+
+  // "/" e qualquer caminho sem extensao resolvem para o index.html
+  const semExt = req.path.endsWith('/') || !path.extname(req.path);
+  const relativo = semExt ? 'index.html' : path.normalize(req.path);
+  if (!semExt && !COMPRIMIVEL.test(req.path)) return next();
+
+  // impede sair da pasta public por caminhos com ../
+  const alvo = path.join(PUBLICO, relativo);
+  if (!alvo.startsWith(PUBLICO)) return next();
+
+  const pac = pacoteGz(alvo);
+  if (!pac) return next();
+
+  res.setHeader('Vary', 'Accept-Encoding');
+  res.setHeader('ETag', pac.etag);
+  res.setHeader('Cache-Control', 'no-cache');
+  if ((req.get('if-none-match') || '').split(/,\s*/).includes(pac.etag)) {
+    return res.status(304).end();          // o aparelho ja tem esta versao
+  }
+  res.setHeader('Content-Encoding', 'gzip');
+  res.setHeader('Content-Length', pac.buf.length);
+  res.type(path.extname(alvo) || '.html');
+  return req.method === 'HEAD' ? res.end() : res.end(pac.buf);
+});
+
 // Arquivos do app
 app.use(express.static(path.join(__dirname, '..', 'public'), {
   extensions: ['html'],
@@ -142,8 +252,27 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
   },
 }));
 
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+app.get('*', (req, res) => {
+  const indice = path.join(PUBLICO, 'index.html');
+  if (/\bgzip\b/.test(req.get('accept-encoding') || '')) {
+    const pacote = pacoteGz(indice);
+    const buf = pacote && pacote.buf;
+    if (buf) {
+      res.setHeader('ETag', pacote.etag);
+      res.setHeader('Vary', 'Accept-Encoding');
+      if ((req.get('if-none-match') || '').split(/,\s*/).includes(pacote.etag)) {
+        res.setHeader('Cache-Control', 'no-cache');
+        return res.status(304).end();
+      }
+      res.setHeader('Content-Encoding', 'gzip');
+      res.setHeader('Vary', 'Accept-Encoding');
+      res.setHeader('Content-Length', buf.length);
+      res.setHeader('Cache-Control', 'no-cache');
+      res.type('.html');
+      return res.end(buf);
+    }
+  }
+  res.sendFile(indice);
 });
 
 migrate()

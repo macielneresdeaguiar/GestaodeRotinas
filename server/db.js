@@ -78,6 +78,28 @@ export async function fotosQueFaltam(ids) {
   return ids.filter((x) => !existentes.has(x));
 }
 
+/** Apaga fotos de servicos ja encerrados, depois que elas ja sairam num
+    backup. E a unica rota que remove conteudo: por isso devolve a conta
+    do que saiu, para o app poder mostrar e registrar na auditoria. */
+export async function apagarFotos(ids) {
+  if (!Array.isArray(ids) || !ids.length) return { apagadas: 0, bytes: 0 };
+  let apagadas = 0, bytes = 0;
+  const lote = 200;
+  for (let i = 0; i < ids.length; i += lote) {
+    const parte = ids.slice(i, i + lote).map(String);
+    const marc = parte.map(() => '?').join(',');
+    const med = await db.execute({
+      sql: `SELECT COUNT(*) n, COALESCE(SUM(bytes),0) b FROM foto WHERE id IN (${marc})`,
+      args: parte,
+    });
+    const r = await db.execute({
+      sql: `DELETE FROM foto WHERE id IN (${marc})`, args: parte });
+    apagadas += Number(r.rowsAffected || med.rows[0].n || 0);
+    bytes += Number(med.rows[0].b || 0);
+  }
+  return { apagadas, bytes };
+}
+
 export async function estatisticaFotos() {
   const r = await db.execute('SELECT COUNT(*) n, COALESCE(SUM(bytes),0) b FROM foto');
   return { quantidade: Number(r.rows[0].n || 0), bytes: Number(r.rows[0].b || 0) };
