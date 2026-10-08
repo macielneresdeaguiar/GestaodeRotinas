@@ -2212,6 +2212,7 @@ function load(d){
     if(migrarFilaPub()) mig=true; if(migrarRevisoesAp()) mig=true; if(migrarMarcaEbiz()) mig=true; if(migrarSalas()) mig=true;
     if(migrarCatalogo2610()) mig=true;
     if(migrarChamadosRonda()) mig=true;
+    if(migrarDuplicadas()) mig=true;
     if(mig) save();
     migrarLaudosParaFora();   // assincrona: salva sozinha quando terminar
     return true;
@@ -3504,12 +3505,21 @@ function finishTask(id,data,obs,anexo,fromDrill){
     const base=t.vencimento||t.concluidoEm||today();
     let nd=nextDate(base,t.periodicidade);
     nd=ajustaRetro(nd,t.periodicidade);
-    const nt=mkTask({titulo:t.titulo,condoId:t.condoId,tipo:t.tipo,responsavel:t.responsavel,
-      periodicidade:t.periodicidade,vencimento:nd,prioridade:t.prioridade,procedimento:t.procedimento,
-      status:'Pendente',repetitiva:true,serieId:t.serieId,criadoPor:t.criadoPor,rotina:t.rotina,rotinaRef:t.rotinaRef});
-    nt.historico=[{q:'Sistema',w:nowStamp(),t:`Ocorrência gerada automaticamente após conclusão de ${fmt(base)}`}];
-    tasks.push(nt);
-    msg=`Concluída! Próxima ocorrência gerada para ${fmt(nd)}.`;
+    /* O concluirMensal ja tinha esta conferencia; aqui faltava. Sem ela, se a
+       ocorrencia seguinte ja existisse (criada pela Rotina da Semana, por
+       exemplo), a conclusao criava uma segunda igual no mesmo dia. */
+    const jaTem=tasks.some(x=>x.id!==t.id&&x.titulo===t.titulo&&x.condoId===t.condoId
+      &&x.vencimento===nd&&!x.arquivada&&x.status!=='Cancelada');
+    if(jaTem){
+      msg=`Concluída! A ocorrência de ${fmt(nd)} já estava na lista.`;
+    }else{
+      const nt=mkTask({titulo:t.titulo,condoId:t.condoId,tipo:t.tipo,responsavel:t.responsavel,
+        periodicidade:t.periodicidade,vencimento:nd,prioridade:t.prioridade,procedimento:t.procedimento,
+        status:'Pendente',repetitiva:true,serieId:t.serieId,criadoPor:t.criadoPor,rotina:t.rotina,rotinaRef:t.rotinaRef});
+      nt.historico=[{q:'Sistema',w:nowStamp(),t:`Ocorrência gerada automaticamente após conclusão de ${fmt(base)}`}];
+      tasks.push(nt);
+      msg=`Concluída! Próxima ocorrência gerada para ${fmt(nd)}.`;
+    }
   }else if(t.periodicidade==='Sob Demanda') msg='Concluída (Sob Demanda — sem recorrência automática).';
   else msg='Concluída (tarefa avulsa — sem novo ciclo).';
   if(fromDrill&&drillKey) renderDrill(); else closeModal();
@@ -4105,8 +4115,14 @@ function gerarSemana(){
     while(d>=wk.start&&d<=wk.end&&guard++<50){
       const key=t.titulo+'|'+t.condoId+'|'+d;
       if(!chaves.has(key)){
+        /* ATENCAO: herdar serieId/rotina do modelo. Sem isso o mkTask criava
+           uma SERIE NOVA a cada clique em "Gerar Rotina da Semana", e como a
+           conclusao propaga a serie para frente, cada clique deixava uma copia
+           extra da tarefa para sempre -- foi assim que "Aprovação do síndico
+           para pagamentos" chegou a aparecer 4 vezes no mesmo dia. */
         const nt=mkTask({titulo:t.titulo,condoId:t.condoId,tipo:t.tipo,responsavel:t.responsavel,
-          periodicidade:t.periodicidade,vencimento:d,prioridade:t.prioridade,procedimento:t.procedimento,status:'Pendente'});
+          periodicidade:t.periodicidade,vencimento:d,prioridade:t.prioridade,procedimento:t.procedimento,
+          status:'Pendente',serieId:t.serieId,rotina:t.rotina,rotinaRef:t.rotinaRef,criadoPor:t.criadoPor});
         nt.historico=[{q:session.nome,w:nowStamp(),t:'Instanciada pela Rotina da Semana'}];
         tasks.push(nt); chaves.add(key); criadas++;
       }
@@ -12700,6 +12716,66 @@ function desprogramarChamado(id){
   save(); toast('Chamado voltou para a fila a programar.');
   return true;
 }
+/* ---- migracao: tarefas de rotina duplicadas ----
+   Dois defeitos somados enchiam a agenda de copias da MESMA tarefa no MESMO
+   dia: a "Rotina da Semana" criava uma serie nova a cada clique (em vez de
+   reaproveitar a do modelo) e a conclusao nao conferia se a ocorrencia
+   seguinte ja existia. As duas causas estao corrigidas; aqui limpamos o que
+   ja ficou para tras. Nada e apagado: a copia extra e ARQUIVADA, some das
+   listas e dos numeros, mas continua no banco. */
+function migrarDuplicadas(){
+  if(CFG.dedupRotina==='v1') return false;
+  /* So mexe em tarefa de rotina recorrente. Avulsa do dia e chamado de ronda
+     podem legitimamente repetir titulo no mesmo dia -- ficam de fora. */
+  const alvo=t=>t.repetitiva&&t.periodicidade!=='Sob Demanda'
+    &&t.origem!=='ronda'&&t.tipoTarefa!=='Avulsa do dia'&&!t.arquivada;
+  const grupos={};
+  tasks.forEach(t=>{
+    if(!alvo(t)) return;
+    const k=t.titulo+'|'+t.condoId+'|'+(t.vencimento||'');
+    (grupos[k]=grupos[k]||[]).push(t);
+  });
+  let arquivadas=0, gruposMexidos=0;
+  Object.values(grupos).forEach(l=>{
+    if(l.length<2) return;
+    /* Fica a primeira da lista (a mais antiga, ordem de criacao). Se alguma
+       foi concluida com observacao ou anexo, ela tem prioridade: e a que
+       guarda o trabalho de verdade. */
+    const comConteudo=l.find(t=>(t.obsConclusao||'').trim()||t.anexo);
+    const fica=comConteudo||l[0];
+    gruposMexidos++;
+    l.forEach(t=>{
+      if(t===fica) return;
+      t.arquivada=true;
+      t.historico=t.historico||[];
+      t.historico.push({q:'Sistema',w:nowStamp(),
+        t:'Cópia duplicada da mesma tarefa no mesmo dia — arquivada automaticamente'});
+      arquivadas++;
+    });
+  });
+  /* Unifica a serie do que sobrou: series paralelas do mesmo titulo voltam a
+     ser uma so, senao a duplicacao recomeca na proxima conclusao. */
+  const porTitulo={};
+  tasks.forEach(t=>{
+    if(!alvo(t)||t.arquivada||!t.serieId) return;
+    const k=t.titulo+'|'+t.condoId;
+    (porTitulo[k]=porTitulo[k]||[]).push(t);
+  });
+  let seriesUnidas=0;
+  Object.values(porTitulo).forEach(l=>{
+    const ids=[...new Set(l.map(t=>t.serieId))];
+    if(ids.length<2) return;
+    const principal=ids[0];
+    l.forEach(t=>{ if(t.serieId!==principal){ t.serieId=principal; seriesUnidas++ } });
+  });
+  CFG.dedupRotina='v1';
+  if((arquivadas||seriesUnidas)&&typeof audit==='function')
+    audit('Sistema','Tarefas duplicadas',
+      arquivadas+' cópia(s) arquivada(s) em '+gruposMexidos+' dia(s) · '+
+      seriesUnidas+' tarefa(s) com série unificada','c1','Correção de duplicidade');
+  return true;
+}
+
 /* ---- migracao: chamados antigos da ronda ----
    Ate aqui a ocorrencia nascia como tarefa do Gestor com vencimento = hoje,
    entao no dia seguinte aparecia como atrasada de quem nao ia executar. E a
@@ -15585,8 +15661,9 @@ function aplicarSnapshot(d){
      de manutencoes nunca nascia em quem recebe a base pelo servidor. */
   const _migCat=migrarCatalogo2610();
   const _migCh=migrarChamadosRonda();
+  const _migDup=migrarDuplicadas();
   _booting=false;
-  if(_migCat||_migCh) save();
+  if(_migCat||_migCh||_migDup) save();
   /* Tambem aqui, e nao so no load(): o snapshot que chega do servidor passa
      por aplicarSnapshot, nao por load. Sem esta linha a migracao rodava na
      base local e logo em seguida era sobrescrita pelo dado do servidor, que
@@ -15769,6 +15846,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a477b415f96af179',t:'MTc5MTQ4OTMyOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-</body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a477d9152acb4ae9',t:'MTc5MTQ5MDg0NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
