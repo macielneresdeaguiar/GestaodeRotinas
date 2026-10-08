@@ -3369,6 +3369,7 @@ function openTask(id){
     ${t.obsConclusao?`<div style="margin-top:12px"><div class="t-sub">Observações da conclusão</div><p>${esc(t.obsConclusao)}</p></div>`:''}
     ${t.anexo?`<div style="margin-top:10px"><span class="badge b-tag">${ic('paperclip')} ${esc(t.anexo)}</span></div>`:''}
     ${boxProgramar(t)}
+    ${boxMateriaisChamado(t)}
     ${histHtml(t.historico)}`;
   $('#modalFoot').innerHTML=`
     ${P().complete&&t.status!=='Concluída'?`<button class="btn green" onclick="completeTask('${t.id}')">${ic('check')} Concluir</button>`:''}
@@ -3402,6 +3403,32 @@ function boxProgramar(t){
         ${t.vencimento?'Mudar data':'Marcar data'}</button>
       ${t.vencimento?`<button class="btn sm ghost" onclick="desprogramarDaTarefa('${t.id}')">Tirar data</button>`:''}
     </div></div>`;
+}
+/* O apontamento tem campo de materiais e o chamado da ronda nao tinha.
+   Como agora os dois aparecem na mesma lista, o chamado ganhou o seu. */
+function boxMateriaisChamado(t){
+  if(!t||t.origem!=='ronda'||!P().edit) return '';
+  if(t.status==='Concluída'||t.status==='Cancelada')
+    return t.materiais?`<div class="t-sub" style="margin-top:10px">${ic('cart')} Materiais usados: ${esc(t.materiais)}</div>`:'';
+  return `<div class="field" style="margin-top:12px">
+    <label>Materiais necessários</label>
+    <div class="rowact" style="gap:6px;align-items:center">
+      <input id="mat_${t.id}" value="${esc(t.materiais||'')}"
+             placeholder="ex.: Lâmpada bulbo 9W 6500k" style="flex:1;min-width:160px">
+      <button class="btn sm" onclick="salvarMateriaisChamado('${t.id}')">Salvar</button>
+    </div></div>`;
+}
+function salvarMateriaisChamado(id){
+  const t=tasks.find(x=>x.id===id); if(!t) return;
+  if(!P().edit) return toast('Sem permissão.');
+  const el=document.querySelector('#mat_'+id);
+  const v=el?el.value.trim():'';
+  if(v===(t.materiais||'')) return toast('Nada mudou.');
+  t.materiais=v;
+  t.historico=t.historico||[];
+  t.historico.push({q:session.nome,w:nowStamp(),
+    t:v?'Materiais anotados: '+v:'Lista de materiais apagada'});
+  save(); openTask(id); render(); toast('Materiais salvos.');
 }
 function programarDaTarefa(id){
   const el=document.querySelector('#dtt_'+id);
@@ -8894,11 +8921,15 @@ function dashLimpeza(){
 }
 
 function dashManutencao(){
-  const meus=apontamentos.filter(a=>P().condos.includes(a.condoId));
+  /* Lista unificada: apontamento proprio + chamado da ronda. Antes esta tela
+     lia so os apontamentos e chegava a dizer "0 urgente(s)" com a fila da
+     ronda cheia de urgencia. */
+  const meus=apUnificado();
   const abertos=meus.filter(a=>a.status==='Aberto');
   const andamento=meus.filter(a=>a.status==='Em Andamento');
   const urgentes=meus.filter(a=>a.status!=='Resolvido'&&a.prioridade==='Urgente');
   const resolvidos=meus.filter(a=>a.status==='Resolvido');
+  const daRonda=meus.filter(a=>a.ref==='ch'&&a.status!=='Resolvido');
   const baixo=estoqueBaixo(), zerados=estoque.filter(i=>i.qtd<=0);
   const meusPed=pedidos.filter(p=>p.solicitante===session.nome);
   const pedAbertos=meusPed.filter(p=>p.status==='Aberto');
@@ -8920,8 +8951,8 @@ function dashManutencao(){
 
     <div class="grid metrics" style="margin-bottom:14px">
       <div class="card metric red" onclick="apFiltro='Aberto';go('apontamentos')">
-        <div class="lbl">Apontamentos abertos</div><div class="val">${abertos.length}</div>
-        <div class="sub">${urgentes.length} urgente(s)</div></div>
+        <div class="lbl">Serviços abertos</div><div class="val">${abertos.length}</div>
+        <div class="sub">${urgentes.length} urgente(s) · ${daRonda.length} da ronda</div></div>
       <div class="card metric amber" onclick="apFiltro='Em Andamento';go('apontamentos')">
         <div class="lbl">Em andamento</div><div class="val">${andamento.length}</div><div class="sub">serviços iniciados</div></div>
       <div class="card metric" onclick="estFiltro='baixo';go('estoque')">
@@ -8942,10 +8973,11 @@ function dashManutencao(){
           return l.length?l.map(a=>`<div class="feed-item ${a.prioridade==='Urgente'?'red':a.status==='Em Andamento'?'amber':'blue'}" style="align-items:flex-start">
             <div style="flex:1;min-width:0">
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px">
-                <span class="ft">${esc(a.titulo)}</span>${badgePrio4(a.prioridade)}</div>
+                <span class="ft">${esc(a.titulo)}</span>${badgePrio4(a.prioridade)}
+                ${a.ref==='ch'?`<span class="badge b-tag">${ic('route')} da ronda</span>`:''}${apPrazoBadge(a)}</div>
               <div class="fd">${esc(a.local)} · ${a.status}</div>
               ${a.materiais?`<div class="t-sub" style="display:flex;align-items:center;gap:5px;margin-top:3px">${ic('cart','ico-sm')}${esc(a.materiais)}</div>`:''}</div>
-            <button class="btn green sm no-print" onclick="avancarApont('${a.id}')">${a.status==='Aberto'?'Iniciar':'Concluir'}</button>
+            <button class="btn green sm no-print" onclick="${a.ref==='ap'?`avancarApont('${a.id}')`:`avancarChamado('${a.id}')`}">${a.status==='Aberto'?'Iniciar':'Concluir'}</button>
           </div>`).join('')
           :'<div class="empty">'+ic('inbox','ico-lg')+'<div>Nenhum serviço pendente.</div></div>'})()}
       </div>
@@ -9451,24 +9483,85 @@ function receberPedido(id){
 /* ============ APONTAMENTOS DE MANUTENÇÃO ============ */
 const AP_STATUS=['Aberto','Em Andamento','Resolvido'];
 let apFiltro='';
+/* ============ LISTA UNIFICADA DA MANUTENCAO ============
+   O oficial tinha dois lugares para olhar: os "apontamentos" que ele mesmo
+   registra e os "chamados" que a ronda abre, que viviam so como tarefa. Dava
+   para o painel dele dizer "0 urgente(s)" com 14 chamados urgentes na fila.
+   Aqui os dois viram uma lista so. NAO e copia: o chamado continua sendo o
+   mesmo e unico registro (a tarefa), apenas traduzido para o formato do
+   apontamento. Concluir por aqui fecha o chamado da ronda tambem. */
+function apComoItem(a){
+  return {ref:'ap',id:a.id,obj:a,titulo:a.titulo,local:a.local||'',
+    prioridade:a.prioridade,status:a.status,descricao:a.descricao||'',
+    materiais:a.materiais||'',fotos:(a.fotos||[]).filter(Boolean),
+    autor:a.autor,data:a.data,condoId:a.condoId,venc:'',
+    urgente:a.prioridade==='Urgente',origem:'Apontamento'};
+}
+function chamadoComoItem(t){
+  const r=brigRondas.find(x=>x.id===t.rondaId)||{};
+  const urg=chamadoUrgente(t);
+  const st=t.status==='Concluída'||t.status==='Cancelada'?'Resolvido'
+          :t.status==='Em Andamento'?'Em Andamento':'Aberto';
+  const fotos=(t.fotos&&t.fotos.length?t.fotos:[t.anexo]).filter(Boolean);
+  return {ref:'ch',id:t.id,obj:t,
+    titulo:brigAndarNome(r.andar)?('Ronda — '+brigAndarNome(r.andar)):t.titulo,
+    local:brigAndarNome(r.andar)||'',
+    prioridade:urg?'Urgente':(t.prioridade==='Baixa'?'Baixa':'Média'),
+    status:st,descricao:r.obs||t.titulo,materiais:t.materiais||'',
+    fotos,autor:r.autor||t.criadoPor||'—',data:r.data||t.dataProgramada||today(),
+    condoId:t.condoId,venc:t.vencimento||'',urgente:urg,origem:'Ronda'};
+}
+/* Chamados da ronda que pertencem a manutencao. Dispensado na triagem nao
+   entra: foi recusado, nunca virou servico. */
+function chamadosDaManutencao(){
+  return tasks.filter(t=>t.origem==='ronda'&&!t.arquivada&&t.triagem!=='dispensado'
+    &&P().condos.includes(t.condoId));
+}
+function apUnificado(){
+  const l=apontamentos.filter(a=>P().condos.includes(a.condoId)).map(apComoItem)
+    .concat(chamadosDaManutencao().map(chamadoComoItem));
+  const ordS={'Aberto':0,'Em Andamento':1,'Resolvido':2};
+  const ordP={'Urgente':0,'Alta':1,'Média':2,'Baixa':3};
+  return l.sort((a,b)=>
+    (ordS[a.status]-ordS[b.status])
+    ||(ordP[a.prioridade]-ordP[b.prioridade])
+    /* com data combinada primeiro, da mais proxima para a mais distante */
+    ||String(a.venc||'9999-12-31').localeCompare(String(b.venc||'9999-12-31'))
+    ||String(b.data).localeCompare(String(a.data)));
+}
+function apPrazoBadge(it){
+  if(it.ref!=='ch'||it.status==='Resolvido') return '';
+  if(it.urgente) return '<span class="badge b-atr">para agora</span>';
+  if(!it.venc) return '<span class="badge b-pend">sem data</span>';
+  const d=diffDays(it.venc,today());
+  if(d<0) return `<span class="badge b-atr">atrasada há ${Math.abs(d)} dia(s)</span>`;
+  if(d===0) return '<span class="badge b-and">fazer hoje</span>';
+  return `<span class="badge b-conc">${fmt(it.venc)}</span>`;
+}
 function viewApontamentos(){
   if(!P().manutencao){$('#content').innerHTML=cardSemAcesso('Apontamentos de Manutenção',
     'Esta tela é da equipe de manutenção, que registra aqui os serviços executados no prédio.');return}
-  let l=apontamentos.filter(a=>P().condos.includes(a.condoId));
-  if(apFiltro) l=l.filter(a=>a.status===apFiltro);
-  l.sort((a,b)=>(a.status==='Resolvido')-(b.status==='Resolvido')
-    ||['Urgente','Alta','Média','Baixa'].indexOf(a.prioridade)-['Urgente','Alta','Média','Baixa'].indexOf(b.prioridade));
-  const cnt=x=>apontamentos.filter(a=>a.status===x&&P().condos.includes(a.condoId)).length;
+  let l=apUnificado();
+  if(apFiltro==='Ronda') l=l.filter(a=>a.ref==='ch');
+  else if(apFiltro) l=l.filter(a=>a.status===apFiltro);
+  const todos=apUnificado();
+  const cnt=x=>todos.filter(a=>a.status===x).length;
+  const daRonda=todos.filter(a=>a.ref==='ch'&&a.status!=='Resolvido');
+  const semData=daRonda.filter(a=>!a.urgente&&!a.venc).length;
+  const atrasados=daRonda.filter(a=>a.venc&&diffDays(a.venc,today())<0).length;
   $('#content').innerHTML=`
     <div class="grid metrics" style="margin-bottom:14px">
-      <div class="card metric red" onclick="apFiltro='Aberto';render()"><div class="lbl">Abertos</div><div class="val">${cnt('Aberto')}</div></div>
-      <div class="card metric amber" onclick="apFiltro='Em Andamento';render()"><div class="lbl">Em andamento</div><div class="val">${cnt('Em Andamento')}</div></div>
-      <div class="card metric green" onclick="apFiltro='Resolvido';render()"><div class="lbl">Resolvidos</div><div class="val">${cnt('Resolvido')}</div></div>
-      <div class="card metric" onclick="apFiltro='';render()"><div class="lbl">Total</div><div class="val">${apontamentos.length}</div><div class="sub">limpar filtro</div></div>
+      <div class="card metric red" onclick="apFiltro='Aberto';render()"><div class="lbl">Abertos</div><div class="val">${cnt('Aberto')}</div>
+        <div class="sub">${todos.filter(a=>a.status!=='Resolvido'&&a.urgente).length} urgente(s)</div></div>
+      <div class="card metric amber" onclick="apFiltro='Em Andamento';render()"><div class="lbl">Em andamento</div><div class="val">${cnt('Em Andamento')}</div><div class="sub">serviços iniciados</div></div>
+      <div class="card metric green" onclick="apFiltro='Resolvido';render()"><div class="lbl">Resolvidos</div><div class="val">${cnt('Resolvido')}</div><div class="sub">histórico</div></div>
+      <div class="card metric purple" onclick="apFiltro='Ronda';render()"><div class="lbl">Vindos da ronda</div><div class="val">${daRonda.length}</div>
+        <div class="sub">${semData} sem data · ${atrasados} atrasado(s)</div></div>
     </div>
     <div class="toolbar no-print">
       ${apFiltro?`<span class="badge b-tag">Filtro: ${apFiltro} <a href="#" onclick="event.preventDefault();apFiltro='';render()">${ic('close')}</a></span>`:''}
       <div class="spacer"></div>
+      ${daRonda.length&&podeProgramarChamado()?`<button class="btn ghost" onclick="abrirPainelChamadosRonda()">${ic('route')} Organizar datas da ronda</button>`:''}
       ${P().create?`<button class="btn" onclick="formApont()">+ Novo Apontamento</button>`:''}
       ${P().estoque?`<button class="btn ghost" onclick="go('pedidos')">${ic('cart')} Pedir materiais</button>`:''}
     </div>
@@ -9476,19 +9569,46 @@ function viewApontamentos(){
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <b style="color:var(--navy)">${esc(a.titulo)}</b>
         ${badgePrio4(a.prioridade)}<span class="badge ${a.status==='Resolvido'?'b-conc':a.status==='Em Andamento'?'b-and':'b-atr'}">${a.status}</span>
+        ${a.ref==='ch'?`<span class="badge b-tag">${ic('route')} da ronda</span>`:''}
+        ${apPrazoBadge(a)}
         ${badgeCondo(a.condoId)}</div>
       <div class="t-sub" style="margin-top:6px">${esc(a.local)} · registrado por <b>${esc(a.autor)}</b> em ${fmt(a.data)}</div>
       <p style="margin-top:8px">${esc(a.descricao)}</p>
       ${a.materiais?`<div class="chip-list" style="margin-top:8px"><span class="badge b-tag">${ic('cart')} Materiais: ${esc(a.materiais)}</span></div>`:''}
-      ${(a.fotos&&a.fotos.length)?`<div class="fotos" style="margin-top:9px">${a.fotos.map((f,i)=>
-        `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" onclick="verFoto('${a.id}',${i})" alt="foto ${i+1}">`).join('')}</div>`:''}
+      ${a.fotos.length?`<div class="fotos" style="margin-top:9px">${a.fotos.map((f,i)=>
+        `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" onclick="${a.ref==='ap'?`verFoto('${a.id}',${i})`:`chAmpliar('${f}')`}" alt="foto ${i+1}">`).join('')}</div>`:''}
+      ${a.ref==='ch'?`<div id="chZoom"></div>`:''}
       <div class="rowact no-print" style="margin-top:10px">
-        ${a.status!=='Resolvido'&&P().edit?`<button class="btn green sm" onclick="avancarApont('${a.id}')">${a.status==='Aberto'?'Iniciar':'Marcar como resolvido'}</button>`:''}
-        ${P().edit?`<button class="btn ghost sm" onclick="formApont('${a.id}')">Editar</button>`:''}
-        <button class="btn ghost sm" onclick="histApont('${a.id}')">Histórico</button>
-        ${P().delete?`<button class="btn danger sm" onclick="delApont('${a.id}')">Excluir</button>`:''}
+        ${a.status!=='Resolvido'&&P().edit?`<button class="btn green sm" onclick="${a.ref==='ap'?`avancarApont('${a.id}')`:`avancarChamado('${a.id}')`}">${a.status==='Aberto'?'Iniciar':'Marcar como resolvido'}</button>`:''}
+        ${a.ref==='ap'
+          ?`${P().edit?`<button class="btn ghost sm" onclick="formApont('${a.id}')">Editar</button>`:''}
+            <button class="btn ghost sm" onclick="histApont('${a.id}')">Histórico</button>
+            ${P().delete?`<button class="btn danger sm" onclick="delApont('${a.id}')">Excluir</button>`:''}`
+          :`<button class="btn ghost sm" onclick="openTask('${a.id}')">Abrir ficha${a.status!=='Resolvido'&&podeProgramarChamado()&&!a.urgente?' e marcar data':''}</button>`}
       </div></div>`).join('')
-      :'<div class="card empty">Nenhum apontamento registrado.</div>'}`;
+      :'<div class="card empty">Nenhum serviço nesta lista.</div>'}`;
+  if(typeof hidratarFotos==='function') setTimeout(()=>hidratarFotos(),0);
+}
+/* Mesmo passo a passo do apontamento, porem sobre o chamado da ronda:
+   Aberto -> Em Andamento -> Resolvido, fechando o chamado de verdade. */
+function avancarChamado(id){
+  const t=tasks.find(x=>x.id===id); if(!t) return;
+  if(!P().edit) return toast('Sem permissão.');
+  t.historico=t.historico||[];
+  if(t.status!=='Em Andamento'&&t.status!=='Concluída'){
+    t.status='Em Andamento';
+    if(!t.iniciadoEm) t.iniciadoEm=today();
+    t.historico.push({q:session.nome,w:nowStamp(),t:'Serviço iniciado'});
+    audit('Chamado iniciado',t.titulo,'',t.condoId,'Ronda');
+    save(); render(); return toast('Serviço iniciado.');
+  }
+  if(t.status==='Em Andamento'){
+    t.status='Concluída'; t.concluidoEm=today(); t.concluidoHora=nowHora();
+    t.concluidoPor=session.nome;
+    t.historico.push({q:session.nome,w:nowStamp(),t:'Serviço concluído'});
+    audit('Chamado concluído',t.titulo,'',t.condoId,'Ronda');
+    save(); render(); return toast('Chamado concluído.');
+  }
 }
 function formApont(id){
   const a=id?apontamentos.find(x=>x.id===id):null;
@@ -15649,5 +15769,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a477386b4bbc6509',t:'MTc5MTQ4NDI2NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4777ed90bd0fc31',t:'MTc5MTQ4NzE0OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
