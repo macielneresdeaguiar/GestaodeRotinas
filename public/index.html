@@ -2211,6 +2211,7 @@ function load(d){
     let mig=migrarLeiturasAgua(); if(migrarTarifaCaesb()) mig=true; migrarManutObrig(); migrarVendasCustas();
     if(migrarFilaPub()) mig=true; if(migrarRevisoesAp()) mig=true; if(migrarMarcaEbiz()) mig=true; if(migrarSalas()) mig=true;
     if(migrarCatalogo2610()) mig=true;
+    if(migrarChamadosRonda()) mig=true;
     if(mig) save();
     migrarLaudosParaFora();   // assincrona: salva sozinha quando terminar
     return true;
@@ -2722,9 +2723,12 @@ function viewDashboard(){
         null,'abrirTriagemChamados()']); }
     /* Chamados que a brigada abriu na ronda — manutenção e gestor */
     { const rc=rondaChamadosAbertos();
-      if(rc.length) avisos.push(['red',ic('route'),
-        `${rc.length} chamado(s) da ronda da brigada`,
-        `${rc.filter(t=>t.prioridade==='Alta').length} urgente(s) · clique para organizar o atendimento`,
+      const ru=rc.filter(chamadoUrgente).length, rs=chamadosAProgramar().length;
+      const ra=chamadosProgramados().filter(t=>diffDays(t.vencimento,today())<0).length;
+      if(rc.length) avisos.push([ru||ra?'red':'amber',ic('route'),
+        `${rc.length} chamado(s) da ronda com a manutenção`,
+        [ru?ru+' urgente(s)':'',rs?rs+' aguardando data':'',ra?ra+' passou da data':'']
+          .filter(Boolean).join(' · ')+' — clique para organizar',
         null,'abrirPainelChamadosRonda()']); }
     /* Brigada: não conformidades abertas viram aviso no painel do Gestor */
     if(P().brigada||P().tipos.includes('Gestor')) brigResumoNC('c1',brigMesAtual()).slice(0,4).forEach(r=>
@@ -2776,7 +2780,48 @@ function viewDashboard(){
       <div class="t-sub" style="margin-top:6px">${pc}% de conclusão geral</div></div>`;
   });
   html+=`</div>`;
-  $('#content').innerHTML=iaCard('Leitura do dia',iaTudo(condoFilter).slice(0,5),false)+html;
+  $('#content').innerHTML=cardChamadosRonda()+iaCard('Leitura do dia',iaTudo(condoFilter).slice(0,5),false)+html;
+}
+/* ============ CARTAO FIXO DOS CHAMADOS DA RONDA ============
+   Pedido do Gestor: o urgente nao pode depender de pop-up nem de alerta que
+   some. Fica cravado no alto do painel dele e no do oficial de manutencao,
+   toda vez que abrem o app, ate alguem concluir. */
+function cardChamadosRonda(){
+  const urg=chamadosUrgentes();
+  const semData=chamadosAProgramar();
+  const atras=chamadosProgramados().filter(t=>diffDays(t.vencimento,today())<0);
+  const hoje=chamadosProgramados().filter(t=>t.vencimento===today());
+  if(!urg.length&&!semData.length&&!atras.length&&!hoje.length) return '';
+  const item=t=>{
+    const r=brigRondas.find(x=>x.id===t.rondaId)||{};
+    const d=r.data?diffDays(r.data,today()):null;
+    const ha=d===null?'':d===0?'hoje':'há '+Math.abs(d)+' dia(s)';
+    return `<div class="feed-item red" style="align-items:flex-start;cursor:pointer"
+         onclick="abrirChamadoRonda('${t.id}')">
+      <div style="flex:1;min-width:0">
+        <div class="ft">${esc(brigAndarNome(r.andar)||t.titulo)}</div>
+        <div class="fd">${esc(r.obs||t.titulo)}</div>
+        <div class="t-sub" style="margin-top:3px">apontado ${esc(ha)} por ${esc(r.autor||t.criadoPor||'—')}</div>
+      </div></div>`;
+  };
+  const chips=[];
+  if(semData.length) chips.push(`<span class="badge b-pend">${semData.length} sem data</span>`);
+  if(atras.length)   chips.push(`<span class="badge b-atr">${atras.length} passou da data</span>`);
+  if(hoje.length)    chips.push(`<span class="badge b-and">${hoje.length} para hoje</span>`);
+  return `<div class="card" style="margin-bottom:14px;border-left:5px solid ${urg.length?'#c2384a':'#f08c00'}">
+    <div class="section-title" style="margin-top:0">
+      <h3>${ic('route')} Chamados da ronda</h3>
+      <span class="spacer badge ${urg.length?'b-atr':'b-conc'}">${urg.length} urgente(s)</span></div>
+    ${urg.length?`<div class="muted" style="font-size:12px;margin-bottom:8px">
+        Urgente é para atender agora — não tem data e continua aqui até ser concluída.</div>
+      ${urg.slice(0,5).map(item).join('')}
+      ${urg.length>5?`<div class="muted" style="margin-top:6px">e mais ${urg.length-5} urgente(s)…</div>`:''}`
+     :'<div class="muted" style="font-size:12px;margin-bottom:8px">Nenhum urgente em aberto.</div>'}
+    ${chips.length?`<div class="rowact" style="margin-top:10px;gap:6px">${chips.join('')}</div>`:''}
+    <div class="rowact no-print" style="margin-top:10px">
+      <button class="btn sm primary" onclick="abrirPainelChamadosRonda()">
+        ${podeProgramarChamado()?'Organizar e marcar datas':'Ver chamados'}</button>
+    </div></div>`;
 }
 function badgeStatus(s){const m={'Pendente':'b-pend','Em Andamento':'b-and','Concluída':'b-conc','Atrasada':'b-atr'};return `<span class="badge ${m[s]}">${s}</span>`}
 function badgePrio(p){const m={'Urgente':'b-urg','Alta':'b-alta','Média':'b-media','Baixa':'b-baixa'};
@@ -3313,13 +3358,17 @@ function openTask(id){
     <div class="chip-list" style="margin-bottom:14px">${badgeCondo(t.condoId)}<span class="badge b-tag">${t.tipo}</span>${badgePrio(t.prioridade)}${badgeStatus(t.status)}<span class="badge b-pend">${t.periodicidade}</span></div>
     <div class="f2">
       <div><div class="t-sub">Responsável</div><b>${esc(t.responsavel||'— não atribuído —')}</b></div>
-      <div><div class="t-sub">Vencimento</div><b>${t.vencimento?fmt(t.vencimento):'Catálogo (sob demanda)'}</b></div>
+      <div><div class="t-sub">${t.origem==='ronda'?'Data de atendimento':'Vencimento'}</div>
+        <b>${t.vencimento?fmt(t.vencimento)
+             :t.origem==='ronda'?(chamadoUrgente(t)?'Urgente — para agora':'A combinar')
+             :'Catálogo (sob demanda)'}</b></div>
       ${t.concluidoEm?`<div><div class="t-sub">Concluída em</div><b>${fmt(t.concluidoEm)}</b></div>
       <div><div class="t-sub">Concluída por</div><b>${esc(t.concluidoPor||'')}</b></div>`:''}
     </div>
     <div style="margin-top:14px"><div class="t-sub">Procedimento</div><p style="margin-top:4px">${esc(t.procedimento||'—')}</p></div>
     ${t.obsConclusao?`<div style="margin-top:12px"><div class="t-sub">Observações da conclusão</div><p>${esc(t.obsConclusao)}</p></div>`:''}
     ${t.anexo?`<div style="margin-top:10px"><span class="badge b-tag">${ic('paperclip')} ${esc(t.anexo)}</span></div>`:''}
+    ${boxProgramar(t)}
     ${histHtml(t.historico)}`;
   $('#modalFoot').innerHTML=`
     ${P().complete&&t.status!=='Concluída'?`<button class="btn green" onclick="completeTask('${t.id}')">${ic('check')} Concluir</button>`:''}
@@ -3327,6 +3376,39 @@ function openTask(id){
     ${canDelete(t)?`<button class="btn danger" onclick="delTask('${t.id}')">Excluir</button>`:''}
     <button class="btn ghost" onclick="closeModal()">Fechar</button>`;
   $('#modal').classList.add('open');
+}
+/* Caixa para marcar/mudar a data do chamado da ronda, dentro da propria
+   tarefa. Quem pode: o Gestor e o oficial de manutencao. */
+function boxProgramar(t){
+  if(!t||t.origem!=='ronda'||t.status==='Concluída'||t.status==='Cancelada') return '';
+  if(!podeProgramarChamado()) return '';
+  if(chamadoUrgente(t)) return `<div class="card" style="box-shadow:none;background:#fdeaea;
+      border-color:#edaab0;padding:11px;margin-top:12px">
+      <div style="font-weight:650;color:var(--navy)">Chamado urgente</div>
+      <div class="t-sub" style="margin-top:3px">Não recebe data: é para atender agora e
+        continua aparecendo no painel até ser concluído.</div></div>`;
+  const atrasada=t.vencimento&&diffDays(t.vencimento,today())<0;
+  return `<div class="card" style="box-shadow:none;background:var(--slate-soft);padding:11px;margin-top:12px">
+    <div style="font-weight:650;color:var(--navy)">
+      ${t.vencimento?'Atendimento marcado para '+fmt(t.vencimento):'Quando isto será feito?'}</div>
+    <div class="t-sub" style="margin-top:3px">
+      ${atrasada?'Passou da data combinada — remarque ou conclua.'
+        :t.vencimento?'Se passar deste dia sem concluir, aparece como atrasada.'
+        :'Enquanto não tiver data, não conta como atrasada de ninguém.'}</div>
+    <div class="rowact" style="margin-top:8px;gap:6px;align-items:center">
+      <input type="date" id="dtt_${t.id}" value="${esc(t.vencimento||'')}"
+             style="padding:6px 8px;font-size:13px">
+      <button class="btn sm primary" onclick="programarDaTarefa('${t.id}')">
+        ${t.vencimento?'Mudar data':'Marcar data'}</button>
+      ${t.vencimento?`<button class="btn sm ghost" onclick="desprogramarDaTarefa('${t.id}')">Tirar data</button>`:''}
+    </div></div>`;
+}
+function programarDaTarefa(id){
+  const el=document.querySelector('#dtt_'+id);
+  if(programarChamado(id,el?el.value:'')){ openTask(id); render() }
+}
+function desprogramarDaTarefa(id){
+  if(desprogramarChamado(id)){ openTask(id); render() }
 }
 function openModal(titulo,corpo,rodape){
   $('#modalTitle').textContent=titulo;
@@ -3457,6 +3539,10 @@ function doDelete(id,scope,fromDrill){
 /* ============ TAREFAS DE HOJE / PLANEJAMENTO DIÁRIO ============ */
 let hojeFiltro='hoje', hojeData=today(), hojeStatus='';
 const PRIOS4=['Baixa','Média','Alta','Urgente'];
+/* Tipo proprio dos chamados da ronda. Fica fora de perms.tipos de todo mundo
+   de proposito: assim a demanda do Cleiton nao entra na lista (nem no contador
+   de atrasadas) de quem nao e o executor. Quem acompanha usa o painel da ronda. */
+const TIPO_MANUT='Manutenção';
 function badgePrio4(p){
   const m={'Urgente':'b-atr','Alta':'b-alta','Média':'b-media','Baixa':'b-baixa'};
   return `<span class="badge ${m[p]||'b-baixa'}">${p==='Urgente'?ic('flame')+' ':''}${p}</span>`;
@@ -8748,7 +8834,7 @@ function dashLimpeza(){
   const ocor=minhaRonda.filter(r=>!r.ok).length;
   const meusCham=tasks.filter(t=>t.origem==='ronda'&&t.criadoPor===session.nome&&
     t.status!=='Concluída'&&!t.arquivada);
-  const aguardando=meusCham.filter(t=>t.triagem==='pendente').length;
+  const aguardando=meusCham.filter(t=>!t.vencimento&&!chamadoUrgente(t)).length;
   $('#content').innerHTML=`
     <div class="card" style="margin-bottom:14px;background:linear-gradient(115deg,#0d1b2e 0%,#1d3557 65%,#1d7a4c 175%);color:#fff;border:0">
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -8795,13 +8881,13 @@ function dashLimpeza(){
       <div style="padding:12px">
         ${aguardando?`<div class="bg-av bg-amber" style="margin-bottom:8px">
           <div class="bg-ic">${ic('clock')}</div>
-          <div><div class="bg-tit">${aguardando} aguardando o Gestor</div>
-          <div class="bg-txt">Assim que ele direcionar, a manutenção recebe.</div></div></div>`:''}
+          <div><div class="bg-tit">${aguardando} aguardando data</div>
+          <div class="bg-txt">Já estão com a manutenção; falta combinar o dia.</div></div></div>`:''}
         ${meusCham.length?meusCham.slice(0,6).map(t=>`
           <div class="feed-item ${t.prioridade==='Alta'?'red':''}">
             <div class="fi-ic">${ic('route')}</div>
             <div style="flex:1"><div class="ft">${esc(t.titulo)}</div>
-              <div class="fd">${t.triagem==='pendente'?'aguardando direcionamento':'com '+esc(t.responsavel||'manutenção')} · ${fmt(t.vencimento)}</div></div>
+              <div class="fd">com ${esc(t.responsavel||'a manutenção')} · ${chamadoUrgente(t)?'urgente, para agora':t.vencimento?'previsto '+fmt(t.vencimento):'aguardando data'}</div></div>
           </div>`).join('')
         :'<div class="muted">Nenhum chamado seu em aberto.</div>'}
       </div></div>`;
@@ -8829,6 +8915,8 @@ function dashManutencao(){
           <button class="btn" style="background:#fff;color:var(--navy)" onclick="formApont()">+ Novo Apontamento</button>
           <button class="btn ghost" style="background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)" onclick="novoPedido()">Pedir Material</button>
         </div></div></div>
+
+    ${cardChamadosRonda()}
 
     <div class="grid metrics" style="margin-bottom:14px">
       <div class="card metric red" onclick="apFiltro='Aberto';go('apontamentos')">
@@ -12427,53 +12515,185 @@ function direcionarTodos(){
    nas rondas e ainda não foi resolvido. O Gestor vê o mesmo painel. */
 function rondaChamadosAbertos(){
   return tasks.filter(t=>t.origem==='ronda'&&t.status!=='Concluída'&&!t.arquivada)
-    .filter(t=>t.triagem!=='pendente')   /* o que aguarda o Gestor ainda não chega à manutenção */
     .filter(t=>P().condos.includes(t.condoId))
-    .sort((a,b)=>{
-      const pa=a.prioridade==='Alta'?0:1, pb=b.prioridade==='Alta'?0:1;
-      return pa-pb || String(a.vencimento).localeCompare(String(b.vencimento));
-    });
+    .sort(ordChamado);
+}
+/* Urgente primeiro; depois o que ja tem data, da mais antiga para a mais
+   nova; o que ainda nao foi programado vai para o fim (string vazia
+   ordenaria na frente de qualquer data, que e o contrario do util). */
+function ordChamado(a,b){
+  const ua=chamadoUrgente(a)?0:1, ub=chamadoUrgente(b)?0:1;
+  if(ua!==ub) return ua-ub;
+  const da=a.vencimento||'9999-12-31', db=b.vencimento||'9999-12-31';
+  return String(da).localeCompare(String(db));
+}
+/* Urgente e a ocorrencia marcada como "risco ou parada de servico" na ronda.
+   Fica fixa na tela do Gestor e da manutencao ate alguem concluir. */
+function chamadoUrgente(t){
+  return !!t && t.origem==='ronda' && (t.prioridade==='Alta'||t.prioridade==='Urgente');
+}
+function chamadosUrgentes(){
+  return rondaChamadosAbertos().filter(chamadoUrgente);
+}
+/* Nao urgentes que ainda esperam alguem dizer QUANDO serao feitos.
+   Sem data, refreshStatuses() nunca marca como atrasada -- de proposito:
+   so atrasa o que foi combinado e nao foi cumprido. */
+function chamadosAProgramar(){
+  return rondaChamadosAbertos().filter(t=>!chamadoUrgente(t)&&!t.vencimento);
+}
+function chamadosProgramados(){
+  return rondaChamadosAbertos().filter(t=>!chamadoUrgente(t)&&t.vencimento);
+}
+/* O Gestor e o proprio oficial de manutencao marcam a data. */
+function podeProgramarChamado(){
+  return !!session && (P().tipos.includes('Gestor')||!!P().manutencao);
+}
+function programarChamado(id,data){
+  const t=tasks.find(x=>x.id===id); if(!t) return false;
+  if(!podeProgramarChamado()){ toast('Você não pode programar chamados.'); return false }
+  if(!data){ toast('Escolha a data de atendimento.'); return false }
+  const antes=t.vencimento||'';
+  t.vencimento=data; t.dataProgramada=data;
+  t.programadoPor=session.nome; t.programadoEm=nowStamp();
+  /* Se estava atrasada e a data foi empurrada para frente, volta a Pendente;
+     refreshStatuses() reavalia em seguida de qualquer forma. */
+  if(t.status==='Atrasada'&&diffDays(data,today())>=0) t.status='Pendente';
+  t.historico=t.historico||[];
+  t.historico.push({q:session.nome,w:nowStamp(),
+    t:(antes?'Data de atendimento alterada de '+fmt(antes)+' para '+fmt(data)
+            :'Atendimento programado para '+fmt(data))+' por '+session.role});
+  audit(antes?'Chamado reprogramado':'Chamado programado',t.titulo,
+    (antes?fmt(antes)+' -> ':'')+fmt(data),t.condoId,'Ronda');
+  save();
+  toast('Atendimento marcado para '+fmt(data)+'.');
+  return true;
+}
+function desprogramarChamado(id){
+  const t=tasks.find(x=>x.id===id); if(!t||!t.vencimento) return false;
+  if(!podeProgramarChamado()){ toast('Você não pode programar chamados.'); return false }
+  const antes=t.vencimento;
+  t.vencimento=''; t.dataProgramada=null; t.status='Pendente';
+  t.historico=t.historico||[];
+  t.historico.push({q:session.nome,w:nowStamp(),
+    t:'Data de '+fmt(antes)+' retirada — voltou para a fila a programar'});
+  audit('Chamado sem data',t.titulo,'era '+fmt(antes),t.condoId,'Ronda');
+  save(); toast('Chamado voltou para a fila a programar.');
+  return true;
+}
+/* ---- migracao: chamados antigos da ronda ----
+   Ate aqui a ocorrencia nascia como tarefa do Gestor com vencimento = hoje,
+   entao no dia seguinte aparecia como atrasada de quem nao ia executar. E a
+   da limpeza/portaria parava numa triagem. Passa tudo para a manutencao e
+   tira a data que ninguem combinou, preservando a que foi programada a mao. */
+function migrarChamadosRonda(){
+  if(CFG.chamadosManut==='v1') return false;
+  let n=0;
+  tasks.forEach(t=>{
+    if(t.origem!=='ronda') return;
+    let mudou=false;
+    if(t.tipo!==TIPO_MANUT){ t.tipo=TIPO_MANUT; mudou=true }
+    if(t.triagem==='pendente'){ t.triagem='direcionado'; mudou=true }
+    if(!t.responsavel&&t.triagem!=='dispensado'){ t.responsavel='Cleiton'; mudou=true }
+    /* so limpa a data de quem continua em aberto e nunca foi programado a mao */
+    if(t.status!=='Concluída'&&t.status!=='Cancelada'&&!t.arquivada&&
+       !t.programadoPor&&t.vencimento){
+      t.vencimento=''; t.dataProgramada=null;
+      if(t.status==='Atrasada') t.status='Pendente';
+      mudou=true;
+    }
+    if(mudou){ n++;
+      t.historico=t.historico||[];
+      t.historico.push({q:'Sistema',w:nowStamp(),
+        t:'Chamado passou a ser demanda da manutenção, aguardando data de atendimento'});
+    }
+  });
+  CFG.chamadosManut='v1';
+  if(n&&typeof audit==='function')
+    audit('Sistema','Chamados da ronda',n+' chamado(s) movido(s) para a manutenção','c1','Migração');
+  return true;
 }
 function avisarChamadosRonda(forcar){
   const lista=rondaChamadosAbertos();
   if(!lista.length) return false;
   const hoje=today();
-  if(!forcar&&notifState._rondaAviso===hoje) return false;
+  /* Urgente avisa SEMPRE que a pessoa entra, nao uma vez por dia: foi pedido
+     expressamente porque um aviso diario deixava risco passar batido. O
+     restante continua com o limite de uma vez ao dia para nao incomodar. */
+  const urg=lista.some(chamadoUrgente);
+  if(!forcar&&!urg&&notifState._rondaAviso===hoje) return false;
   notifState._rondaAviso=hoje; save();
   abrirPainelChamadosRonda(lista);
   return true;
 }
 function abrirPainelChamadosRonda(lista){
-  lista=lista||rondaChamadosAbertos();
-  if(!lista.length) return toast('Nenhum chamado da ronda em aberto.');
-  const urg=lista.filter(t=>t.prioridade==='Alta').length;
-  const ontem=lista.filter(t=>{
-    const r=brigRondas.find(x=>x.id===t.rondaId);
-    return r&&r.data<today();
-  }).length;
-  const item=t=>{
+  const urg=chamadosUrgentes();
+  const semData=chamadosAProgramar();
+  const comData=chamadosProgramados();
+  if(!urg.length&&!semData.length&&!comData.length)
+    return toast('Nenhum chamado da ronda em aberto.');
+  const pode=podeProgramarChamado();
+  const atras=comData.filter(t=>t.vencimento&&diffDays(t.vencimento,today())<0);
+
+  const linha=(t,modo)=>{
     const r=brigRondas.find(x=>x.id===t.rondaId)||{};
-    const quando=r.data?fmt(r.data)+' às '+(r.hora||'—'):fmt(t.vencimento);
-    return `<div class="rc-item ${t.prioridade==='Alta'?'urg':''}">
+    const quando=r.data?fmt(r.data)+' às '+(r.hora||'—'):'—';
+    const atrasada=t.vencimento&&diffDays(t.vencimento,today())<0;
+    const dias=t.vencimento?diffDays(t.vencimento,today()):null;
+    const prazo=!t.vencimento?'<span class="badge b-pend">sem data</span>'
+      :atrasada?`<span class="badge b-atr">atrasada há ${Math.abs(dias)} dia(s)</span>`
+      :dias===0?'<span class="badge b-and">é hoje</span>'
+      :`<span class="badge b-conc">em ${dias} dia(s)</span>`;
+    return `<div class="rc-item ${modo==='urg'?'urg':''}">
       ${t.anexo?`<img src="${srcFoto(t.anexo)}"${attrFoto(t.anexo)} class="rc-foto" onclick="verFotoChamado('${t.id}')" alt="foto">`
               :`<div class="rc-foto vazio">${ic('camera')}</div>`}
       <div class="rc-txt">
         <div class="rc-t">${esc(brigAndarNome(r.andar)||t.titulo)}
-          ${t.prioridade==='Alta'?'<span class="badge red">urgente</span>':''}</div>
+          ${modo==='urg'?'<span class="badge red">urgente</span>':prazo}</div>
         <div class="rc-d">${esc(r.obs||t.titulo)}</div>
-        <div class="rc-m">${esc(quando)} · por ${esc(r.autor||t.criadoPor||'—')}</div>
+        <div class="rc-m">apontado ${esc(quando)} · por ${esc(r.autor||t.criadoPor||'—')}
+          ${t.programadoPor?' · data posta por '+esc(t.programadoPor):''}</div>
+        ${modo==='urg'?`<div class="rc-m" style="color:#c2384a">
+            Sem data: é para atender agora. Fica aqui até ser concluída.</div>`:''}
+        ${pode&&modo!=='urg'?`<div class="rowact" style="margin-top:7px;gap:6px;align-items:center">
+            <label class="muted" style="font-size:11.5px">Fazer em</label>
+            <input type="date" id="dtc_${t.id}" value="${esc(t.vencimento||'')}"
+                   min="${today()}" style="padding:5px 7px;font-size:12.5px">
+            <button class="btn sm primary" onclick="programarDoPainel('${t.id}')">
+              ${t.vencimento?'Mudar':'Marcar'}</button>
+            ${t.vencimento?`<button class="btn sm ghost" onclick="desprogramarDoPainel('${t.id}')">Tirar data</button>`:''}
+          </div>`:''}
       </div>
-      <button class="btn sm" onclick="closeModal();abrirChamadoRonda('${t.id}')">Abrir</button>
+      <div class="rc-acoes">
+        <button class="btn sm" onclick="closeModal();abrirChamadoRonda('${t.id}')">Abrir</button>
+        ${pode?`<button class="btn sm ghost" onclick="dispensarChamado('${t.id}')">Dispensar</button>`:''}
+      </div>
     </div>`;
   };
-  openModal('Chamados da ronda da brigada',
-    `<div class="muted" style="margin-bottom:10px">
-       <b>${lista.length}</b> chamado(s) aguardando execução${urg?` · <b style="color:#c2384a">${urg} urgente(s)</b>`:''}${ontem?` · ${ontem} de dias anteriores`:''}.
-       Programe o atendimento pela tela de tarefas.</div>
-     <div class="rc-lista">${lista.slice(0,12).map(item).join('')}</div>
-     ${lista.length>12?`<div class="muted" style="margin-top:8px">e mais ${lista.length-12}…</div>`:''}`,
-    `<button class="btn" onclick="closeModal()">Depois</button>
-     <button class="btn primary" onclick="closeModal();go('tarefas')">Organizar na agenda</button>`);
+  const bloco=(tit,sub,l,modo)=>!l.length?'':
+    `<div style="margin:14px 0 6px">
+       <div style="font-weight:650;font-size:13.5px">${tit} <span class="muted">(${l.length})</span></div>
+       <div class="muted" style="font-size:11.5px">${sub}</div></div>
+     <div class="rc-lista">${l.slice(0,20).map(t=>linha(t,modo)).join('')}</div>
+     ${l.length>20?`<div class="muted" style="margin-top:6px">e mais ${l.length-20}…</div>`:''}`;
+
+  openModal('Chamados da ronda',
+    `<div class="muted" style="margin-bottom:4px">
+       Tudo que a ronda aponta vira demanda da manutenção (Cleiton).
+       ${pode?'O urgente é para agora; no restante, marque a data em que será feito.'
+             :'O Gestor e a manutenção marcam a data de atendimento.'}
+       ${atras.length?` · <b style="color:#c2384a">${atras.length} passou da data combinada</b>`:''}
+     </div>
+     ${bloco('Urgentes — atender agora','Risco ou parada de serviço. Não recebem data e continuam aparecendo até serem concluídas.',urg,'urg')}
+     ${bloco('Aguardando data','Ninguém combinou ainda quando será feito. Enquanto não tiver data, não conta como atrasada.',semData,'sem')}
+     ${bloco('Com data marcada','Se passar do dia combinado, aparece como atrasada da manutenção.',comData,'com')}`,
+    `<button class="btn" onclick="closeModal()">Fechar</button>`);
+}
+function programarDoPainel(id){
+  const el=document.querySelector('#dtc_'+id);
+  if(programarChamado(id,el?el.value:'')){ abrirPainelChamadosRonda(); render() }
+}
+function desprogramarDoPainel(id){
+  if(desprogramarChamado(id)){ abrirPainelChamadosRonda(); render() }
 }
 function verFotoChamado(id){
   const t=tasks.find(x=>x.id===id); if(!t||!t.anexo)return;
@@ -12482,7 +12702,10 @@ function verFotoChamado(id){
 }
 function abrirChamadoRonda(id){
   const t=tasks.find(x=>x.id===id); if(!t) return;
-  go('tarefas'); setTimeout(()=>openTask(id),260);
+  /* Abre direto a ficha. Antes mandava para a tela de Tarefas, que agora nao
+     lista chamado de ronda (eles sao da manutencao, nao do Gestor) -- o
+     usuario caia numa tela onde o item nao aparecia. */
+  openTask(id);
 }
 
 /* ============ RONDA DIÁRIA ============
@@ -12514,7 +12737,7 @@ function viewBrigRonda(){
       <div class="ap-faixa">${ic('route')} RONDA DE HOJE — ${fmt(hoje).toUpperCase()}</div>
       <div style="padding:12px">
         <div class="muted" style="margin-bottom:8px">Toque no andar ao passar por ele. Se encontrar algo, registre a ocorrência —
-          ${P().brigada?'ela abre o chamado da manutenção na hora.':'o Gestor recebe o chamado e direciona para a manutenção.'}</div>
+          ela vira uma demanda da manutenção na hora. O urgente é atendido de imediato; no restante, o Gestor ou o Cleiton marcam a data.</div>
         ${relAvisoRonda(cid)}
         ${brigQuemCobriu(cid,hoje)}
         <div class="bg-grade">${grade}</div>
@@ -12630,13 +12853,15 @@ function chStatusCartao(t){
   if(!t) return `<div class="card" style="box-shadow:none;background:var(--slate-soft);padding:13px">
     <div class="t-sub">O chamado deste registro não foi encontrado. Pode ter sido excluído pelo Gestor.</div></div>`;
   const fim = t.status==='Concluída';
-  const triagem = t.origem==='ronda' && t.triagem==='pendente';
+  const semData = t.origem==='ronda' && !t.vencimento && !fim;
+  const urgente = chamadoUrgente(t);
   const cor = fim?'#e6f6ea':(t.status==='Atrasada'?'#fdeaea':'#fff8e8');
   const borda= fim?'#9ad3ab':(t.status==='Atrasada'?'#edaab0':'#e7cf9a');
   let frase;
   if(fim) frase='Resolvido'+(t.concluidoPor?' por '+esc(t.concluidoPor):'')+
     (t.concluidoEm?' em '+fmt(t.concluidoEm):'')+'.';
-  else if(triagem) frase='Aguardando o Gestor direcionar para a manutenção.';
+  else if(urgente) frase='Urgente, com '+esc(t.responsavel||'a manutenção')+' — para atender agora.';
+  else if(semData) frase='Com '+esc(t.responsavel||'a manutenção')+', aguardando a data de atendimento.';
   else if(t.responsavel) frase='Com '+esc(t.responsavel)+'. Previsto para '+fmt(t.vencimento)+'.';
   else frase='Aberto, ainda sem responsável definido.';
   return `<div class="card" style="box-shadow:none;background:${cor};border-color:${borda};padding:13px;margin-bottom:12px">
@@ -12644,7 +12869,7 @@ function chStatusCartao(t){
     <div style="font-weight:700;color:var(--navy);line-height:1.45">${frase}</div>
     ${fim&&t.obsConclusao?`<div class="t-sub" style="margin-top:7px;line-height:1.55">
       <b>O que foi feito:</b> ${esc(t.obsConclusao)}</div>`:''}
-    ${!fim?`<div class="t-sub" style="margin-top:5px">Aberto em ${fmt(t.dataProgramada||t.vencimento)}.</div>`:''}
+    ${!fim&&(t.dataProgramada||t.vencimento)?`<div class="t-sub" style="margin-top:5px">Previsto para ${fmt(t.dataProgramada||t.vencimento)}.</div>`:''}
   </div>`;
 }
 function chFotos(lista,rot){
@@ -13304,7 +13529,8 @@ function brigRondaMarcar(cid,andar){
          <div id="brFotoCont" class="muted" style="font-size:11.5px;margin-top:4px"></div>
        </div>
        <div class="muted" style="font-size:11.5px;margin-top:8px">
-         ${P().brigada?'O chamado vai direto para a manutenção.':'O chamado será enviado ao Gestor, que direciona para a manutenção.'}</div>
+         O chamado vai direto para a manutenção. Marcando <b>Urgente</b>, ele fica fixo
+         na tela do Gestor e do Cleiton até ser resolvido; em <b>Normal</b>, eles marcam a data.</div>
        <label style="margin-top:12px">Qual a urgência?</label>
        <input type="hidden" id="brPrio" value="Média">
        <div class="rd-pri">
@@ -13389,13 +13615,18 @@ function brigRondaSalvar(cid,andar){
   if(!ok){
     /* Brigada: vai direto para a manutenção, por ser segurança.
        Demais perfis (limpeza/portaria): passam pela triagem do Gestor. */
-    const direto=!!P().brigada;
+    /* A ocorrencia da ronda e demanda da manutencao, nao do Gestor: nasce
+       com tipo 'Manutencao' e responsavel Cleiton, venha de quem vier.
+       Nasce TAMBEM sem vencimento -- antes vinha com a data de hoje e no dia
+       seguinte virava "atrasada" na lista do Gestor, que nem era o executor.
+       Quem marca a data e o Gestor ou o proprio Cleiton, por programarChamado().
+       Urgente nao recebe data: fica fixa na tela dos dois ate ser concluida. */
     const t=mkTask({titulo:'Ronda — '+brigAndarNome(andar)+': '+obs.slice(0,60),
-      condoId:cid,tipo:'Gestor',periodicidade:'Sob Demanda',repetitiva:false,
-      tipoTarefa:'Avulsa do dia',prioridade:prio,vencimento:today(),
-      responsavel:direto?'Cleiton':'',origem:'ronda',rondaId:r.id,
+      condoId:cid,tipo:TIPO_MANUT,periodicidade:'Sob Demanda',repetitiva:false,
+      tipoTarefa:'Avulsa do dia',prioridade:prio,vencimento:'',
+      responsavel:'Cleiton',origem:'ronda',rondaId:r.id,
       anexo:fotos[0]||'',fotos:fotos.slice(),
-      triagem:direto?'direcionado':'pendente',
+      triagem:'direcionado',
       criadoPor:session.nome,
       procedimento:'Registrado na ronda diária da brigada em '+fmt(r.data)+' às '+r.hora+
         ' por '+session.nome+'.\n\nLocal: '+brigAndarNome(andar)+
@@ -13405,13 +13636,13 @@ function brigRondaSalvar(cid,andar){
                         :'\n\nA foto do problema está anexada ao chamado.')});
     const nf=!fotos.length?'sem foto':fotos.length>1?'com '+fotos.length+' fotos':'com foto';
     t.historico=[{q:session.nome,w:nowStamp(),
-      t:direto?'Chamado aberto pela ronda da brigada ('+nf+')'
-             :'Chamado aberto na ronda ('+nf+') — aguardando direcionamento do Gestor'}];
+      t:'Chamado aberto na ronda ('+nf+') — vai para a manutenção'+
+        (chamadoUrgente(t)?' como URGENTE':', aguardando data de atendimento')}];
     tasks.push(t); r.chamadoId=t.id;
     audit('Ocorrência na ronda',brigAndarNome(andar),obs,cid,'Ronda diária');
     const qf=!fotos.length?'sem foto.':fotos.length>1?'com '+fotos.length+' fotos.':'com a foto.';
-    toast(direto?'Chamado aberto para a manutenção '+qf
-                :'Chamado registrado '+qf+' O Gestor vai direcionar.');
+    toast(chamadoUrgente(t)?'Chamado URGENTE aberto para a manutenção '+qf
+                           :'Chamado aberto para a manutenção '+qf+' Falta marcar a data.');
   } else toast('Ronda registrada.');
   _rondaFotos=[];
   save(); closeModal(); render();
@@ -15233,8 +15464,9 @@ function aplicarSnapshot(d){
   /* Mesmo motivo do laudo: esta migracao so existia no load(), entao o plano
      de manutencoes nunca nascia em quem recebe a base pelo servidor. */
   const _migCat=migrarCatalogo2610();
+  const _migCh=migrarChamadosRonda();
   _booting=false;
-  if(_migCat) save();
+  if(_migCat||_migCh) save();
   /* Tambem aqui, e nao so no load(): o snapshot que chega do servidor passa
      por aplicarSnapshot, nao por load. Sem esta linha a migracao rodava na
      base local e logo em seguida era sobrescrita pelo dado do servidor, que
@@ -15417,5 +15649,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a46dea191e246348',t:'MTc5MTM4NjY4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a477386b4bbc6509',t:'MTc5MTQ4NDI2NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
