@@ -1411,10 +1411,12 @@ function audit(acao,alvo,detalhe,condoId,motivo){
 const USERS=[
   {id:'u1',nome:'Maciel',login:'maciel',role:'Gestor',
    perms:{condos:['c1','c2'],tipos:['Administrativo','Gestor'],manutencao:true,manutobrig:true,estoque:true,estoqueTotal:true,
-          apontamentos:true,brigada:true,ia:true,create:true,edit:true,complete:true,delete:true}},
+          apontamentos:true,brigada:true,ia:true,create:true,edit:true,complete:true,delete:true,
+          /* carteira particular do sindico: so o Gestor e o Coordenador Administrativo */
+          sindico:true}},
   {id:'u2',nome:'Alef',login:'alef',role:'Coordenador Administrativo',
    perms:{condos:['c1','c2'],tipos:['Administrativo'],manutencao:false,manutobrig:true,estoque:true,estoqueTotal:false,
-          apontamentos:false,ia:true,create:true,edit:true,complete:true,delete:false}},
+          apontamentos:false,ia:true,create:true,edit:true,complete:true,delete:false,sindico:true}},
   {id:'u3',nome:'Cleiton',login:'cleiton',role:'Oficial de Manutenção',
    perms:{condos:['c1'],tipos:[],manutencao:true,estoque:true,estoqueTotal:true,
           apontamentos:true,create:true,edit:true,complete:true,delete:false}},
@@ -1894,7 +1896,7 @@ let _saveTimer=null, _booting=true;
 function store(){ try{ return window.localStorage }catch(e){ return null } }
 function dbSnapshot(){
   return {v:DB_VER, savedAt:new Date().toISOString(),
-    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,brigInsp,brigRondas,salas,
+    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,brigInsp,brigRondas,salas,unidSind,
     auditLog, CFG, creds, notifs, notifState};
 }
 /* ============ ONDE O APP GUARDA OS DADOS NO APARELHO ============
@@ -2202,7 +2204,7 @@ function load(d){
     apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
     pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
     prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
-    analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[];
+    analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[]; unidSind=d.unidSind||[];
     if(!prestadores.length) seedPrestadores();
     migrarPrestadoresEB();
     if(d.CFG) CFG=Object.assign(CFG,d.CFG);
@@ -2213,6 +2215,7 @@ function load(d){
     if(migrarCatalogo2610()) mig=true;
     if(migrarChamadosRonda()) mig=true;
     if(migrarDuplicadas()) mig=true;
+    if(migrarUnidSind()) mig=true;
     if(mig) save();
     migrarLaudosParaFora();   // assincrona: salva sozinha quando terminar
     return true;
@@ -2462,6 +2465,9 @@ function moduloDaPagina(){ return MODULO_DA_PAGINA[page]||'tarefas' }
 function buildCondoFilter(){
   const meus=condosDo(moduloDaPagina());
   const box=$('#condoFilter');
+  /* A carteira do sindico inclui predios que nao administramos: o filtro de
+     condominio nao faz sentido ali e so confundiria. */
+  if(page==='unidsind'){ box.innerHTML=''; if(box.classList)box.classList.add('hidden'); return }
   if(meus.length<2||!P().tipos.length){condoFilter=meus.length?meus[0].id:'all';
     box.innerHTML=''; if(box.classList)box.classList.add('hidden'); return}
   if(box.classList)box.classList.remove('hidden');
@@ -2584,6 +2590,13 @@ function buildNav(){
     items.push(['analises','helmet','Análise de Projetos']);
     items.push(['ocupacao','building','Taxa de Ocupação']);
   }
+  /* Carteira particular do sindico: so aparece para quem tem perms.sindico
+     (hoje Maciel e Alef). Fica num grupo proprio para nao se confundir com
+     os dados do condominio. */
+  if(P().sindico){
+    items.push(['#','','Particular']);
+    items.push(['unidsind','lock','Unidades do Síndico']);
+  }
   /* Perfis operacionais (sem tarefas) que registram leitura */
   if(!P().tipos.length&&P().leituras){
     items.push(['#','','Operação']);
@@ -2651,7 +2664,8 @@ function render(){
   tipoLock=null;
   const R={dashboard:viewDashboard,hoje:viewHoje,leituras:viewLeituras,tarefas:viewTasks,rotina:viewRotina,
     notas:viewNotas,cessoes:viewCessoes,vendascustas:viewVendasCustas,publicidade:viewPublicidade,manutobrig:viewManutObrig,estoque:viewEstoque,pedidos:viewPedidos,
-    apontamentos:viewApontamentos,relatorios:viewReports,relmensal:viewRelatorioMensal,config:viewConfig};
+    apontamentos:viewApontamentos,relatorios:viewReports,relmensal:viewRelatorioMensal,config:viewConfig,
+    unidsind:viewUnidSind};
   (R[page]||viewDashboard)();
 }
 
@@ -4131,6 +4145,278 @@ function gerarSemana(){
   });
   refreshStatuses(); render();
   toast(criadas?`Rotina gerada: ${criadas} ocorrência(s) criada(s).`:'A semana já está completa — nada novo a gerar.');
+}
+
+
+/* ============ CARTEIRA DO SÍNDICO (Evandro) ============
+   Tela restrita: so quem tem perms.sindico (Maciel e Alef) ve no menu e
+   consegue abrir. Reune as unidades do sindico com area, fracao ideal e a
+   inscricao do IPTU, inclusive de predios de terceiros.
+
+   Origem dos dados:
+   - E-Business: desmembramento oficial do GDF (PDF "Inscricao IPTU"), que
+     traz inscricao, area construida e fracao ideal das 261 unidades.
+   - Milena e Green: anotacao manual do sindico. Nao ha documento oficial
+     conferido, entao o que ficou duvidoso vai marcado com `conferir`. */
+const SIND_NOME='Evandro';
+function seedUnidSind(){
+  const E=(unidade,area,fi,iptu,obs,conferir)=>({id:uid('us'),predio:'E-Business',
+    tipo:'Sala',unidade,area,fi,iptu,obs:obs||'',conferir:!!conferir,
+    historico:[{q:'Sistema',w:nowStamp(),t:'Cadastrada pelo desmembramento do GDF'}]});
+  const O=(predio,tipo,unidade,iptu,obs,conferir)=>({id:uid('us'),predio,tipo,unidade,
+    area:null,fi:null,iptu,obs:obs||'',conferir:!!conferir,
+    historico:[{q:'Sistema',w:nowStamp(),t:'Cadastrada pela anotação do síndico'}]});
+  unidSind=[
+    /* --- E-Business: area e fracao conferidas no desmembramento do GDF --- */
+    E('506' ,70.57 ,0.2980,'52011658'),
+    E('606' ,70.57 ,0.2980,'52011666'),
+    E('801' ,85.83 ,0.3400,'52011984',
+      'A folha do síndico trazia 52011982, que não existe no desmembramento. O oficial da 801 é 52011984 — confirmar.',true),
+    E('812' ,80.64 ,0.3400,'52012107'),
+    E('909' ,80.64 ,0.3400,'52012328','Estava sem número na folha; inscrição obtida no desmembramento.'),
+    E('912' ,80.64 ,0.3400,'52012352','Acrescentada depois; inscrição obtida no desmembramento.'),
+    E('1003',65.38 ,0.2760,'52012387','Não constava na folha; inscrição obtida no desmembramento.'),
+    E('1008',61.55 ,0.2600,'52012433'),
+    E('1201',80.64 ,0.3400,'52012603'),
+    E('1510',69.57 ,0.2940,'52013057'),
+    E('1909',80.64 ,0.3400,'52013529'),
+    E('2402',94.01 ,0.3880,'52013790'),
+    E('2406',70.12 ,0.2940,'52013839'),
+    E('2407',297.73,1.2150,'52013847','Não constava na folha; é a maior unidade da carteira.'),
+    /* --- Residencial Milena --- */
+    O('Milena','Apartamento','303' ,'50674536'),
+    O('Milena','Apartamento','1703','50675772',
+      'O último dígito está rasurado na folha e não dá para ler com segurança. Confirmar no carnê.',true),
+    /* --- Green --- */
+    O('Green','Apartamento','202' ,'50626809'),
+    O('Green','Apartamento','817' ,'50629174'),
+    O('Green','Apartamento','712' ,'50630210'),
+    O('Green','Apartamento','814' ,'50628046',
+      'Na folha o número saiu emendado ("5062 80.46"). Confirmar no carnê.',true),
+    O('Green','Apartamento','1110','50631810'),
+    O('Green','Apartamento','1114','50631160'),
+    O('Green','Apartamento','1414','50631284'),
+    O('Green','Apartamento','—'   ,'50628674',
+      'A unidade foi riscada na folha e não deu para ler. Havia também 50630563 riscado ao lado. Confirmar a qual apartamento pertence.',true),
+    O('Green','Vaga','VG 28','50631229'),
+    O('Green','Vaga','VG 29','',
+      'A folha não traz o número do IPTU desta vaga.',true),
+    O('Green','Vaga','VG 30','50631837'),
+    O('Green','Vaga','VG 31','50631845'),
+  ];
+}
+function migrarUnidSind(){
+  let mudou=false;
+  if(CFG.carteiraSindico!=='v1'&&CFG.carteiraSindico!=='v2'){
+    if(!unidSind.length) seedUnidSind();
+    CFG.carteiraSindico='v1'; mudou=true;
+  }
+  /* v2: a inscricao do DF tem 8 digitos. A primeira carga gravou com os
+     zeros a esquerda do desmembramento; aqui tiramos. E a sala 912, que
+     faltou na lista original, entra se ainda nao estiver. */
+  if(CFG.carteiraSindico!=='v2'){
+    unidSind.forEach(u=>{
+      const n=usIptuNorm(u.iptu);
+      if(n!==u.iptu){
+        u.iptu=n;
+        u.historico=u.historico||[];
+        u.historico.push({q:'Sistema',w:nowStamp(),t:'Inscrição ajustada para os 8 dígitos'});
+        mudou=true;
+      }
+      if(u.obs) u.obs=u.obs.replace(/\b00(\d{8})\b/g,'$1');
+    });
+    if(!unidSind.some(u=>u.predio==='E-Business'&&u.unidade==='912')){
+      unidSind.push({id:uid('us'),predio:'E-Business',tipo:'Sala',unidade:'912',
+        area:80.64,fi:0.3400,iptu:'52012352',
+        obs:'Acrescentada depois; inscrição obtida no desmembramento.',conferir:false,
+        historico:[{q:'Sistema',w:nowStamp(),t:'Cadastrada pelo desmembramento do GDF'}]});
+      mudou=true;
+    }
+    CFG.carteiraSindico='v2';
+    mudou=true;
+  }
+  return mudou;
+}
+function podeSindico(){ return !!(session&&P().sindico) }
+let usBusca='', usPredio='';
+function usPredios(){ return [...new Set(unidSind.map(u=>u.predio))] }
+function usLista(){
+  const b=usBusca.trim().toLowerCase();
+  return unidSind
+    .filter(u=>!usPredio||u.predio===usPredio)
+    .filter(u=>!b||[u.unidade,u.iptu,u.predio,u.tipo,u.obs].join(' ').toLowerCase().includes(b))
+    .sort((a,b2)=>a.predio.localeCompare(b2.predio)
+      ||String(a.tipo).localeCompare(String(b2.tipo))
+      ||String(a.unidade).localeCompare(String(b2.unidade),'pt',{numeric:true}));
+}
+function usArea(l){ return l.reduce((s,u)=>s+(+u.area||0),0) }
+function usFmtArea(v){ return v?v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' m²':'—' }
+/* A inscricao do IPTU do DF tem 8 digitos. O desmembramento imprime com
+   zeros a esquerda ("0052011658"); guardamos e mostramos so os 8. */
+function usIptuNorm(v){
+  const d=String(v||'').replace(/\D/g,'').replace(/^0+/,'');
+  return d;
+}
+function usIptuFmt(v){ return usIptuNorm(v)||'—' }
+function viewUnidSind(){
+  if(!podeSindico()){ $('#content').innerHTML=cardSemAcesso('Unidades do Síndico',
+    'Esta tela é restrita ao Gestor e ao Coordenador Administrativo.'); return }
+  const l=usLista();
+  const todas=unidSind;
+  const aConferir=todas.filter(u=>u.conferir);
+  const porPredio={};
+  l.forEach(u=>{ (porPredio[u.predio]=porPredio[u.predio]||[]).push(u) });
+  const linha=u=>`<tr${u.conferir?' style="background:#fff8e8"':''}>
+    <td><b>${esc(u.unidade)}</b><div class="t-sub">${esc(u.tipo)}</div></td>
+    <td>${u.area?usFmtArea(u.area):'<span class="muted">—</span>'}</td>
+    <td>${u.fi?(u.fi.toFixed(4).replace('.',',')+'%'):'<span class="muted">—</span>'}</td>
+    <td><span style="font-variant-numeric:tabular-nums">${esc(usIptuFmt(u.iptu))}</span>
+      ${u.iptu?`<button class="btn sm ghost no-print" style="margin-left:6px;padding:2px 7px"
+        onclick="usCopiar('${esc(u.iptu)}')" title="Copiar">${ic('copy')}</button>`:''}</td>
+    <td class="no-print">
+      ${u.conferir?`<span class="badge b-avencer">conferir</span>`:''}
+      ${u.obs?`<div class="t-sub" style="max-width:320px;line-height:1.45">${esc(u.obs)}</div>`:''}</td>
+    <td class="no-print" style="white-space:nowrap">
+      ${P().edit?`<button class="btn sm ghost" onclick="usForm('${u.id}')">Editar</button>`:''}
+      ${P().delete?`<button class="btn sm danger" onclick="usExcluir('${u.id}')">Excluir</button>`:''}</td>
+  </tr>`;
+  $('#content').innerHTML=`
+    <div class="grid metrics" style="margin-bottom:14px">
+      <div class="card metric"><div class="lbl">Unidades</div><div class="val">${todas.length}</div>
+        <div class="sub">${usPredios().length} prédio(s)</div></div>
+      <div class="card metric"><div class="lbl">Área no E-Business</div>
+        <div class="val" style="font-size:22px">${usFmtArea(usArea(todas.filter(u=>u.predio==='E-Business')))}</div>
+        <div class="sub">${todas.filter(u=>u.predio==='E-Business').length} salas</div></div>
+      <div class="card metric"><div class="lbl">Fração ideal somada</div>
+        <div class="val" style="font-size:22px">${todas.filter(u=>u.predio==='E-Business')
+          .reduce((s,u)=>s+(+u.fi||0),0).toFixed(4).replace('.',',')}%</div>
+        <div class="sub">no E-Business</div></div>
+      <div class="card metric ${aConferir.length?'amber':'green'}"><div class="lbl">A conferir</div>
+        <div class="val">${aConferir.length}</div><div class="sub">dado incerto na anotação</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px;background:var(--slate-soft);box-shadow:none">
+      <div style="font-weight:650;color:var(--navy)">Carteira particular de ${esc(SIND_NOME)}, síndico do E-Business</div>
+      <div class="t-sub" style="margin-top:4px;line-height:1.55">
+        Tela restrita: só o Gestor e o Coordenador Administrativo veem este menu.
+        As salas do E-Business têm área e fração ideal tiradas do desmembramento oficial do GDF.
+        As unidades do Milena e do Green vieram da anotação do síndico — o que ficou duvidoso
+        está marcado como <b>conferir</b>, para não passar número errado adiante.</div>
+    </div>
+
+    <div class="toolbar no-print">
+      <input placeholder="Buscar sala, IPTU, prédio..." value="${esc(usBusca)}"
+        oninput="usBusca=this.value;render()" style="min-width:220px">
+      <select onchange="usPredio=this.value;render()">
+        <option value="">Todos os prédios</option>
+        ${usPredios().map(x=>`<option ${usPredio===x?'selected':''}>${esc(x)}</option>`).join('')}
+      </select>
+      <div class="spacer"></div>
+      ${P().create?`<button class="btn" onclick="usForm()">+ Nova unidade</button>`:''}
+      <button class="btn ghost" onclick="usExportar()">${ic('download')} Baixar planilha</button>
+      <button class="btn ghost" onclick="window.print()">${ic('print')} Imprimir</button>
+    </div>
+
+    ${Object.keys(porPredio).length?Object.entries(porPredio).map(([pr,ll])=>`
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-title" style="margin-top:0"><h3>${esc(pr)}</h3>
+          <span class="spacer badge b-tag">${ll.length} unidade(s)</span>
+          ${usArea(ll)?`<span class="badge b-conc">${usFmtArea(usArea(ll))}</span>`:''}</div>
+        <div class="tablewrap"><table style="min-width:620px">
+          <thead><tr><th>Unidade</th><th>Área</th><th>Fração</th><th>Inscrição do IPTU</th>
+            <th class="no-print">Observação</th><th class="no-print"></th></tr></thead>
+          <tbody>${ll.map(linha).join('')}</tbody>
+        </table></div>
+      </div>`).join('')
+      :'<div class="card empty">Nenhuma unidade encontrada com esse filtro.</div>'}`;
+}
+function usCopiar(v){
+  const t=String(v||'');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(()=>toast('IPTU '+t+' copiado.'),()=>toast(t));
+  } else toast(t);
+}
+function usForm(id){
+  if(!podeSindico()) return toast('Sem permissão.');
+  const u=id?unidSind.find(x=>x.id===id):null;
+  if(id&&!u) return;
+  openModal(u?'Editar unidade':'Nova unidade do síndico',
+    `<div class="f2">
+      <div class="field"><label>Prédio</label>
+        <input id="usPr" value="${esc(u?u.predio:'')}" placeholder="ex.: E-Business" list="usPrList">
+        <datalist id="usPrList">${usPredios().map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
+      <div class="field"><label>Tipo</label>
+        <select id="usTp">${['Sala','Apartamento','Vaga','Loja','Outro']
+          .map(t=>`<option ${u&&u.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label>Unidade</label>
+        <input id="usUn" value="${esc(u?u.unidade:'')}" placeholder="ex.: 1201"></div>
+      <div class="field"><label>Inscrição do IPTU</label>
+        <input id="usIp" value="${esc(u?u.iptu:'')}" placeholder="só números"></div>
+      <div class="field"><label>Área (m²)</label>
+        <input id="usAr" type="number" step="0.01" value="${u&&u.area?u.area:''}" placeholder="ex.: 80,64"></div>
+      <div class="field"><label>Fração ideal (%)</label>
+        <input id="usFi" type="number" step="0.0001" value="${u&&u.fi?u.fi:''}" placeholder="ex.: 0,3400"></div>
+     </div>
+     <div class="field"><label>Observação</label>
+       <textarea id="usOb" rows="3">${esc(u?u.obs:'')}</textarea></div>
+     <label style="display:flex;align-items:center;gap:7px;margin-top:4px;cursor:pointer">
+       <input type="checkbox" id="usCf" ${u&&u.conferir?'checked':''}>
+       <span>Marcar como <b>a conferir</b> (dado ainda não confirmado em documento)</span></label>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn primary" onclick="usSalvar('${id||''}')">Salvar</button>`);
+}
+function usSalvar(id){
+  if(!podeSindico()) return toast('Sem permissão.');
+  const v=x=>{const e=document.querySelector(x);return e?e.value.trim():''};
+  const predio=v('#usPr'), unidade=v('#usUn');
+  if(!predio) return toast('Informe o prédio.');
+  if(!unidade) return toast('Informe a unidade.');
+  const iptu=usIptuNorm(v('#usIp'));
+  const cf=document.querySelector('#usCf');
+  const o={predio,tipo:v('#usTp'),unidade,iptu,
+    area:v('#usAr')?+v('#usAr'):null, fi:v('#usFi')?+v('#usFi'):null,
+    obs:v('#usOb'), conferir:!!(cf&&cf.checked)};
+  /* nao deixa cadastrar a mesma unidade duas vezes no mesmo predio */
+  const igual=unidSind.find(x=>x.id!==id&&x.predio===o.predio&&x.unidade===o.unidade&&x.tipo===o.tipo);
+  if(igual) return toast('Essa unidade já está cadastrada neste prédio.');
+  if(id){
+    const u=unidSind.find(x=>x.id===id); if(!u) return;
+    const mud=Object.keys(o).filter(k=>String(u[k]||'')!==String(o[k]||''));
+    Object.assign(u,o);
+    u.historico=u.historico||[];
+    u.historico.push({q:session.nome,w:nowStamp(),
+      t:'Editada'+(mud.length?' ('+mud.join(', ')+')':'')});
+    audit('Unidade do síndico editada',o.predio+' '+o.unidade,mud.join(', '),null,'Carteira do síndico');
+    toast('Unidade atualizada.');
+  }else{
+    unidSind.push(Object.assign({id:uid('us'),
+      historico:[{q:session.nome,w:nowStamp(),t:'Cadastrada'}]},o));
+    audit('Unidade do síndico cadastrada',o.predio+' '+o.unidade,o.iptu,null,'Carteira do síndico');
+    toast('Unidade cadastrada.');
+  }
+  save(); closeModal(); render();
+}
+function usExcluir(id){
+  if(!podeSindico()||!P().delete) return toast('Sem permissão.');
+  const u=unidSind.find(x=>x.id===id); if(!u) return;
+  const motivo=prompt('Por que esta unidade sai da carteira? (fica na auditoria)','');
+  if(motivo===null) return;
+  audit('Unidade do síndico excluída',u.predio+' '+u.unidade,u.iptu,null,motivo||'—');
+  unidSind=unidSind.filter(x=>x.id!==id);
+  save(); render(); toast('Unidade removida.');
+}
+function usExportar(){
+  const l=usLista();
+  if(!l.length) return toast('Nada para exportar com esse filtro.');
+  const colunas=['Prédio','Tipo','Unidade','Área (m²)','Fração ideal (%)','Inscrição IPTU','A conferir','Observação'];
+  const linhas=l.map(u=>[u.predio,u.tipo,u.unidade,
+    u.area!=null?u.area:'', u.fi!=null?u.fi:'',
+    u.iptu||'', u.conferir?'SIM':'', u.obs||'']);
+  _baixar('unidades-'+SIND_NOME.toLowerCase()+'-'+today()+'.xlsx',
+    new Blob([xlsxAbas([{nome:'Unidades do síndico',colunas,linhas}])],
+      {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  audit('Carteira do síndico exportada',l.length+' unidade(s)','',null,'Carteira do síndico');
+  toast('Planilha gerada.');
 }
 
 /* ============ MANUTENÇÕES ============ */
@@ -14644,6 +14930,10 @@ function avisarResumoSemanal(){
    Cessão de Direitos (entrada e saída de ocupante).
    ============================================================ */
 let salas=[];                       // {id,condoId,numero,andar,area,ocupante,tipo,status,obs,manual,historico[]}
+/* Carteira particular do sindico (Evandro). Visivel so para quem tem
+   perms.sindico. Guarda unidade, area, fracao ideal e a inscricao do IPTU,
+   inclusive de predios que nao sao administrados por nos. */
+let unidSind=[];                    // {id,predio,tipo,unidade,area,fi,iptu,obs,conferir,historico[]}
 let ocuFiltro='', ocuBusca='', ocuAndar='';
 const OCU_STATUS=['Ocupada','Vaga','Em obra','Reservada'];
 
@@ -15652,7 +15942,7 @@ function aplicarSnapshot(d){
   apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
   pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
   prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
-  analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[];
+  analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[]; unidSind=d.unidSind||[];
   if(d.CFG) CFG=Object.assign(CFG,d.CFG);
   creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
   if(!prestadores.length) seedPrestadores();
@@ -15662,8 +15952,9 @@ function aplicarSnapshot(d){
   const _migCat=migrarCatalogo2610();
   const _migCh=migrarChamadosRonda();
   const _migDup=migrarDuplicadas();
+  const _migUS=migrarUnidSind();
   _booting=false;
-  if(_migCat||_migCh||_migDup) save();
+  if(_migCat||_migCh||_migDup||_migUS) save();
   /* Tambem aqui, e nao so no load(): o snapshot que chega do servidor passa
      por aplicarSnapshot, nao por load. Sem esta linha a migracao rodava na
      base local e logo em seguida era sobrescrita pelo dado do servidor, que
@@ -15847,5 +16138,5 @@ window.addEventListener('keydown',e=>{
 });
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a477d9152acb4ae9',t:'MTc5MTQ5MDg0NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
