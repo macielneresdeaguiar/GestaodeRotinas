@@ -2216,6 +2216,7 @@ function load(d){
     if(migrarChamadosRonda()) mig=true;
     if(migrarDuplicadas()) mig=true;
     if(migrarUnidSind()) mig=true;
+    if(migrarSalasIptu()) mig=true;
     if(mig) save();
     migrarLaudosParaFora();   // assincrona: salva sozinha quando terminar
     return true;
@@ -2460,7 +2461,7 @@ function toggleSidebar(){
    Sem isso, páginas financeiras herdavam a lista de 'tarefas' e o Taguá Life
    (regime Somente Financeiro) sumia do seletor do topo. */
 const MODULO_DA_PAGINA={ocupacao:'ocupacao',brigada:'brigada','brigada-inicio':'brigada','brigada-ronda':'brigada','brigada-form':'brigada',notas:'notas',cessoes:'cessoes',vendascustas:'vendascustas',publicidade:'publicidade',manutobrig:'manutobrig',analises:'analises',
-  leituras:'leituras',estoque:'estoque',pedidos:'pedidos',apontamentos:'apontamentos'};
+  leituras:'leituras',estoque:'estoque',pedidos:'pedidos',apontamentos:'apontamentos',unidades:'ocupacao'};
 function moduloDaPagina(){ return MODULO_DA_PAGINA[page]||'tarefas' }
 function buildCondoFilter(){
   const meus=condosDo(moduloDaPagina());
@@ -2588,6 +2589,7 @@ function buildNav(){
     items.push(['#','','Predial']);
     items.push(['leituras','water','Leituras — Água e Energia']);
     items.push(['analises','helmet','Análise de Projetos']);
+    items.push(['unidades','grid','Unidades do Prédio']);
     items.push(['ocupacao','building','Taxa de Ocupação']);
   }
   /* Carteira particular do sindico: so aparece para quem tem perms.sindico
@@ -2665,7 +2667,7 @@ function render(){
   const R={dashboard:viewDashboard,hoje:viewHoje,leituras:viewLeituras,tarefas:viewTasks,rotina:viewRotina,
     notas:viewNotas,cessoes:viewCessoes,vendascustas:viewVendasCustas,publicidade:viewPublicidade,manutobrig:viewManutObrig,estoque:viewEstoque,pedidos:viewPedidos,
     apontamentos:viewApontamentos,relatorios:viewReports,relmensal:viewRelatorioMensal,config:viewConfig,
-    unidsind:viewUnidSind};
+    unidsind:viewUnidSind,unidades:viewUnidades};
   (R[page]||viewDashboard)();
 }
 
@@ -4185,8 +4187,8 @@ function seedUnidSind(){
     E('2407',297.73,1.2150,'52013847','Não constava na folha; é a maior unidade da carteira.'),
     /* --- Residencial Milena --- */
     O('Milena','Apartamento','303' ,'50674536'),
-    O('Milena','Apartamento','1703','50675772',
-      'O último dígito está rasurado na folha e não dá para ler com segurança. Confirmar no carnê.',true),
+    O('Milena','Apartamento','1703','5067577X',
+      'O X no fim é o dígito verificador do GDF, não rasura.'),
     /* --- Green --- */
     O('Green','Apartamento','202' ,'50626809'),
     O('Green','Apartamento','817' ,'50629174'),
@@ -4206,15 +4208,19 @@ function seedUnidSind(){
   ];
 }
 function migrarUnidSind(){
+  /* Comparacao por numero, nao por igualdade de texto: com `!=='v1'` o passo
+     da carga voltava a rodar quando a versao ja era v3, zerando o marcador a
+     cada abertura. */
+  const ver=+String(CFG.carteiraSindico||'v0').replace('v','')||0;
   let mudou=false;
-  if(CFG.carteiraSindico!=='v1'&&CFG.carteiraSindico!=='v2'){
+  if(ver<1){
     if(!unidSind.length) seedUnidSind();
     CFG.carteiraSindico='v1'; mudou=true;
   }
   /* v2: a inscricao do DF tem 8 digitos. A primeira carga gravou com os
      zeros a esquerda do desmembramento; aqui tiramos. E a sala 912, que
      faltou na lista original, entra se ainda nao estiver. */
-  if(CFG.carteiraSindico!=='v2'){
+  if(ver<2){
     unidSind.forEach(u=>{
       const n=usIptuNorm(u.iptu);
       if(n!==u.iptu){
@@ -4233,6 +4239,21 @@ function migrarUnidSind(){
       mudou=true;
     }
     CFG.carteiraSindico='v2';
+    mudou=true;
+  }
+  /* v3: o "X" no fim da inscricao e o DIGITO VERIFICADOR usado pelo GDF, nao
+     uma rasura. O desmembramento traz 22 unidades assim. Com isso o AP 1703
+     do Milena deixa de ser duvida. */
+  if(ver<3){
+    const ap=unidSind.find(u=>u.predio==='Milena'&&String(u.unidade)==='1703');
+    if(ap){
+      ap.iptu='5067577X'; ap.conferir=false;
+      ap.obs='O X no fim é o dígito verificador do GDF, não rasura.';
+      ap.historico=(ap.historico||[]).concat([{q:'Sistema',w:nowStamp(),
+        t:'Inscrição confirmada: 5067577X (X = dígito verificador)'}]);
+      mudou=true;
+    }
+    CFG.carteiraSindico='v3';
     mudou=true;
   }
   return mudou;
@@ -4254,8 +4275,9 @@ function usFmtArea(v){ return v?v.toLocaleString('pt-BR',{minimumFractionDigits:
 /* A inscricao do IPTU do DF tem 8 digitos. O desmembramento imprime com
    zeros a esquerda ("0052011658"); guardamos e mostramos so os 8. */
 function usIptuNorm(v){
-  const d=String(v||'').replace(/\D/g,'').replace(/^0+/,'');
-  return d;
+  /* O GDF usa X como digito verificador em parte das inscricoes, entao nao
+     da para jogar fora tudo que nao e numero. */
+  return String(v||'').toUpperCase().replace(/[^0-9X]/g,'').replace(/^0+/,'');
 }
 function usIptuFmt(v){ return usIptuNorm(v)||'—' }
 function viewUnidSind(){
@@ -4416,6 +4438,507 @@ function usExportar(){
     new Blob([xlsxAbas([{nome:'Unidades do síndico',colunas,linhas}])],
       {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
   audit('Carteira do síndico exportada',l.length+' unidade(s)','',null,'Carteira do síndico');
+  toast('Planilha gerada.');
+}
+
+/* Desmembramento oficial do GDF: 261 unidades do E-Business.
+   [inscricao do IPTU, area construida m2, fracao ideal %]. O X no fim de
+   algumas inscricoes e o digito verificador, nao e erro de digitacao. */
+const UNID_EB={'Loja 01':['52011119',232.55,0.972],
+  'Loja 02':['52011127',186.66,0.779],
+  'Loja 03':['52011135',172.49,0.719],
+  'Loja 04':['52011143',192.52,0.804],
+  'Loja 05':['52011151',178.56,0.745],
+  'Loja 06':['5201116X',215.64,0.901],
+  'Loja 07':['52011178',219.94,0.919],
+  'Loja 08':['52011186',271.75,1.136],
+  'Loja 09':['52011194',654.83,2.754],
+  'Loja Mez. 01':['52011208',223.45,0.829],
+  'Loja Mez. 02':['52011216',341.03,1.251],
+  'Loja Mez. 03':['52011224',421.79,1.499],
+  'Loja Mez. 04':['52011232',418.97,1.517],
+  'Loja Mez. 05':['52011240',402.32,1.498],
+  '201':['52011259',80.64,0.34],
+  '202':['52011267',69.21,0.292],
+  '203':['52011275',65.38,0.276],
+  '204':['52011283',67.31,0.284],
+  '205':['52011291',67.31,0.284],
+  '206':['52011305',65.38,0.276],
+  '207':['52011313',69.21,0.292],
+  '208':['52011321',80.64,0.34],
+  '209':['5201133X',80.64,0.34],
+  '210':['52011348',69.57,0.294],
+  '211':['52011356',69.57,0.294],
+  '212':['52011364',80.64,0.34],
+  '301':['52011372',80.64,0.34],
+  '302':['52011380',96.38,0.407],
+  '303':['52011399',88.7,0.375],
+  '304':['52011402',87.26,0.368],
+  '305':['52011410',81,0.342],
+  '306':['52011429',70.57,0.298],
+  '307':['52011437',63.6,0.269],
+  '308':['52011445',61.55,0.26],
+  '309':['52011453',80.64,0.34],
+  '310':['52011461',69.57,0.294],
+  '311':['5201147X',69.57,0.294],
+  '312':['52011488',80.64,0.34],
+  '401':['52011496',80.64,0.34],
+  '402':['52011526',96.38,0.407],
+  '403':['52011550',88.7,0.375],
+  '404':['52011585',87.26,0.368],
+  '405':['52011615',81,0.342],
+  '406':['5201164X',70.57,0.298],
+  '407':['52011674',63.6,0.269],
+  '408':['52011704',61.55,0.26],
+  '409':['52011739',80.64,0.34],
+  '410':['52011763',69.57,0.294],
+  '411':['52011798',69.57,0.294],
+  '412':['52011828',80.64,0.34],
+  '501':['5201150X',80.64,0.34],
+  '502':['52011534',96.38,0.407],
+  '503':['52011569',88.7,0.375],
+  '504':['52011593',87.26,0.368],
+  '505':['52011623',81,0.342],
+  '506':['52011658',70.57,0.298],
+  '507':['52011682',63.6,0.269],
+  '508':['52011712',61.55,0.26],
+  '509':['52011747',80.64,0.34],
+  '510':['52011771',69.57,0.294],
+  '511':['52011801',69.57,0.294],
+  '512':['52011836',80.64,0.34],
+  '601':['52011518',80.64,0.34],
+  '602':['52011542',96.38,0.407],
+  '603':['52011577',88.7,0.375],
+  '604':['52011607',87.26,0.368],
+  '605':['52011631',81,0.342],
+  '606':['52011666',70.57,0.298],
+  '607':['52011690',63.6,0.269],
+  '608':['52011720',61.55,0.26],
+  '609':['52011755',80.64,0.34],
+  '610':['5201178X',69.57,0.294],
+  '611':['5201181X',69.57,0.294],
+  '612':['52011844',80.64,0.34],
+  '701':['52011852',89.13,0.366],
+  '702':['52011860',96.38,0.407],
+  '703':['52011879',65.38,0.276],
+  '704':['52011887',67.31,0.284],
+  '705':['52011895',67.31,0.284],
+  '706':['52011909',70.57,0.298],
+  '707':['52011917',63.6,0.269],
+  '708':['52011925',61.55,0.26],
+  '709':['52011941',80.64,0.34],
+  '710':['5201195X',69.57,0.294],
+  '711':['52011968',69.57,0.294],
+  '712':['52011976',80.64,0.34],
+  '801':['52011984',85.83,0.34],
+  '802':['52011992',99.53,0.432],
+  '803':['52012018',65.38,0.276],
+  '804':['52012026',67.31,0.284],
+  '805':['52012034',67.31,0.284],
+  '806':['52012042',70.57,0.298],
+  '807':['52012050',63.6,0.269],
+  '808':['52012069',61.55,0.26],
+  '809':['52012077',80.64,0.34],
+  '810':['52012085',69.57,0.294],
+  '811':['52012093',69.57,0.294],
+  '812':['52012107',80.64,0.34],
+  '901':['52012247',89.06,0.366],
+  '902':['52012255',96.38,0.407],
+  '903':['52012263',65.38,0.276],
+  '904':['52012271',67.31,0.284],
+  '905':['5201228X',67.31,0.284],
+  '906':['52012298',70.57,0.298],
+  '907':['52012301',63.6,0.269],
+  '908':['5201231X',61.55,0.26],
+  '909':['52012328',80.64,0.34],
+  '910':['52012336',69.57,0.294],
+  '911':['52012344',69.57,0.294],
+  '912':['52012352',80.64,0.34],
+  '1001':['52012360',89.38,0.367],
+  '1002':['52012379',96.38,0.407],
+  '1003':['52012387',65.38,0.276],
+  '1004':['52012395',67.31,0.284],
+  '1005':['52012409',67.31,0.284],
+  '1006':['52012417',70.57,0.298],
+  '1007':['52012425',63.6,0.269],
+  '1008':['52012433',61.55,0.26],
+  '1009':['52012441',80.64,0.34],
+  '1010':['5201245X',69.57,0.294],
+  '1011':['52012468',69.57,0.294],
+  '1012':['52012476',80.64,0.34],
+  '1101':['52012484',89.74,0.368],
+  '1102':['52012492',96.38,0.407],
+  '1103':['52012506',65.38,0.276],
+  '1104':['52012514',67.31,0.284],
+  '1105':['52012522',67.31,0.284],
+  '1106':['52012530',70.57,0.298],
+  '1107':['52012549',63.6,0.269],
+  '1108':['52012557',61.55,0.26],
+  '1109':['52012565',80.64,0.34],
+  '1110':['52012573',69.57,0.294],
+  '1111':['52012581',69.57,0.294],
+  '1112':['5201259X',80.64,0.34],
+  '1201':['52012603',80.64,0.34],
+  '1202':['52012611',96.38,0.407],
+  '1203':['5201262X',65.38,0.276],
+  '1204':['52012638',67.31,0.284],
+  '1205':['52012646',67.31,0.284],
+  '1206':['52012654',70.57,0.298],
+  '1207':['52012662',63.6,0.269],
+  '1208':['52012670',61.55,0.26],
+  '1209':['52012689',80.64,0.34],
+  '1210':['52012697',69.57,0.294],
+  '1211':['52012700',69.57,0.294],
+  '1212':['52012719',80.64,0.34],
+  '1301':['52012727',80.64,0.34],
+  '1302':['52012735',96.38,0.407],
+  '1303':['52012743',65.38,0.276],
+  '1304':['52012751',67.31,0.284],
+  '1305':['5201276X',67.31,0.284],
+  '1306':['52012778',70.57,0.298],
+  '1307':['52012786',63.6,0.269],
+  '1308':['52012794',61.55,0.26],
+  '1309':['52012808',80.64,0.34],
+  '1310':['52012816',69.57,0.294],
+  '1311':['52012824',69.57,0.294],
+  '1312':['52012832',80.64,0.34],
+  '1401':['52012840',80.64,0.34],
+  '1402':['52012859',96.38,0.407],
+  '1403':['52012867',65.38,0.276],
+  '1404':['52012875',67.31,0.284],
+  '1405':['52012883',67.31,0.284],
+  '1406':['52012891',70.57,0.298],
+  '1407':['52012905',63.6,0.269],
+  '1408':['52012913',61.55,0.26],
+  '1409':['52012921',80.64,0.34],
+  '1410':['5201293X',69.57,0.294],
+  '1411':['52012948',69.57,0.294],
+  '1412':['52012956',80.64,0.34],
+  '1501':['52012964',80.64,0.34],
+  '1502':['52012972',96.38,0.407],
+  '1503':['52012980',65.38,0.276],
+  '1504':['52012999',67.31,0.284],
+  '1505':['52013006',67.31,0.284],
+  '1506':['52013014',70.57,0.298],
+  '1507':['52013022',63.6,0.269],
+  '1508':['52013030',61.55,0.26],
+  '1509':['52013049',80.64,0.34],
+  '1510':['52013057',69.57,0.294],
+  '1511':['52013065',69.57,0.294],
+  '1512':['52013073',80.64,0.34],
+  '1601':['52013081',80.64,0.34],
+  '1602':['5201309X',96.38,0.407],
+  '1603':['52013103',65.38,0.276],
+  '1604':['52013111',67.31,0.284],
+  '1605':['5201312X',67.31,0.284],
+  '1606':['52013138',70.57,0.298],
+  '1607':['52013146',63.6,0.269],
+  '1608':['52013154',61.55,0.26],
+  '1609':['52013162',80.64,0.34],
+  '1610':['52013170',69.57,0.294],
+  '1611':['52013189',69.57,0.294],
+  '1612':['52013197',80.64,0.34],
+  '1701':['52013200',80.64,0.34],
+  '1702':['52013219',96.38,0.407],
+  '1703':['52013227',65.38,0.276],
+  '1704':['52013235',67.31,0.284],
+  '1705':['52013243',67.31,0.284],
+  '1706':['52013251',70.57,0.298],
+  '1707':['5201326X',63.6,0.269],
+  '1708':['52013278',61.55,0.26],
+  '1709':['52013286',80.64,0.34],
+  '1710':['52013294',69.57,0.294],
+  '1711':['52013308',69.57,0.294],
+  '1712':['52013316',80.64,0.34],
+  '1801':['52013324',80.64,0.34],
+  '1802':['52013332',96.38,0.407],
+  '1803':['52013340',65.38,0.276],
+  '1804':['52013359',67.31,0.284],
+  '1805':['52013367',67.31,0.284],
+  '1806':['52013375',70.57,0.298],
+  '1807':['52013383',63.6,0.269],
+  '1808':['52013391',61.55,0.26],
+  '1809':['52013405',80.64,0.34],
+  '1810':['52013413',69.57,0.294],
+  '1811':['52013421',69.57,0.294],
+  '1812':['5201343X',80.64,0.34],
+  '1901':['52013448',80.64,0.34],
+  '1902':['52013456',96.38,0.407],
+  '1903':['52013464',65.38,0.276],
+  '1904':['52013472',67.31,0.284],
+  '1905':['52013480',67.31,0.284],
+  '1906':['52013499',70.57,0.298],
+  '1907':['52013502',63.6,0.269],
+  '1908':['52013510',61.55,0.26],
+  '1909':['52013529',80.64,0.34],
+  '1910':['52013537',69.57,0.294],
+  '1911':['52013545',69.57,0.294],
+  '1912':['52013553',80.64,0.34],
+  '2001':['52013561',89,0.366],
+  '2002':['5201357X',96.38,0.407],
+  '2003':['52013588',88.7,0.375],
+  '2004':['52013596',87.26,0.368],
+  '2005':['5201360X',81,0.342],
+  '2006':['52013618',70.57,0.298],
+  '2007':['52013626',63.6,0.269],
+  '2008':['52013634',152.39,0.632],
+  '2009':['52013642',69.57,0.294],
+  '2010':['52013650',69.57,0.294],
+  '2011':['52013669',80.64,0.34],
+  '2201':['52013677',41.53,0.165],
+  '2202':['52013685',44.55,0.188],
+  '2203':['52013693',51.25,0.216],
+  '2204':['52013707',52.86,0.223],
+  '2205':['52013715',52.86,0.223],
+  '2206':['52013723',51.29,0.216],
+  '2207':['52013731',44.51,0.188],
+  '2208':['5201374X',73.36,0.298],
+  '2209':['52013758',38.73,0.163],
+  '2210':['52013766',38.78,0.164],
+  '2211':['52013774',33.73,0.142],
+  '2401':['52013782',80.64,0.34],
+  '2402':['52013790',94.01,0.388],
+  '2403':['52013804',86.67,0.358],
+  '2404':['52013812',85.51,0.354],
+  '2405':['52013820',79.8,0.332],
+  '2406':['52013839',70.12,0.294],
+  '2407':['52013847',297.73,1.215],
+  '2408':['52013855',69.56,0.294],
+  '2409':['52013863',80.64,0.34]};
+/* Preenche area, fracao ideal e inscricao do IPTU nas salas que ja existem.
+   NAO cria uma lista paralela: a colecao `salas` continua sendo a unica, a
+   mesma que a Taxa de Ocupacao usa. Antes `area` era nula em todas as 261,
+   entao os numeros de area do mapa de ocupacao viviam zerados. */
+/* ATENCAO - sao DUAS areas diferentes, e confundi-las engana:
+   - `area`     = area PRIVATIVA, da relacao de salas do condominio. E a que
+                  interessa para alugar, para a taxa de ocupacao e para o dia
+                  a dia. Ex.: sala 1201 = 38,55 m2.
+   - `areaIptu` = area do DESMEMBRAMENTO do GDF, que soma a fracao de area
+                  comum. E a que aparece no carne do IPTU. Ex.: 1201 = 80,64 m2.
+   Da quase o dobro. Guardar so uma faria o sistema oferecer uma sala de
+   38 m2 como se fosse de 80. */
+function salaSeedArea(numero){
+  const r=(typeof SALAS_SEED!=='undefined'?SALAS_SEED:[]).find(x=>String(x[0])===String(numero));
+  return r?Number(r[3])||null:null;
+}
+function migrarSalasIptu(){
+  const ver=+String(CFG.salasIptu||'v0').replace('v','')||0;
+  if(ver>=2) return false;
+  let n=0;
+  salas.forEach(s=>{
+    if(s.condoId!=='c1') return;
+    const d=UNID_EB[String(s.numero)];
+    if(!d) return;
+    let mudou=false;
+    if(!s.iptu){ s.iptu=d[0]; mudou=true }
+    if(s.fi==null||s.fi===''){ s.fi=d[2]; mudou=true }
+    if(s.areaIptu==null||s.areaIptu===''){ s.areaIptu=d[1]; mudou=true }
+    /* conserta a v1, que gravou a area do IPTU no lugar da privativa */
+    const priv=salaSeedArea(s.numero);
+    if(priv&&(s.area==null||s.area===''||Number(s.area)===d[1])){ s.area=priv; mudou=true }
+    if(mudou){ n++;
+      s.historico=s.historico||[];
+      s.historico.push({q:'Sistema',w:nowStamp(),
+        t:'Fração ideal e inscrição do IPTU trazidas do desmembramento do GDF'});
+    }
+  });
+  CFG.salasIptu='v2';
+  if(n&&typeof audit==='function')
+    audit('Sistema','Unidades do prédio',n+' unidade(s) com fração, IPTU e área do carnê','c1','Desmembramento do GDF');
+  return true;
+}
+
+/* ============ LISTA DE UNIDADES DO PRÉDIO ============
+   Tudo sobre a unidade num lugar: tamanho, fracao ideal, inscricao do IPTU e
+   quem ocupa. O ocupante e a situacao NAO sao digitados aqui -- saem dos
+   mesmos calculos da Taxa de Ocupacao, que ja leem a Cessao de Direitos e a
+   Analise de Projetos. Assim nao existe numero divergente entre as telas. */
+let unBusca='', unAndar='', unStatus='', unSo='';
+function unCessoesDa(s){
+  return cessoes.filter(c=>c.condoId===s.condoId&&ocuMesmaSala(c.unidade,s.numero));
+}
+function unAnalisesDa(s){
+  return analises.filter(a=>a.condoId===s.condoId&&ocuMesmaSala(a.unidade,s.numero));
+}
+function unEhDoSindico(s){
+  if(!podeSindico()) return false;
+  return unidSind.some(u=>u.predio==='E-Business'&&String(u.unidade)===String(s.numero));
+}
+function unLista(cid){
+  let l=ocuSalas(cid);
+  if(unAndar) l=l.filter(s=>(s.andar||'—')===unAndar);
+  if(unStatus) l=l.filter(s=>ocuStatus(s)===unStatus);
+  if(unSo==='cessao')  l=l.filter(s=>unCessoesDa(s).length);
+  if(unSo==='projeto') l=l.filter(s=>unAnalisesDa(s).length);
+  if(unSo==='sindico') l=l.filter(unEhDoSindico);
+  if(unSo==='semiptu') l=l.filter(s=>!s.iptu);
+  if(unBusca){ const q=unBusca.toLowerCase();
+    l=l.filter(s=>[s.numero,s.andar,s.iptu,ocuOcupante(s),s.ocupante]
+      .join(' ').toLowerCase().includes(q)); }
+  return l;
+}
+function unFmtArea(v){ return v?Number(v).toLocaleString('pt-BR',
+  {minimumFractionDigits:2,maximumFractionDigits:2})+' m²':'—' }
+function viewUnidades(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const todas=ocuSalas(cid);
+  if(!todas.length){ $('#content').innerHTML=`<div class="card empty">
+    ${ic('building','ico-lg')}<div>Nenhuma unidade cadastrada neste condomínio.</div>
+    <div class="t-sub" style="margin-top:6px">Cadastre pela Taxa de Ocupação.</div></div>`; return }
+  const l=unLista(cid);
+  const andares=[...new Set(todas.map(s=>s.andar||'—'))];
+  const areaTot=todas.reduce((t,s)=>t+(Number(s.area)||0),0);
+  const areaIptuTot=todas.reduce((t,s)=>t+(Number(s.areaIptu)||0),0);
+  const fiTot=todas.reduce((t,s)=>t+(Number(s.fi)||0),0);
+  const semIptu=todas.filter(s=>!s.iptu).length;
+  const r=ocuResumo(cid);
+
+  const linha=s=>{
+    const st=ocuStatus(s), oc=ocuOcupante(s);
+    const ces=unCessoesDa(s), ana=unAnalisesDa(s);
+    const cesAberta=ces.filter(c=>cessStatusAuto(c)!=='Concluída'&&cessStatusAuto(c)!=='Cancelada').length;
+    return `<tr>
+      <td><b>${esc(s.numero)}</b>${unEhDoSindico(s)?` <span class="badge b-tag" title="Unidade do síndico">${ic('lock')}</span>`:''}
+        <div class="t-sub">${esc(s.andar?ocuAndarRot(s.andar):'—')}</div></td>
+      <td style="white-space:nowrap">${unFmtArea(s.area)}</td>
+      <td style="white-space:nowrap" class="muted">${unFmtArea(s.areaIptu)}</td>
+      <td style="white-space:nowrap">${s.fi!=null&&s.fi!==''?Number(s.fi).toFixed(4).replace('.',',')+'%':'—'}</td>
+      <td><span style="font-variant-numeric:tabular-nums">${esc(s.iptu||'—')}</span>
+        ${s.iptu?`<button class="btn sm ghost no-print" style="margin-left:6px;padding:2px 7px"
+          onclick="unCopiar('${esc(s.iptu)}')" title="Copiar">${ic('copy')}</button>`:''}</td>
+      <td>${oc?esc(oc):'<span class="muted">—</span>'}
+        ${s.tipo&&oc?`<div class="t-sub">${esc(s.tipo)}</div>`:''}</td>
+      <td><span class="badge ${{'Ocupada':'b-conc','Vaga':'b-atr','Em obra':'b-and','Reservada':'b-pend'}[st]||'b-tag'}">${st}</span></td>
+      <td class="no-print" style="white-space:nowrap">
+        ${ces.length?`<button class="btn sm ghost" onclick="go('cessoes')"
+          title="${ces.length} cessão(ões) desta unidade">${ic('contract')} ${ces.length}${cesAberta?' ('+cesAberta+' aberta)':''}</button>`:''}
+        ${ana.length?`<button class="btn sm ghost" onclick="go('analises')"
+          title="${ana.length} análise(s) de projeto desta unidade">${ic('helmet')} ${ana.length}</button>`:''}
+        ${P().edit?`<button class="btn sm ghost" onclick="unEditar('${s.id}')">Editar</button>`:''}
+      </td></tr>`;
+  };
+  $('#content').innerHTML=`
+    <div class="grid metrics" style="margin-bottom:14px">
+      <div class="card metric"><div class="lbl">Unidades</div><div class="val">${todas.length}</div>
+        <div class="sub">${andares.length} andares</div></div>
+      <div class="card metric"><div class="lbl">Área privativa total</div>
+        <div class="val" style="font-size:21px">${unFmtArea(areaTot)}</div>
+        <div class="sub">${unFmtArea(areaIptuTot)} no carnê do IPTU</div></div>
+      <div class="card metric"><div class="lbl">Fração ideal somada</div>
+        <div class="val" style="font-size:21px">${fiTot.toFixed(4).replace('.',',')}%</div>
+        <div class="sub">o restante é área comum</div></div>
+      <div class="card metric ${semIptu?'amber':'green'}"><div class="lbl">Sem IPTU cadastrado</div>
+        <div class="val">${semIptu}</div><div class="sub">${semIptu?'completar':'todas conferidas'}</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px;background:var(--slate-soft);box-shadow:none">
+      <div class="t-sub" style="line-height:1.6">
+        São <b>duas áreas diferentes</b>: a <b>privativa</b> é a da relação de salas do
+        condomínio, que serve para alugar e para a ocupação; a <b>área no IPTU</b> vem do
+        desmembramento do GDF e soma a fração de área comum, por isso dá quase o dobro.
+        Fração ideal e inscrição também vêm do desmembramento.
+        O ocupante e a situação não são digitados aqui: saem do mesmo cálculo da
+        <a href="#" onclick="event.preventDefault();go('ocupacao')"><b>Taxa de Ocupação</b></a>,
+        que já lê a <a href="#" onclick="event.preventDefault();go('cessoes')"><b>Cessão de Direitos</b></a>
+        e a <a href="#" onclick="event.preventDefault();go('analises')"><b>Análise de Projetos</b></a> —
+        por isso os números nunca divergem entre as telas.
+        ${unidSind.length&&podeSindico()?`O cadeado marca as unidades do síndico.`:''}
+      </div></div>
+
+    <div class="toolbar no-print">
+      <input placeholder="Buscar unidade, ocupante, IPTU..." value="${esc(unBusca)}"
+        oninput="unBusca=this.value;render()" style="min-width:220px">
+      <select onchange="unAndar=this.value;render()">
+        <option value="">Todos os andares</option>
+        ${andares.map(a=>`<option ${unAndar===a?'selected':''}>${esc(a)}</option>`).join('')}</select>
+      <select onchange="unStatus=this.value;render()">
+        <option value="">Qualquer situação</option>
+        ${['Ocupada','Vaga','Em obra','Reservada'].map(x=>
+          `<option ${unStatus===x?'selected':''}>${x}</option>`).join('')}</select>
+      <select onchange="unSo=this.value;render()">
+        <option value="">Sem recorte</option>
+        <option value="cessao" ${unSo==='cessao'?'selected':''}>Com cessão de direitos</option>
+        <option value="projeto" ${unSo==='projeto'?'selected':''}>Com análise de projeto</option>
+        ${podeSindico()?`<option value="sindico" ${unSo==='sindico'?'selected':''}>Do síndico</option>`:''}
+        <option value="semiptu" ${unSo==='semiptu'?'selected':''}>Sem IPTU</option></select>
+      <div class="spacer"></div>
+      <button class="btn ghost" onclick="unExportar()">${ic('download')} Baixar planilha</button>
+      <button class="btn ghost" onclick="window.print()">${ic('print')} Imprimir</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title" style="margin-top:0"><h3>${esc(condoName(cid))}</h3>
+        <span class="spacer badge b-tag">${l.length} de ${todas.length}</span>
+        <span class="badge b-conc">${r.taxa}% ocupado</span></div>
+      ${l.length?`<div class="tablewrap"><table style="min-width:860px">
+        <thead><tr><th>Unidade</th><th>Área privativa</th>
+          <th title="Área do desmembramento, que soma a fração de área comum">Área no IPTU</th>
+          <th>Fração</th><th>Inscrição do IPTU</th>
+          <th>Ocupante</th><th>Situação</th><th class="no-print">Vínculos</th></tr></thead>
+        <tbody>${l.map(linha).join('')}</tbody></table></div>`
+        :'<div class="empty">Nenhuma unidade com esse filtro.</div>'}
+    </div>`;
+}
+function unCopiar(v){
+  const t=String(v||'');
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(t).then(()=>toast('IPTU '+t+' copiado.'),()=>toast(t));
+  else toast(t);
+}
+function unEditar(id){
+  const s=salas.find(x=>x.id===id); if(!s) return;
+  if(!P().edit) return toast('Sem permissão.');
+  openModal('Unidade '+s.numero,
+    `<div class="f2">
+      <div class="field"><label>Área privativa (m²)</label>
+        <input id="unAr" type="number" step="0.01" value="${s.area!=null?s.area:''}"></div>
+      <div class="field"><label>Área no IPTU (m²)</label>
+        <input id="unAi" type="number" step="0.01" value="${s.areaIptu!=null?s.areaIptu:''}"></div>
+      <div class="field"><label>Fração ideal (%)</label>
+        <input id="unFi" type="number" step="0.0001" value="${s.fi!=null?s.fi:''}"></div>
+      <div class="field"><label>Inscrição do IPTU</label>
+        <input id="unIp" value="${esc(s.iptu||'')}" placeholder="8 dígitos"></div>
+      <div class="field"><label>Andar</label>
+        <input id="unAn" value="${esc(s.andar||'')}"></div>
+     </div>
+     <div class="t-sub" style="margin-top:8px;line-height:1.5">
+       O ocupante e a situação não se editam aqui — são calculados pela Cessão de
+       Direitos e pela Análise de Projetos. Para corrigir quem ocupa, use a Taxa de Ocupação.</div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn primary" onclick="unSalvar('${id}')">Salvar</button>`);
+}
+function unSalvar(id){
+  const s=salas.find(x=>x.id===id); if(!s) return;
+  if(!P().edit) return toast('Sem permissão.');
+  const v=x=>{const e=document.querySelector(x);return e?e.value.trim():''};
+  const antes={area:s.area,areaIptu:s.areaIptu,fi:s.fi,iptu:s.iptu,andar:s.andar};
+  s.area=v('#unAr')?+v('#unAr'):null;
+  s.areaIptu=v('#unAi')?+v('#unAi'):null;
+  s.fi=v('#unFi')?+v('#unFi'):null;
+  s.iptu=usIptuNorm(v('#unIp'));
+  s.andar=v('#unAn');
+  const mud=Object.keys(antes).filter(k=>String(antes[k]||'')!==String(s[k]||''));
+  if(mud.length){
+    s.historico=s.historico||[];
+    s.historico.push({q:session.nome,w:nowStamp(),t:'Editada ('+mud.join(', ')+')'});
+    audit('Unidade do prédio editada','Sala '+s.numero,mud.join(', '),s.condoId,'Unidades do prédio');
+  }
+  save(); closeModal(); render(); toast('Unidade atualizada.');
+}
+function unExportar(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const l=unLista(cid);
+  if(!l.length) return toast('Nada para exportar com esse filtro.');
+  const colunas=['Unidade','Andar','Área privativa (m²)','Área no IPTU (m²)','Fração ideal (%)',
+    'Inscrição IPTU','Ocupante','Vínculo','Situação','Cessões','Análises de projeto'];
+  const linhas=l.map(s=>[s.numero,s.andar||'',s.area!=null?s.area:'',
+    s.areaIptu!=null?s.areaIptu:'',s.fi!=null?s.fi:'',
+    s.iptu||'',ocuOcupante(s)||'',s.tipo||'',ocuStatus(s),
+    unCessoesDa(s).length,unAnalisesDa(s).length]);
+  _baixar('unidades-'+(condoName(cid)||'predio').toLowerCase().replace(/\W+/g,'-')+'-'+today()+'.xlsx',
+    new Blob([xlsxAbas([{nome:'Unidades do prédio',colunas,linhas}])],
+      {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  audit('Unidades do prédio exportadas',l.length+' unidade(s)','',cid,'Unidades do prédio');
   toast('Planilha gerada.');
 }
 
@@ -15953,8 +16476,9 @@ function aplicarSnapshot(d){
   const _migCh=migrarChamadosRonda();
   const _migDup=migrarDuplicadas();
   const _migUS=migrarUnidSind();
+  const _migSI=migrarSalasIptu();
   _booting=false;
-  if(_migCat||_migCh||_migDup||_migUS) save();
+  if(_migCat||_migCh||_migDup||_migUS||_migSI) save();
   /* Tambem aqui, e nao so no load(): o snapshot que chega do servidor passa
      por aplicarSnapshot, nao por load. Sem esta linha a migracao rodava na
      base local e logo em seguida era sobrescrita pelo dado do servidor, que
