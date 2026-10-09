@@ -4213,6 +4213,20 @@ function migrarUnidSind(){
      cada abertura. */
   const ver=+String(CFG.carteiraSindico||'v0').replace('v','')||0;
   let mudou=false;
+  /* A EXISTENCIA do dado nao pode depender do marcador de versao.
+     Aconteceu em producao: um aparelho ainda com a versao antiga do app
+     devolveu o snapshot sem a colecao `unidSind` (o codigo dele nem conhecia
+     a chave). O dado sumiu, mas o CFG continuou dizendo 'v3' -- entao a carga
+     nunca mais rodava e a tela ficava vazia para sempre. Mesma armadilha do
+     laudo: marcador de concluido no caminho de falha prende o dado.
+     Agora: vazio => recarrega, independente da versao. */
+  if(!unidSind.length&&!CFG.carteiraZerada){
+    seedUnidSind();
+    CFG.carteiraSindico='v3';
+    if(typeof audit==='function')
+      audit('Sistema','Unidades do síndico','carteira recarregada: estava vazia',null,'Recuperação');
+    return true;
+  }
   if(ver<1){
     if(!unidSind.length) seedUnidSind();
     CFG.carteiraSindico='v1'; mudou=true;
@@ -4413,6 +4427,7 @@ function usSalvar(id){
   }else{
     unidSind.push(Object.assign({id:uid('us'),
       historico:[{q:session.nome,w:nowStamp(),t:'Cadastrada'}]},o));
+    CFG.carteiraZerada='';
     audit('Unidade do síndico cadastrada',o.predio+' '+o.unidade,o.iptu,null,'Carteira do síndico');
     toast('Unidade cadastrada.');
   }
@@ -4425,6 +4440,9 @@ function usExcluir(id){
   if(motivo===null) return;
   audit('Unidade do síndico excluída',u.predio+' '+u.unidade,u.iptu,null,motivo||'—');
   unidSind=unidSind.filter(x=>x.id!==id);
+  /* Se o usuario apagar TODAS de proposito, a carteira nao pode renascer
+     sozinha na proxima abertura. Esvaziar por vontade e diferente de perder. */
+  CFG.carteiraZerada=unidSind.length?'':'1';
   save(); render(); toast('Unidade removida.');
 }
 function usExportar(){
@@ -16661,6 +16679,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
