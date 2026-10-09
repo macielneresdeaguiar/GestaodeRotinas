@@ -125,8 +125,31 @@ export async function lerWorkspace(id = 'default') {
  * Se `versaoBase` não bater com a versão atual, devolve conflito
  * em vez de sobrescrever o trabalho de outra pessoa.
  */
+/* Rede de protecao contra aparelho com versao antiga do app.
+   Quando uma colecao nova e criada (ex.: unidSind), o aparelho que ainda
+   roda a versao velha do index.html devolve o snapshot SEM essa chave --
+   o codigo dele nem sabe que ela existe. Isso apagou a carteira do sindico
+   em producao. Aqui: se a chave sumiu do que chegou mas existe com conteudo
+   no que esta gravado, mantemos a gravada. Nao mexe em chave enviada vazia
+   de proposito; so na que foi OMITIDA. */
+function preservarColecoes(novo, antigo) {
+  if (!novo || !antigo || typeof novo !== 'object' || typeof antigo !== 'object') return novo;
+  let mantidas = [];
+  for (const k of Object.keys(antigo)) {
+    if (k in novo) continue;
+    const v = antigo[k];
+    if (Array.isArray(v) ? v.length : (v && typeof v === 'object' && Object.keys(v).length)) {
+      novo[k] = v;
+      mantidas.push(k);
+    }
+  }
+  if (mantidas.length) console.log('[grc] coleções preservadas (cliente antigo):', mantidas.join(', '));
+  return novo;
+}
+
 export async function gravarWorkspace({ id = 'default', snapshot, versaoBase, autor, dispositivo }) {
   const atual = await lerWorkspace(id);
+  if (atual && atual.snapshot) snapshot = preservarColecoes(snapshot, atual.snapshot);
   const texto = JSON.stringify(snapshot);
   const agora = new Date().toISOString();
 
