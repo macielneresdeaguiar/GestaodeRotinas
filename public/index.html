@@ -1594,12 +1594,12 @@ const prestOf=n=>prestadores.find(p=>p.id===n.prestadorId)||{exigeBook:true,exig
 function dia15De(y,m){return `${y}-${pad(m)}-15`}
 function vencCessao(dataCad){
   const d=parse(dataCad), dia=d.getDate(), y=d.getFullYear(), m=d.getMonth()+1;
-  if(dia<=13) return {data:dia15De(y,m),alerta:false,regra:'Cadastro até dia 13 → fecha no dia 15 do mês corrente.'};
-  if(dia<=15) return {data:dia15De(y,m),alerta:true,
-    regra:'Cadastro em 14/15 → confirme se fecha no dia 15 atual ou no dia 15 do próximo mês.',
-    alt:dia15De(m===12?y+1:y,m===12?1:m+1)};
   const ny=m===12?y+1:y, nm=m===12?1:m+1;
-  return {data:dia15De(ny,nm),alerta:false,regra:'Cadastro após o dia 15 → fecha no dia 15 do mês subsequente.'};
+  if(dia<=15) return {data:dia15De(y,m),alerta:false,
+    regra:'Cadastro até o dia 15 → fechamento no dia 15 do mês corrente.',
+    alt:dia15De(ny,nm)};
+  return {data:dia15De(ny,nm),alerta:false,
+    regra:'Cadastro a partir do dia 16 → fechamento no dia 15 do próximo mês.'};
 }
 const CESS_TIPOS=['Proprietário','Locatário','Proprietário e Locatário juntos','Volta p/ Proprietário'];
 const CESS_STATUS=['Pendente','Em Análise','Concluída','Cancelada'];
@@ -1621,9 +1621,9 @@ const ROTINA_SEMANAL=[
   {dow:4,titulo:'Fechar relatório semanal de pagamentos'}
 ];
 const ROTINA_MENSAL=[
-  {dia:14,titulo:'Cessões de direito'},
   {dia:14,titulo:'Custas de espaços'},
   {dia:14,titulo:'Faturamento mensal'},
+  {dia:15,titulo:'Cessões de direito'},
   {dia:15,titulo:'Pedir material de limpeza'},
   {dia:20,titulo:'Cobranças de inadimplência'},
   {dia:20,titulo:'Escopo de funcionários para contabilidade'},
@@ -2217,6 +2217,7 @@ function load(d){
     if(migrarDuplicadas()) mig=true;
     if(migrarUnidSind()) mig=true;
     if(migrarSalasIptu()) mig=true;
+    if(migrarCessoesLgpd()) mig=true;
     if(mig) save();
     migrarLaudosParaFora();   // assincrona: salva sozinha quando terminar
     return true;
@@ -3385,6 +3386,7 @@ function openTask(id){
     <div style="margin-top:14px"><div class="t-sub">Procedimento</div><p style="margin-top:4px">${esc(t.procedimento||'—')}</p></div>
     ${t.obsConclusao?`<div style="margin-top:12px"><div class="t-sub">Observações da conclusão</div><p>${esc(t.obsConclusao)}</p></div>`:''}
     ${t.anexo?`<div style="margin-top:10px"><span class="badge b-tag">${ic('paperclip')} ${esc(t.anexo)}</span></div>`:''}
+    ${boxCessaoTarefa(t)}
     ${boxProgramar(t)}
     ${boxMateriaisChamado(t)}
     ${histHtml(t.historico)}`;
@@ -3511,6 +3513,8 @@ function completeTask(id,fromDrill){ quickComplete('tarefa',id,fromDrill); }
 function finishTask(id,data,obs,anexo,fromDrill){
   if(!P().complete) return toast('Sem permissão.');
   const t=tasks.find(x=>x.id===id); if(!t)return;
+  const vCes=validarConclusaoTarefaCessao(t);
+  if(!vCes.ok){ toast(vCes.msg); render(); return false; }
   t.status='Concluída'; t.concluidoEm=data||today(); t.concluidoPor=session.nome; t.obsConclusao=obs||'';
   if(anexo)t.anexo=anexo;
   t.historico.push({q:session.nome,w:nowStamp(),t:'Tarefa concluída em '+fmt(t.concluidoEm),obs,anexo});
@@ -4042,6 +4046,8 @@ function moverMesRotina(n){
 function concluirMensal(id){
   if(!P().complete) return toast('Sem permissão.');
   const t=tasks.find(x=>x.id===id); if(!t||t.status==='Concluída')return;
+  const vCes=validarConclusaoTarefaCessao(t);
+  if(!vCes.ok){ toast(vCes.msg); render(); return false; }
   t.status='Concluída'; t.concluidoEm=today(); t.concluidoPor=session.nome;
   t.historico.push({q:session.nome,w:nowStamp(),t:`Concluída na rotina mensal de ${t.vencimento.slice(5,7)}/${t.vencimento.slice(0,4)}`});
   let msg='Tarefa concluída.';
@@ -5508,7 +5514,7 @@ function searchAll(q){
     out.push({ic:ic('invoice'),cat:'Nota Fiscal',t:`${n.empresa} — ${n.servico}`,s:`${condoName(n.condoId)} · ${n.insumo} · ${n.competencia}`,go:`goNota('${n.id}')`}) });
   prestadores.filter(p=>P().condos.includes(p.condoId)).forEach(p=>{ if(hit(p.empresa)||hit(p.servico)||hit(p.insumo))
     out.push({ic:ic('factory'),cat:'Prestador',t:`${p.empresa} — ${p.servico}`,s:`${condoName(p.condoId)} · dia ${p.dia} · ${p.ativo?'ativo':'inativo'}`,go:`goPrestador('${p.condoId}')`}) });
-  visibleCess().forEach(c=>{ if(hit(c.unidade)||hit(c.nome)||hit(c.doc)||hit(c.contato))
+  visibleCess().forEach(c=>{ if(hit(c.unidade)||hit(c.nome)||hit(c.contato)||hit(c.email))
     out.push({ic:ic('contract'),cat:'Cessão',t:`${c.unidade} — ${c.nome}`,s:`${condoName(c.condoId)} · ${c.tipo}`,go:`goCess('${c.id}')`}) });
   apontamentos.filter(a=>P().condos.includes(a.condoId)).forEach(a=>{ if(hit(a.titulo)||hit(a.descricao)||hit(a.local))
     out.push({ic:ic('wrench'),cat:'Apontamento',t:a.titulo,s:`${condoName(a.condoId)} · ${a.local} · ${a.status}`,go:`go('apontamentos')`}) });
@@ -5529,60 +5535,285 @@ function runSearch(q){
 }
 function goNota(id){const n=notas.find(x=>x.id===id);nfTab=n.condoId;nfComp=n.competencia;go('notas');openNfHist(id)}
 function goPrestador(cid){nfTab=cid;go('notas')}
-function goCess(id){go('cessoes');openCess(id)}
+function goCess(id){
+  const c=cessoes.find(x=>x.id===id);
+  if(c&&cessStatusAuto(c)==='Concluída') csFiltroStatus='Concluída';
+  go('cessoes');openCess(id);
+}
 function goEstoque(id){go('estoque');histEstoque(id)}
 
 /* ============ CESSÃO DE DIREITOS ============ */
-let csFiltroStatus='', csFiltroTipo='', csBusca='';
+let csFiltroStatus='', csFiltroTipo='', csBusca='', csAvisoSala=null;
+function cessAberta(c){
+  const st=cessStatusAuto(c);
+  return st!=='Concluída'&&st!=='Cancelada';
+}
+function csSalaChave(c){
+  const n=String(c?.unidade||'').trim().toLowerCase().replace(/^sala\s*/,'').replace(/\s+/g,'');
+  return (c?.condoId||'c1')+'|'+(n||c?.id||'');
+}
+function outrasCessoesDaSala(c,apenasAbertas=true){
+  if(!c) return [];
+  return (cessoes||[]).filter(x=>x.id!==c.id&&x.condoId===c.condoId
+    &&ocuMesmaSala(x.unidade,c.unidade)
+    &&(apenasAbertas?cessAberta(x):x.status!=='Cancelada'));
+}
+function csAgruparPorSala(list){
+  const map=new Map(), grupos=[];
+  (list||[]).forEach(c=>{
+    const k=csSalaChave(c);
+    let g=map.get(k);
+    if(!g){
+      g={chave:k,condoId:c.condoId,unidade:c.unidade,itens:[]};
+      map.set(k,g); grupos.push(g);
+    }
+    g.itens.push(c);
+  });
+  return grupos;
+}
+function alertaOutrasDaSalaHtml(c,modo){
+  const outras=outrasCessoesDaSala(c,true);
+  if(!outras.length) return '';
+  const tit=modo==='concluir'
+    ?`Atenção: a unidade ${esc(c.unidade)} possui mais ${outras.length} cessão(ões) pendente(s)!`
+    :`Unidade ${esc(c.unidade)} com ${outras.length+1} cessões em andamento no mesmo ciclo`;
+  const sub=modo==='concluir'
+    ?`Além desta (${esc(c.tipo)} — ${esc(c.nome)}), falta fazer: ${outras.map(x=>`<b>${esc(x.tipo)} — ${esc(x.nome)}</b>`).join(' · ')}. Comum quando há troca de proprietário e já transferência da locação no mesmo dia.`
+    :`Outras pendentes nesta mesma sala: ${outras.map(x=>`<b>${esc(x.tipo)}</b>: ${esc(x.nome)} (venc. ${fmt(x.vencimento)})`).join(' · ')}.`;
+  return `<div class="feed-item amber" style="margin-bottom:12px">
+    <div class="fi-ic">${ic('alert')}</div>
+    <div style="flex:1">
+      <div class="ft">${tit}</div>
+      <div class="fd">${sub}</div>
+      <div class="rowact" style="margin-top:8px">
+        ${outras.map(x=>`<button class="btn sm ghost" onclick="openCess('${x.id}')">Abrir: ${esc(x.nome)}</button>
+          ${P().complete?`<button class="btn sm green" onclick="quickComplete('cessao','${x.id}')">${ic('check')} Concluir: ${esc(x.nome)}</button>`:''}`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function ehTarefaCessao(t){
+  if(!t||!t.titulo) return false;
+  const s=String(t.titulo).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  return /^cess(ao|oes)\s+de\s+direitos?$/.test(s);
+}
+function cessoesStatusMes(condoId,ym){
+  const cid=condoId||'c1';
+  const mes=String(ym||today()).slice(0,7);
+  const doMes=(cessoes||[]).filter(c=>c.condoId===cid&&c.status!=='Cancelada'&&String(c.vencimento||'').slice(0,7)===mes);
+  const pendentes=doMes.filter(c=>cessStatusAuto(c)!=='Concluída');
+  const concluidas=doMes.filter(c=>cessStatusAuto(c)==='Concluída');
+  return {mes,total:doMes.length,pendentes,concluidas};
+}
+function validarConclusaoTarefaCessao(t){
+  if(!ehTarefaCessao(t)) return {ok:true};
+  const info=cessoesStatusMes(t.condoId,t.vencimento||today());
+  if(info.pendentes.length>0){
+    const faltam=info.pendentes.length, feitas=info.concluidas.length, tot=info.total;
+    const salasTxt=info.pendentes.slice(0,5).map(c=>`${c.unidade} (${c.nome})`).join(', ')+(info.pendentes.length>5?'…':'');
+    const msg=`Não é possível concluir a tarefa "${t.titulo}": ${feitas} de ${tot} cessão(ões) concluída(s) no mês — falta(m) ${faltam} pendente(s): ${salasTxt}.`;
+    return {ok:false,info,msg};
+  }
+  return {ok:true,info};
+}
+function boxCessaoTarefa(t){
+  if(!ehTarefaCessao(t)) return '';
+  const info=cessoesStatusMes(t.condoId,t.vencimento||today());
+  const pct=info.total?Math.round(info.concluidas.length/info.total*100):100;
+  const [y,m]=info.mes.split('-');
+  return `<div class="card" style="box-shadow:none;background:${info.pendentes.length?'#fff9eb':'#eefaf3'};border:1px solid ${info.pendentes.length?'#f0d58c':'#a8dfc0'};padding:12px;margin-top:12px">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
+      <div><b style="color:var(--navy)">Vínculo com Cessão de Direitos (${m}/${y})</b>
+        <div class="t-sub">${info.total?`${info.concluidas.length} de ${info.total} concluída(s) · ${info.pendentes.length} pendente(s)`:'Nenhuma cessão programada neste mês'}</div>
+      </div>
+      <button class="btn sm ghost" onclick="closeModal();csFiltroStatus='';go('cessoes')">${ic('contract')} Abrir Cessão de Direitos</button>
+    </div>
+    ${info.total?`<div class="progress" style="margin:8px 0"><div style="width:${pct}%"></div></div>`:''}
+    ${info.pendentes.length?`<div class="t-sub" style="color:#8a5300;margin-top:4px">
+      <b>Pendente(s) para liberar a conclusão da tarefa:</b> ${info.pendentes.map(c=>`${esc(c.unidade)} (${esc(c.nome)})`).join(' · ')}
+    </div>`:`<div class="t-sub" style="color:#1d7a4c;margin-top:4px"><b>Todas as cessões programadas do mês estão concluídas.</b></div>`}
+  </div>`;
+}
+function migrarCessoesLgpd(){
+  let mudou=false;
+  (cessoes||[]).forEach(c=>{
+    if(c&&c.doc){ c.doc=''; mudou=true; }
+  });
+  /* Garante a tarefa mensal "Cessões de direito" no dia 15 para todo mês que
+     já tenha cessões em aberto cadastradas na base real. */
+  if(CFG.cessoesLgpd!=='v2'){
+    const meses=new Set();
+    (cessoes||[]).filter(cessAberta).forEach(c=>{
+      const ym=String(c.vencimento||'').slice(0,7);
+      if(/^\d{4}-\d{2}$/.test(ym)) meses.add((c.condoId||'c1')+'|'+ym);
+    });
+    meses.forEach(par=>{
+      const [cid,ym]=par.split('|');
+      const jaTem=(tasks||[]).some(t=>!t.arquivada&&t.status!=='Cancelada'&&t.condoId===cid
+        &&ehTarefaCessao(t)&&String(t.vencimento||'').slice(0,7)===ym);
+      if(!jaTem&&Array.isArray(tasks)&&tasks.length>0){
+        const nt=mkTask({
+          titulo:'Cessões de direito',condoId:cid,tipo:'Administrativo',responsavel:'Alef',
+          periodicidade:'Mensal',vencimento:`${ym}-15`,prioridade:'Alta',status:'Pendente',
+          repetitiva:true,rotina:'mensal',rotinaRef:'Cessões de direito|15',criadoPor:'Sistema',
+          procedimento:'Conferir e finalizar todas as cessões de direito programadas até o dia 15 do mês no módulo Cessão de Direitos.'
+        });
+        nt.historico=[{q:'Sistema',w:nowStamp(),t:`Tarefa mensal vinculada às cessões de ${ym.slice(5,7)}/${ym.slice(0,4)}`}];
+        tasks.push(nt);
+        mudou=true;
+      }
+    });
+    CFG.cessoesLgpd='v2'; mudou=true;
+  }
+  return mudou;
+}
 function visibleCess(){
   return cessoes.filter(c=>condoNoModulo(c.condoId,'cessoes'))
     .filter(c=>P().condos.includes(c.condoId)&&(condoFilter==='all'||c.condoId===condoFilter));
 }
-function viewCessoes(){
+function csListaVisivel(){
   let list=visibleCess();
   if(csFiltroStatus) list=list.filter(c=>cessStatusAuto(c)===csFiltroStatus);
+  else list=list.filter(cessAberta);
   if(csFiltroTipo) list=list.filter(c=>c.tipo===csFiltroTipo);
-  if(csBusca) list=list.filter(c=>(c.unidade+c.nome+c.doc+c.contato+(c.email||'')).toLowerCase().includes(csBusca.toLowerCase()));
-  list.sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
+  if(csBusca) list=list.filter(c=>(c.unidade+c.nome+c.contato+(c.email||'')).toLowerCase().includes(csBusca.toLowerCase()));
+  list.sort((a,b)=>a.vencimento.localeCompare(b.vencimento)||String(a.unidade).localeCompare(String(b.unidade),'pt-BR',{numeric:true}));
+  return list;
+}
+function csToggleConcluidas(){
+  csFiltroStatus=(csFiltroStatus==='Concluída')?'':'Concluída';
+  render();
+}
+function csToggleContrato(id,qual){
+  if(!P().edit&&!P().complete) return toast('Sem permissão.');
+  const c=cessoes.find(x=>x.id===id); if(!c) return;
+  if(qual==='fisico') c.contratoFisico=!c.contratoFisico;
+  if(qual==='email') c.contratoEmail=!c.contratoEmail;
+  c.historico=c.historico||[];
+  c.historico.push({q:session.nome,w:nowStamp(),t:`Contrato ${qual==='fisico'?'Físico':'E-mail'} ${c[qual==='fisico'?'contratoFisico':'contratoEmail']?'marcado':'desmarcado'}`});
+  save(); render();
+}
+function viewCessoes(){
+  const list=csListaVisivel();
+  const grupos=csAgruparPorSala(list);
   const all=visibleCess(), cnt=st=>all.filter(c=>cessStatusAuto(c)===st).length;
+  const abertas=all.filter(cessAberta);
+  const vendoConc=csFiltroStatus==='Concluída';
+  const salasDuplas=grupos.filter(g=>g.itens.length>1).length;
+  const cidAtual=condoFilter==='all'?'c1':condoFilter;
+  const mesRefCiclo=(abertas[0]?.vencimento||today()).slice(0,7);
+  const infoMes=cessoesStatusMes(cidAtual,mesRefCiclo);
+  const tarefaMes=(tasks||[]).find(t=>!t.arquivada&&t.status!=='Cancelada'&&t.condoId===cidAtual&&ehTarefaCessao(t)&&String(t.vencimento||'').slice(0,7)===mesRefCiclo);
+
+  const renderItemLinha=(c,idx,totGrupo)=>{
+    const st=cessStatusAuto(c), d=diffDays(c.vencimento,today());
+    const prazoTxt=st==='Concluída'?'finalizada':st==='Atrasada'?`há ${-d} dia(s)`:d===0?'vence hoje':`em ${d} dia(s)`;
+    return `<div style="${idx>0?'border-top:1px dashed #d8e1ee;padding-top:10px;margin-top:10px':''};display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+      <div style="flex:1 1 240px;min-width:180px">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          ${totGrupo>1?`<span class="badge b-and" style="font-size:11px">${idx+1}ª etapa</span>`:''}
+          <b style="color:var(--navy);font-size:14px">${esc(c.nome)}</b>
+          <span class="badge ${c.tipo==='Volta p/ Proprietário'?'b-avencer':'b-tag'}">${esc(c.tipo)}</span>
+          ${badgeCess(st)}
+        </div>
+        <div class="t-sub" style="margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          ${c.contato?`<span>Tel: <b>${esc(c.contato)}</b></span>`:''}
+          ${c.email?`<a href="mailto:${esc(c.email)}" title="Enviar e-mail">${esc(c.email)}</a>`:''}
+          ${c.anexo?`<span class="badge b-tag">${ic('paperclip')} ${esc(c.anexo)}</span>`:''}
+          ${c.obs?`<span title="${esc(c.obs)}" style="color:var(--navy)">${ic('edit')} ${esc(c.obs.length>48?c.obs.slice(0,48)+'…':c.obs)}</span>`:''}
+        </div>
+      </div>
+      <div class="chip-list" style="flex:0 0 auto">
+        <button type="button" class="badge ${c.contratoFisico?'b-conc':'b-pend'}" style="border:0;cursor:pointer" title="Clique para marcar/desmarcar Contrato Físico" onclick="csToggleContrato('${c.id}','fisico')">${c.contratoFisico?'✓ ':''}Físico</button>
+        <button type="button" class="badge ${c.contratoEmail?'b-conc':'b-pend'}" style="border:0;cursor:pointer" title="Clique para marcar/desmarcar Contrato E-mail" onclick="csToggleContrato('${c.id}','email')">${c.contratoEmail?'✓ ':''}E-mail</button>
+      </div>
+      <div style="flex:0 0 105px">
+        <b style="color:var(--navy)">${fmt(c.vencimento)}</b>
+        <div class="t-sub">${prazoTxt}</div>
+      </div>
+      <div class="rowact no-print" style="flex:0 0 auto;justify-content:flex-end;flex-wrap:wrap">
+        ${P().complete&&st!=='Concluída'&&st!=='Cancelada'?`<button class="btn green sm" onclick="quickComplete('cessao','${c.id}')">${ic('check')} Concluir</button>`:''}
+        ${P().edit?`<button class="btn ghost sm" onclick="editCess('${c.id}')">Editar</button>`:''}
+        <button class="btn ghost sm" onclick="openCess('${c.id}')">Histórico</button>
+        ${canDelete(c)&&st!=='Concluída'?`<button class="btn danger sm" onclick="delCess('${c.id}')" title="Excluir">Excluir</button>`:''}
+      </div>
+    </div>`;
+  };
+
+  const avisoRestantes=csAvisoSala?(()=>{
+    const rest=(cessoes||[]).filter(x=>csAvisoSala.ids.includes(x.id)&&cessAberta(x));
+    if(!rest.length){ csAvisoSala=null; return ''; }
+    return `<div class="feed-item amber" style="margin-bottom:12px">
+      <div class="fi-ic">${ic('alert')}</div>
+      <div style="flex:1">
+        <div class="ft">Atenção: a unidade ${esc(csAvisoSala.unidade)} ainda tem ${rest.length} cessão(ões) pendente(s)!</div>
+        <div class="fd">Você concluiu <b>${esc(csAvisoSala.concluiu)}</b>, mas falta concluir na mesma sala: ${rest.map(x=>`<b>${esc(x.tipo)} — ${esc(x.nome)}</b>`).join(' · ')}.</div>
+      </div>
+      <div class="rowact">
+        <button class="btn sm green" onclick="quickComplete('cessao','${rest[0].id}')">${ic('check')} Concluir ${esc(rest[0].nome)}</button>
+        <button class="btn sm ghost" onclick="csAvisoSala=null;render()">Fechar aviso</button>
+      </div>
+    </div>`;
+  })():'';
+
   $('#content').innerHTML=`
     <div class="grid metrics" style="margin-bottom:14px">
-      <div class="card metric" onclick="csFiltroStatus='';render()"><div class="lbl">Total de cessões</div><div class="val">${all.length}</div><div class="sub">clique para limpar filtro</div></div>
-      <div class="card metric amber" onclick="csFiltroStatus='Pendente';render()"><div class="lbl">Pendentes</div><div class="val">${cnt('Pendente')}</div><div class="sub">aguardando documentação</div></div>
+      <div class="card metric" onclick="csFiltroStatus='';render()"><div class="lbl">Em aberto (na lista)</div><div class="val">${abertas.length}</div><div class="sub">${salasDuplas?`${salasDuplas} sala(s) com 2+ cessões`:'somente o que falta concluir'}</div></div>
+      <div class="card metric amber" onclick="csFiltroStatus='Pendente';render()"><div class="lbl">Pendentes</div><div class="val">${cnt('Pendente')}</div><div class="sub">aguardando fechamento dia 15</div></div>
       <div class="card metric red" onclick="csFiltroStatus='Atrasada';render()"><div class="lbl">Atrasadas</div><div class="val">${cnt('Atrasada')}</div><div class="sub">passaram do dia 15 previsto</div></div>
-      <div class="card metric green" onclick="csFiltroStatus='Concluída';render()"><div class="lbl">Concluídas</div><div class="val">${cnt('Concluída')}</div></div>
+      <div class="card metric green" onclick="csToggleConcluidas()"><div class="lbl">Concluídas</div><div class="val">${cnt('Concluída')}</div><div class="sub">${vendoConc?'exibindo agora — clique p/ voltar':'fora da lista — clique p/ consultar'}</div></div>
     </div>
+    ${infoMes.total?`<div class="card" style="padding:11px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;background:#f8fafd">
+      <div style="flex:1;min-width:240px">
+        <div style="font-weight:700;color:var(--navy)">Fechamento do mês (${mesRefCiclo.slice(5,7)}/${mesRefCiclo.slice(0,4)} — dia 15): ${infoMes.concluidas.length} de ${infoMes.total} concluída(s)</div>
+        <div class="t-sub">${infoMes.pendentes.length?`Falta(m) ${infoMes.pendentes.length} cessão(ões) pendente(s) para liberar a conclusão da tarefa mensal "Cessões de direito".`:'Todas as cessões programadas do mês foram concluídas! A tarefa mensal já pode ser finalizada.'}</div>
+      </div>
+      ${tarefaMes&&tarefaMes.status!=='Concluída'?`<button class="btn sm ${infoMes.pendentes.length?'ghost':'green'}" onclick="completeTask('${tarefaMes.id}')">${ic('check')} Concluir tarefa do mês (${infoMes.concluidas.length}/${infoMes.total})</button>`:''}
+    </div>`:''}
+    ${avisoRestantes}
     <div class="toolbar no-print">
-      <input placeholder="Unidade, nome, CPF/CNPJ..." value="${esc(csBusca)}" oninput="csBusca=this.value;render()" style="min-width:210px">
+      <input placeholder="Unidade, nome, contato, e-mail..." value="${esc(csBusca)}" oninput="csBusca=this.value;render()" style="min-width:210px">
       <select onchange="csFiltroTipo=this.value;render()">${opt(['',...CESS_TIPOS],csFiltroTipo,'Tipo')}</select>
-      <select onchange="csFiltroStatus=this.value;render()">${opt(['','Pendente','Em Análise','Atrasada','Concluída','Cancelada'],csFiltroStatus,'Status')}</select>
+      <select onchange="csFiltroStatus=this.value;render()">
+        <option value="" ${csFiltroStatus===''?'selected':''}>Pendentes (em aberto)</option>
+        <option value="Pendente" ${csFiltroStatus==='Pendente'?'selected':''}>Só Pendentes</option>
+        <option value="Em Análise" ${csFiltroStatus==='Em Análise'?'selected':''}>Em Análise</option>
+        <option value="Atrasada" ${csFiltroStatus==='Atrasada'?'selected':''}>Atrasadas</option>
+        <option value="Concluída" ${csFiltroStatus==='Concluída'?'selected':''}>Concluídas</option>
+        <option value="Cancelada" ${csFiltroStatus==='Cancelada'?'selected':''}>Canceladas</option>
+      </select>
+      <button class="btn ${vendoConc?'':'ghost'}" id="btnCsConcluidas" onclick="csToggleConcluidas()">
+        ${ic('checkCircle')} ${vendoConc?`Voltar às pendentes (${abertas.length})`:`Concluídas (${cnt('Concluída')})`}
+      </button>
       <div class="spacer"></div>
       ${P().create?`<button class="btn" onclick="editCess()">+ Nova Cessão</button>`:''}
     </div>
-    ${list.length?`<div class="tablewrap"><table><thead><tr>
-      <th>Sala / Unidade</th><th>Condomínio</th><th>Tipo</th><th>Nome / Razão Social</th><th>CPF/CNPJ</th>
-      <th>Contato</th><th>E-mail</th><th>Contrato</th><th>Venc. previsto</th><th>Anexo</th><th>Status</th><th>Ações</th>
+    ${vendoConc?`<div class="feed-item green" style="margin-bottom:12px"><div class="fi-ic">${ic('checkCircle')}</div>
+      <div style="flex:1"><div class="ft">Consultando cessões concluídas (${list.length})</div>
+      <div class="fd">Registros já finalizados ficam guardados aqui fora da fila de pendências.</div></div>
+      <button class="btn sm ghost" onclick="csFiltroStatus='';render()">Voltar às pendentes</button></div>`:''}
+    ${grupos.length?`<div class="tablewrap"><table><thead><tr>
+      <th style="width:140px">Sala / Unidade</th>
+      <th>Cessão · Nome / Contato · Contrato · Fechamento · Ações</th>
       </tr></thead><tbody>
-      ${list.map(c=>{const st=cessStatusAuto(c),d=diffDays(c.vencimento,today());return `<tr>
-        <td class="t-title">${esc(c.unidade)}</td>
-        <td>${badgeCondo(c.condoId)}</td>
-        <td><span class="badge ${c.tipo==='Volta p/ Proprietário'?'b-avencer':'b-tag'}">${c.tipo}</span></td>
-        <td>${esc(c.nome)}</td><td>${esc(c.doc)}</td><td>${esc(c.contato)}</td>
-        <td>${c.email?`<a href="mailto:${esc(c.email)}" title="Enviar e-mail">${esc(c.email)}</a>`:'<span class="t-sub">—</span>'}</td>
-        <td><div class="chip-list">
-          <span class="badge ${c.contratoFisico?'b-conc':'b-pend'}">${c.contratoFisico?'':''} Físico</span>
-          <span class="badge ${c.contratoEmail?'b-conc':'b-pend'}">${c.contratoEmail?'':''} E-mail</span></div></td>
-        <td>${fmt(c.vencimento)}<div class="t-sub">${st==='Concluída'?'finalizada':st==='Atrasada'?`'+ic('alert')+' há ${-d} dia(s)`:d===0?'vence hoje':`em ${d} dia(s)`}</div></td>
-        <td>${c.anexo?`<span class="badge b-tag">${ic('paperclip')} ${esc(c.anexo)}</span>`:'<span class="t-sub">—</span>'}</td>
-        <td>${badgeCess(st)}${c.obs?`<div class="t-sub" title="${esc(c.obs)}">${ic('edit')} com observação</div>`:''}</td>
-        <td><div class="rowact no-print">
-          ${P().complete&&st!=='Concluída'&&st!=='Cancelada'?`<button class="btn green sm" onclick="quickComplete('cessao','${c.id}')">Concluir</button>`:''}
-          ${P().edit?`<button class="btn ghost sm" onclick="editCess('${c.id}')">Editar</button>`:''}
-          <button class="btn ghost sm" onclick="openCess('${c.id}')">Histórico</button>
-          ${canDelete(c)?`<button class="btn danger sm" onclick="delCess('${c.id}')">Excluir</button>`:''}
-        </div></td></tr>`}).join('')}</tbody></table></div>`
-      :'<div class="card empty">Nenhuma cessão encontrada com os filtros atuais.</div>'}
-    <div class="legend"><span><b>Regra de vencimento previsto:</b> cadastro até dia 13 → dia 15 do mês corrente; dias 14 e 15 → alerta de escolha entre o dia 15 atual ou o do mês seguinte; após o dia 15 → dia 15 do mês subsequente.</span></div>`;
+      ${grupos.map(g=>{
+        const mult=g.itens.length>1;
+        return `<tr style="${mult?'background:#fffdf6':''}">
+          <td style="vertical-align:top">
+            <div class="t-title" style="font-size:15px">${esc(g.unidade)}</div>
+            <div style="margin-top:4px">${badgeCondo(g.condoId)}</div>
+            ${mult?`<div style="margin-top:6px"><span class="badge b-avencer" title="Mais de uma cessão para a mesma sala">${g.itens.length} cessões na sala</span></div>`:''}
+          </td>
+          <td>
+            ${g.itens.map((c,i)=>renderItemLinha(c,i,g.itens.length)).join('')}
+            ${mult&&!vendoConc?`<div class="t-sub" style="margin-top:8px;padding:6px 10px;background:#fff4d6;border-radius:8px;color:#7a4b00">
+              ${ic('alert')} <b>Mesma unidade com ${g.itens.length} cessões acumuladas</b> (ex.: troca de proprietário + transferência de locação). Ao abrir ou concluir uma, o sistema avisa sobre a outra.
+            </div>`:''}
+          </td>
+        </tr>`;
+      }).join('')}</tbody></table></div>`
+      :`<div class="card empty">${vendoConc?'Nenhuma cessão concluída encontrada.':'Nenhuma cessão pendente no momento.'}</div>`}
+    <div class="legend"><span><b>Regra de fechamento:</b> cadastros realizados até o dia 15 entram no fechamento do dia 15 do mês corrente; cadastros realizados a partir do dia 16 ficam programados para o dia 15 do próximo mês.</span></div>`;
 }
 function editCess(id){
   if(!(id?P().edit:P().create)) return toast('Sem permissão.');
@@ -5591,6 +5822,7 @@ function editCess(id){
   const v=vencCessao(cad);
   $('#modalTitle').textContent=c?'Editar Cessão de Direitos':'Nova Cessão de Direitos';
   $('#modalBody').innerHTML=`
+    ${c?alertaOutrasDaSalaHtml(c,'abrir'):''}
     <div class="f2">
       <div class="field"><label>Condomínio</label><select id="csCondo">${condosDo('cessoes').map(x=>`<option value="${x.id}" ${c?.condoId===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
       <div class="field"><label>Sala / Unidade</label>
@@ -5598,7 +5830,6 @@ function editCess(id){
       <div class="field"><label>Tipo</label><select id="csTipo">${CESS_TIPOS.map(t=>`<option ${c?.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="field"><label>Status</label><select id="csStatus">${CESS_STATUS.map(t=>`<option ${c?.status===t?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="field"><label>Nome / Razão Social</label><input id="csNome" value="${esc(c?.nome||'')}"></div>
-      <div class="field"><label>CPF / CNPJ</label><input id="csDoc" value="${esc(c?.doc||'')}" placeholder="000.000.000-00"></div>
       <div class="field"><label>Contato</label><input id="csCont" value="${esc(c?.contato||'')}" placeholder="(61) 90000-0000"></div>
       <div class="field"><label>E-mail do cedente</label><input type="email" id="csEmail" value="${esc(c?.email||'')}" placeholder="nome@empresa.com.br"></div>
       <div class="field"><label>Data de cadastro</label><input type="date" id="csCad" value="${cad}" onchange="csPreviewVenc()"></div>
@@ -5610,7 +5841,7 @@ function editCess(id){
     <div class="field"><label>Anexo</label><input id="csAnexo" value="${esc(c?.anexo||'')}" placeholder="ex.: contrato_sala208.pdf"></div>
     <div class="field"><label>Observações</label>
       <textarea id="csObs" rows="3"
-        placeholder="ex.: transferência da sala de pessoa física para pessoa jurídica (mesmo titular, CNPJ novo)">${esc(c?.obs||'')}</textarea>
+        placeholder="ex.: transferência da sala de pessoa física para pessoa jurídica (mesmo titular)">${esc(c?.obs||'')}</textarea>
       <div class="t-sub">Use para registrar o contexto da cessão — troca de titularidade, transferência de PF para PJ, condição negociada.</div></div>
     <div id="csVencBox"></div>`;
   $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
@@ -5639,8 +5870,8 @@ function csPreviewVenc(pre){
 }
 function csSetVenc(d){csVencEscolha=d;csPreviewVenc(d)}
 function saveCess(id,dados){
-  const o=dados||{condoId:$('#csCondo').value,unidade:$('#csUni').value.trim(),tipo:$('#csTipo').value,
-    status:$('#csStatus').value,nome:$('#csNome').value.trim(),doc:$('#csDoc').value.trim(),
+  const o=dados?Object.assign({},dados,{doc:''}):{condoId:$('#csCondo').value,unidade:$('#csUni').value.trim(),tipo:$('#csTipo').value,
+    status:$('#csStatus').value,nome:$('#csNome').value.trim(),doc:'',
     contato:$('#csCont').value.trim(),email:($('#csEmail')?$('#csEmail').value:'').trim(),cadastro:$('#csCad').value,
     contratoFisico:$('#csFis').checked,contratoEmail:$('#csMail').checked,anexo:$('#csAnexo').value.trim(),
     obs:($('#csObs')?$('#csObs').value:'').trim(),
@@ -5657,9 +5888,13 @@ function saveCess(id,dados){
       obs:(obsAntes!==(o.obs||''))?o.obs:''});
     toast('Cessão atualizada.');
   }else{
-    cessoes.push(Object.assign({id:uid('cs'),concluidoEm:null,concluidoPor:null,obsConclusao:'',criadoPor:session.nome,
-      historico:[{q:session.nome,w:nowStamp(),t:'Registro criado · vencimento previsto '+fmt(o.vencimento)}]},o));
-    toast('Cessão cadastrada. Vencimento previsto: '+fmt(o.vencimento));
+    const novo=Object.assign({id:uid('cs'),concluidoEm:null,concluidoPor:null,obsConclusao:'',criadoPor:session.nome,
+      historico:[{q:session.nome,w:nowStamp(),t:'Registro criado · vencimento previsto '+fmt(o.vencimento)}]},o);
+    cessoes.push(novo);
+    const outras=outrasCessoesDaSala(novo,true);
+    toast(outras.length
+      ?`Cessão cadastrada (${fmt(o.vencimento)}). Atenção: a unidade ${o.unidade} agora possui ${outras.length+1} cessões acumuladas!`
+      :'Cessão cadastrada. Vencimento previsto: '+fmt(o.vencimento));
   }
   closeModal(); render();
 }
@@ -5668,10 +5903,10 @@ function openCess(id){
   const st=cessStatusAuto(c);
   $('#modalTitle').textContent=c.unidade+' — '+c.tipo;
   $('#modalBody').innerHTML=`
+    ${alertaOutrasDaSalaHtml(c,'abrir')}
     <div class="chip-list" style="margin-bottom:14px">${badgeCondo(c.condoId)}<span class="badge b-tag">${c.tipo}</span>${badgeCess(st)}</div>
     <div class="f2">
       <div><div class="t-sub">Nome / Razão Social</div><b>${esc(c.nome)}</b></div>
-      <div><div class="t-sub">CPF / CNPJ</div><b>${esc(c.doc||'—')}</b></div>
       <div><div class="t-sub">Contato</div><b>${esc(c.contato||'—')}</b></div>
       <div><div class="t-sub">E-mail do cedente</div><b>${c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:'—'}</b></div>
       <div><div class="t-sub">Cadastro</div><b>${fmt(c.cadastro)}</b></div>
@@ -8749,11 +8984,36 @@ let qcCtx=null;
 function quickComplete(kind,id,fromDrill){
   if(!P().complete) return toast('Sem permissão.');
   const cfg=QC[kind], reg=cfg.get(id); if(!reg)return;
+  if(kind==='tarefa'&&ehTarefaCessao(reg)){
+    const vCes=validarConclusaoTarefaCessao(reg);
+    if(!vCes.ok){
+      const info=vCes.info;
+      toast(vCes.msg);
+      $('#modalTitle').textContent='Pendências em Cessão de Direitos';
+      $('#modalBody').innerHTML=`
+        <div class="feed-item red" style="margin-bottom:14px"><div class="fi-ic">${ic('alert')}</div><div>
+          <div class="ft">Falta(m) ${info.pendentes.length} de ${info.total} cessão(ões) programada(s) no mês</div>
+          <div class="fd">Você concluiu <b>${info.concluidas.length} de ${info.total}</b> cessões previstas para ${info.mes.slice(5,7)}/${info.mes.slice(0,4)}. Para concluir a tarefa <b>${esc(reg.titulo)}</b>, finalize primeiro todas as cessões pendentes do mês.</div>
+        </div></div>
+        <div class="t-sub" style="margin-bottom:8px"><b>Cessão(ões) ainda pendente(s):</b></div>
+        ${info.pendentes.map(c=>`<div class="feed-item amber" style="margin-bottom:8px"><div style="flex:1">
+          <div class="ft">${esc(c.unidade)} — ${esc(c.nome)}</div>
+          <div class="fd">${esc(c.tipo)} · venc. ${fmt(c.vencimento)}</div></div>
+          <button class="btn sm green" onclick="quickComplete('cessao','${c.id}')">${ic('check')} Concluir</button>
+        </div>`).join('')}`;
+      $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Fechar</button>
+        <button class="btn" onclick="closeModal();csFiltroStatus='';go('cessoes')">${ic('contract')} Ir para Cessão de Direitos</button>`;
+      $('#modal').classList.add('open');
+      return;
+    }
+  }
   qcCtx={kind,id,fromDrill:!!fromDrill};
   $('#modalTitle').textContent=cfg.titulo;
   $('#modalBody').innerHTML=`
     <div class="feed-item blue" style="margin-bottom:16px"><div></div><div>
       <div class="ft">${esc(cfg.nome(reg))}</div><div class="fd">${esc(cfg.sub(reg))}</div></div></div>
+    ${kind==='cessao'?alertaOutrasDaSalaHtml(reg,'concluir'):''}
+    ${kind==='tarefa'&&ehTarefaCessao(reg)?boxCessaoTarefa(reg):''}
     <div class="f2">
       <div class="field"><label>Data da conclusão</label><input type="date" id="qcData" value="${today()}"></div>
       <div class="field"><label>Responsável</label><input id="qcResp" value="${esc(session.nome)}" readonly></div>
@@ -8774,11 +9034,22 @@ function qcConfirm(){
   if(kind==='nota') return finishNota(id,data,obs,anexo);
 }
 function finishCess(id,data,obs,anexo){
-  const c=cessoes.find(x=>x.id===id);
+  const c=cessoes.find(x=>x.id===id); if(!c) return;
   c.status='Concluída'; c.concluidoEm=data; c.concluidoPor=session.nome; c.obsConclusao=obs;
   if(anexo)c.anexo=anexo;
   c.historico.push({q:session.nome,w:nowStamp(),t:'Cessão concluída em '+fmt(data),obs,anexo});
-  closeModal(); render(); toast('Cessão concluída e registrada no histórico.');
+  const rest=outrasCessoesDaSala(c,true);
+  if(rest.length){
+    csAvisoSala={unidade:c.unidade,concluiu:c.nome,ids:rest.map(x=>x.id)};
+  }else if(csAvisoSala&&ocuMesmaSala(csAvisoSala.unidade,c.unidade)){
+    csAvisoSala=null;
+  }
+  closeModal(); render();
+  if(rest.length){
+    toast(`Cessão concluída! Atenção: a unidade ${c.unidade} ainda tem ${rest.length} cessão(ões) pendente(s) (${rest.map(x=>x.nome).join(', ')}).`);
+  }else{
+    toast('Cessão concluída e registrada no histórico.');
+  }
 }
 function finishNota(id,data,obs,anexo){
   const n=notas.find(x=>x.id===id);
@@ -16495,8 +16766,9 @@ function aplicarSnapshot(d){
   const _migDup=migrarDuplicadas();
   const _migUS=migrarUnidSind();
   const _migSI=migrarSalasIptu();
+  const _migLgpd=migrarCessoesLgpd();
   _booting=false;
-  if(_migCat||_migCh||_migDup||_migUS||_migSI) save();
+  if(_migCat||_migCh||_migDup||_migUS||_migSI||_migLgpd) save();
   /* Tambem aqui, e nao so no load(): o snapshot que chega do servidor passa
      por aplicarSnapshot, nao por load. Sem esta linha a migracao rodava na
      base local e logo em seguida era sobrescrita pelo dado do servidor, que
