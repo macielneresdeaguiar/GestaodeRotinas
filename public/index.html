@@ -2468,8 +2468,8 @@ function buildCondoFilter(){
   const meus=condosDo(moduloDaPagina());
   const box=$('#condoFilter');
   /* A carteira do sindico inclui predios que nao administramos: o filtro de
-     condominio nao faz sentido ali e so confundiria. */
-  if(page==='unidsind'){ box.innerHTML=''; if(box.classList)box.classList.add('hidden'); return }
+     condominio nao faz sentido ali e so confundiria. Tambem nos padroes de e-mails. */
+  if(page==='unidsind'||page==='emails'){ box.innerHTML=''; if(box.classList)box.classList.add('hidden'); return }
   if(meus.length<2||!P().tipos.length){condoFilter=meus.length?meus[0].id:'all';
     box.innerHTML=''; if(box.classList)box.classList.add('hidden'); return}
   if(box.classList)box.classList.remove('hidden');
@@ -2485,6 +2485,7 @@ const ICONS={
   shieldCheck:'<path d="M12 3l7.5 3v5.5c0 4.3-3 8.1-7.5 9.5-4.5-1.4-7.5-5.2-7.5-9.5V6z"/><path d="m9 12 2.2 2.2L15.5 10"/>',
   image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="m4 17 5-4.5 3.5 3L16 12l4 4"/>',
   megaphone:'<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 0 1-5.8-1.6"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/>',
   cloud:'<path d="M7 18a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.5 1.5A3.5 3.5 0 0 1 17 18Z"/>',
  dashboard:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
  today:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor" stroke="none"/>',
@@ -2586,7 +2587,7 @@ function buildNav(){
     items.push(['calendario','calendar','Calendário']);
     items.push(['#','','Financeiro']);
     items.push(['notas','invoice','Notas Fiscais'],['cessoes','contract','Cessão de Direitos'],['vendascustas','money','Vendas e Custas'],
-      ['publicidade','megaphone','Publicidade nos Elevadores']);
+      ['publicidade','megaphone','Publicidade nos Elevadores'],['emails','mail','Padrões de E-mails']);
     items.push(['#','','Predial']);
     items.push(['leituras','water','Leituras — Água e Energia']);
     items.push(['analises','helmet','Análise de Projetos']);
@@ -2644,7 +2645,7 @@ function render(){
     'tarefas-adm':'Tarefas Administrativas','tarefas-gestor':'Tarefas do Gestor',calendario:'Calendário',rotina:'Minha Rotina',
     hoje:'Tarefas de Hoje — Planejamento Diário',leituras:'Leituras / Água e Energia',notas:'Controle de Notas Fiscais',
     estoque:'Controle de Estoque',pedidos:'Pedidos de Material',relmensal:'Relatório Mensal de Gestão',
-    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',analises:'Análise de Projetos — Check-list de Aprovação',ocupacao:'Taxa de Ocupação — Mapa de Salas','brigada-inicio':'Brigada — Iniciar Check-list',brigada:'Brigada de Incêndio — Check-list por Andar','brigada-ronda':(session&&!P().brigada&&P().ronda)?'Ronda Diária e Chamados':'Brigada — Ronda Diária','brigada-form':'Brigada — Check-list',relatorios:'Relatórios',config:'Configurações'};
+    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',emails:'Padrões de E-mails e Solicitação de Boleto CRM',analises:'Análise de Projetos — Check-list de Aprovação',ocupacao:'Taxa de Ocupação — Mapa de Salas','brigada-inicio':'Brigada — Iniciar Check-list',brigada:'Brigada de Incêndio — Check-list por Andar','brigada-ronda':(session&&!P().brigada&&P().ronda)?'Ronda Diária e Chamados':'Brigada — Ronda Diária','brigada-form':'Brigada — Check-list',relatorios:'Relatórios',config:'Configurações'};
   /* A portaria so tem duas telas. Travar aqui, no roteador, cobre tambem
      as telas que nunca tiveram verificacao propria (brigada, ronda, mapa
      de salas), em vez de depender de cada uma lembrar de conferir. */
@@ -2666,7 +2667,7 @@ function render(){
   if(page==='calendario'){tipoLock=null;taskView='calendario';return viewTasks()}
   tipoLock=null;
   const R={dashboard:viewDashboard,hoje:viewHoje,leituras:viewLeituras,tarefas:viewTasks,rotina:viewRotina,
-    notas:viewNotas,cessoes:viewCessoes,vendascustas:viewVendasCustas,publicidade:viewPublicidade,manutobrig:viewManutObrig,estoque:viewEstoque,pedidos:viewPedidos,
+    notas:viewNotas,cessoes:viewCessoes,vendascustas:viewVendasCustas,publicidade:viewPublicidade,emails:viewEmailsPadrao,manutobrig:viewManutObrig,estoque:viewEstoque,pedidos:viewPedidos,
     apontamentos:viewApontamentos,relatorios:viewReports,relmensal:viewRelatorioMensal,config:viewConfig,
     unidsind:viewUnidSind,unidades:viewUnidades};
   (R[page]||viewDashboard)();
@@ -3387,6 +3388,7 @@ function openTask(id){
     ${t.obsConclusao?`<div style="margin-top:12px"><div class="t-sub">Observações da conclusão</div><p>${esc(t.obsConclusao)}</p></div>`:''}
     ${t.anexo?`<div style="margin-top:10px"><span class="badge b-tag">${ic('paperclip')} ${esc(t.anexo)}</span></div>`:''}
     ${boxCessaoTarefa(t)}
+    ${boxEmailPadraoTarefa(t)}
     ${boxProgramar(t)}
     ${boxMateriaisChamado(t)}
     ${histHtml(t.historico)}`;
@@ -4964,6 +4966,429 @@ function unExportar(){
       {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
   audit('Unidades do prédio exportadas',l.length+' unidade(s)','',cid,'Unidades do prédio');
   toast('Planilha gerada.');
+}
+
+/* ============ PADRÕES DE E-MAILS E SOLICITAÇÃO DE BOLETO CRM ============
+   Modelos oficiais da Administração (E-Business) para cobrança de inadimplência
+   (1 taxa, múltiplas taxas sem jurídico, múltiplas taxas com jurídico Martins
+   Advocacia), reembolso de desconto de pontualidade, mensagem padrão de histórico
+   no CRM e formulário interativo de Solicitação de Boleto CRM.
+   Visível apenas para Gestor e Administrativo (P().tipos.length > 0). */
+const EMAILS_PADRAO_SEED=[
+  {
+    id:'em_1taxa',
+    cat:'inadimplencia',
+    catLabel:'Cobrança de Inadimplência',
+    badgeCls:'b-avencer',
+    titulo:'1 Taxa Condominial em Aberto (1 a 90 dias)',
+    uso:'E-mail para condôminos com uma taxa condominial em aberto',
+    assunto:'E-Business – Taxa Condominial em Aberto',
+    corpo:`Prezado (a) Condômino (a),
+
+Informamos que se encontra em aberto em nosso sistema o pagamento do boleto referente a taxa condominial do mês de {{MES}} da unidade {{UNIDADE}}.
+A solicitação de atualização do boleto poderá ser realizada diretamente junto a administração do condomínio através do e-mail admebusiness@ablsm.com.br ou também através do telefone (61) 3554-3930.
+Caso já tenha efetuado o pagamento, favor encaminhar via e-mail o comprovante para conciliação no sistema e baixa de quitação.
+
+Aproveitamos a oportunidade para esclarecer as regras deste Condomínio quanto aos débitos condominiais em atraso:
+
+1) As Unidades que possuam unicamente débitos vencidos entre 1 e 90 dias deverão procurar a Administração do Condomínio para fazer o pagamento. Os débitos serão atualizados e acrescidos de juros e multa;
+2) Após 90 dias do vencimento da parcela mais antiga, todo o débito da unidade será enviado à assessoria jurídica, inclusive as parcelas com vencimento inferior a 90 dias. Os débitos serão atualizados e acrescidos de juros, multa e honorários;
+3) Os débitos ficarão em cobrança extrajudicial até o 120º dia após o vencimento da parcela mais antiga, quando serão executados judicialmente.
+
+Qualquer dúvida ou esclarecimentos estamos à disposição.
+
+Atenciosamente.`
+  },
+  {
+    id:'em_2taxas',
+    cat:'inadimplencia',
+    catLabel:'Cobrança de Inadimplência',
+    badgeCls:'b-avencer',
+    titulo:'Mais de uma Taxa em Aberto (Ainda não foi para o jurídico)',
+    uso:'E-mail para condôminos com mais de uma taxa condominial em aberto (ainda não foi para o jurídico)',
+    assunto:'E-Business – Taxa Condominial em Aberto',
+    corpo:`Prezado (a) Condômino (a),
+
+Informamos que se encontram em aberto em nosso sistema o pagamento dos boletos referentes as taxas condominiais dos meses de {{MESES}} da unidade {{UNIDADE}}.
+A solicitação de atualização dos boletos poderá ser realizada diretamente junto a administração do condomínio através do e-mail admebusiness@ablsm.com.br ou também através do telefone (61) 3554-3930.
+Caso já tenha efetuado o pagamento, favor encaminhar via e-mail os comprovantes para conciliação no sistema e baixa de quitação.
+
+Aproveitamos a oportunidade para esclarecer as regras deste Condomínio quanto aos débitos condominiais em atraso:
+
+1) As Unidades que possuam unicamente débitos vencidos entre 1 e 90 dias deverão procurar a Administração do Condomínio para fazer o pagamento. Os débitos serão atualizados e acrescidos de juros e multa;
+2) Após 90 dias do vencimento da parcela mais antiga, todo o débito da unidade será enviado à assessoria jurídica, inclusive as parcelas com vencimento inferior a 90 dias. Os débitos serão atualizados e acrescidos de juros, multa e honorários;
+3) Os débitos ficarão em cobrança extrajudicial até o 120º dia após o vencimento da parcela mais antiga, quando serão executados judicialmente.
+
+Qualquer dúvida ou esclarecimentos estamos à disposição.
+
+Atenciosamente.`
+  },
+  {
+    id:'em_juridico',
+    cat:'inadimplencia',
+    catLabel:'Cobrança de Inadimplência (+90 dias / Jurídico)',
+    badgeCls:'b-atr',
+    titulo:'Mais de uma Taxa em Aberto — Com Taxas no Escritório Jurídico',
+    uso:'E-mail para condôminos com mais de uma taxa condominial em aberto e com taxas já enviadas ao escritório jurídico (Martins Advocacia)',
+    assunto:'E-Business – Taxa Condominial em Aberto',
+    corpo:`Prezado (a) Condômino (a),
+
+Informamos que se encontram em aberto pagamentos referentes as taxas condominiais da unidade {{UNIDADE}}.
+Alguns destes pagamentos foram enviados para o escritório de cobrança devido ao tempo de vencido.
+Para solicitar a atualização do boleto com menos de 90 dias de vencido, basta entrar em contato com a administração do condomínio através do e-mail admebusiness@ablsm.com.br ou também através do telefone (61) 3554-3930.
+Para negociação dos débitos acima de 90 dias de vencidos, será necessário entrar em contato com o escritório de cobrança:
+
+MARTINS ADVOCACIA E CONSULTORIA
+End.: SRTVS Ed. Assis Chateaubriand, Bloco 1, Salas 626/628, Brasília/DF
+Telefones: (61) 3202-8252 / (61) 99619-1658
+E-mail: creditos@martinslaw.adv.br
+
+Caso já tenha efetuado o pagamento, favor encaminhar via e-mail os comprovantes para conciliação no sistema e baixa de quitação.
+
+Aproveitamos a oportunidade para esclarecer as regras deste Condomínio quanto aos débitos condominiais em atraso:
+
+1) As Unidades que possuam unicamente débitos vencidos entre 1 e 90 dias deverão procurar a Administração do Condomínio para fazer o pagamento. Os débitos serão atualizados e acrescidos de juros e multa;
+2) Após 90 dias do vencimento da parcela mais antiga, todo o débito da unidade será enviado à assessoria jurídica, inclusive as parcelas com vencimento inferior a 90 dias. Os débitos serão atualizados e acrescidos de juros, multa e honorários;
+3) Os débitos ficarão em cobrança extrajudicial até o 120º dia após o vencimento da parcela mais antiga, quando serão executados judicialmente.
+
+Qualquer dúvida ou esclarecimentos estamos à disposição.
+
+Atenciosamente.`
+  },
+  {
+    id:'em_reembolso',
+    cat:'reembolso',
+    catLabel:'Reembolso de Desconto',
+    badgeCls:'b-and',
+    titulo:'Pagamento sem Desconto de Pontualidade (Pago cheio até o dia 10)',
+    uso:'E-mail para condôminos que pagaram a taxa condominial sem o desconto de pontualidade (pagamento cheio até o dia 10)',
+    assunto:'E-Business – Reembolso de desconto da Taxa Condominial',
+    corpo:`Prezado (a) Condômino (a),
+
+Verificamos que a parcela referente a taxa condominial do mês de {{MES}} da unidade {{UNIDADE}} foi paga com o valor total sem desconto.
+Solicitamos por gentileza que seja enviado o comprovante de pagamento do boleto e também os dados bancários (banco, agência, conta, CPF/CNPJ) para que o reembolso seja realizado.
+Favor enviar o comprovante para o e-mail admebusiness@ablsm.com.br.
+Desde já agradecemos e nos colocamos a disposição para demais esclarecimentos.
+
+Atenciosamente.`
+  },
+  {
+    id:'em_crm_msg',
+    cat:'crm',
+    catLabel:'CRM / Solicitação de Boleto',
+    badgeCls:'b-conc',
+    titulo:'Mensagem para colocar no CRM (Proprietário não atendeu)',
+    uso:'Mensagem padrão para registrar no CRM quando o proprietário não atende as ligações e foi enviado e-mail com os meses em aberto',
+    assunto:'',
+    corpo:`O PROPRIETÁRIO NÃO ATENDEU AS LIGAÇÕES FOI ENVIADO UM E-MAIL COM OS MESES QUE CONSTAM EM ABERTO.`
+  },
+  {
+    id:'em_crm_boleto',
+    cat:'crm',
+    catLabel:'CRM / Solicitação de Boleto',
+    badgeCls:'b-conc',
+    titulo:'Solicitação de Boleto CRM',
+    uso:'Formulário padrão para solicitar atualização/emissão de boleto no CRM (com marcação de boleto único/separado e abonos)',
+    assunto:'Solicitação de Boleto CRM',
+    corpo:`Parcela Inadimplente: {{PARCELA}}
+Data de prorrogação: {{PRORROGACAO}}
+Boleto Único ({{BOL_UNICO}}) Boleto Separado: Por Unidade({{POR_UNID}}) Por Vencimento({{POR_VENC}})
+Unidades/Vagas: {{UNIDADE}}
+Abono: Multas ({{AB_MULTA}}) – Juros ({{AB_JUROS}}) – Correção ({{AB_CORR}})
+Obs.: Adicionais {{OBS}}`
+  }
+];
+
+let epCat='todos', epBusca='', epUnidade='', epMes='';
+let epCrm={parcela:'',prorrogacao:'',unidades:'',bolUnico:false,porUnid:false,porVenc:false,abMulta:false,abJuros:false,abCorr:false,obs:''};
+
+function podeEmailsPadrao(){
+  return !!(session&&P().tipos&&P().tipos.length);
+}
+function epLista(){
+  if(CFG&&Array.isArray(CFG.emailsPadrao)&&CFG.emailsPadrao.length) return CFG.emailsPadrao;
+  return JSON.parse(JSON.stringify(EMAILS_PADRAO_SEED));
+}
+function epFmtData(d){
+  const s=String(d||'').trim();
+  if(!s) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return fmt(s);
+  return s;
+}
+function epRenderTexto(item){
+  if(!item) return '';
+  let txt=String(item.corpo||'');
+  const unidEmail=String(epUnidade||'').trim()||'XXX';
+  const unidCrm=String(epCrm.unidades||epUnidade||'').trim();
+  const mesSimples=String(epMes||'').trim()||'XXXX de 2026';
+  const mesesLista=String(epMes||'').trim()||'XXXX, XXXX e XXXX de 2026';
+  if(item.id==='em_crm_boleto'){
+    txt=txt
+      .replace(/\{\{PARCELA\}\}/g, String(epCrm.parcela||epMes||'').trim())
+      .replace(/\{\{PRORROGACAO\}\}/g, epFmtData(epCrm.prorrogacao))
+      .replace(/\{\{BOL_UNICO\}\}/g, epCrm.bolUnico?' X ':'  ')
+      .replace(/\{\{POR_UNID\}\}/g, epCrm.porUnid?' X ':'  ')
+      .replace(/\{\{POR_VENC\}\}/g, epCrm.porVenc?' X ':'  ')
+      .replace(/\{\{UNIDADE\}\}/g, unidCrm)
+      .replace(/\{\{AB_MULTA\}\}/g, epCrm.abMulta?' X ':'  ')
+      .replace(/\{\{AB_JUROS\}\}/g, epCrm.abJuros?' X ':'  ')
+      .replace(/\{\{AB_CORR\}\}/g, epCrm.abCorr?' X ':'  ')
+      .replace(/\{\{OBS\}\}/g, String(epCrm.obs||'').trim());
+    return txt;
+  }
+  return txt
+    .replace(/\{\{UNIDADE\}\}/g, unidEmail)
+    .replace(/\{\{MES\}\}/g, mesSimples)
+    .replace(/\{\{MESES\}\}/g, mesesLista);
+}
+function epAtualizarPreviews(){
+  const l=epLista();
+  l.forEach(item=>{
+    const el=document.querySelector('#epPrev_'+item.id);
+    if(el) el.textContent=epRenderTexto(item);
+  });
+}
+function epSetVar(campo,val){
+  if(campo==='unidade') epUnidade=val;
+  else if(campo==='mes') epMes=val;
+  epAtualizarPreviews();
+}
+function epSetCrm(campo,val){
+  epCrm[campo]=val;
+  epAtualizarPreviews();
+}
+function epLimparVars(){
+  epUnidade=''; epMes='';
+  epCrm={parcela:'',prorrogacao:'',unidades:'',bolUnico:false,porUnid:false,porVenc:false,abMulta:false,abJuros:false,abCorr:false,obs:''};
+  render();
+  toast('Campos de preenchimento rápido limpos.');
+}
+function epCopiarTexto(texto,msgOk){
+  const t=String(texto||'');
+  try{
+    if(typeof navigator!=='undefined'&&navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).catch(()=>{});
+    }
+  }catch(e){}
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=t;
+    ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta);
+    ta.select();
+    if(document.execCommand) document.execCommand('copy');
+    document.body.removeChild(ta);
+  }catch(e){}
+  toast(msgOk||'Copiado para a área de transferência!');
+  return t;
+}
+function epCopiar(id,modo){
+  const item=epLista().find(x=>x.id===id);
+  if(!item) return '';
+  const corpo=epRenderTexto(item);
+  if(modo==='assunto'){
+    return epCopiarTexto(item.assunto||'','Assunto copiado!');
+  }
+  if(modo==='tudo'&&item.assunto){
+    return epCopiarTexto('Assunto: '+item.assunto+'\n\n'+corpo,'Assunto + texto copiados!');
+  }
+  return epCopiarTexto(corpo,'Texto copiado para a área de transferência!');
+}
+function boxEmailPadraoTarefa(t){
+  if(!t||!podeEmailsPadrao()) return '';
+  const txt=((t.titulo||'')+' '+(t.procedimento||'')).toLowerCase();
+  if(!/cobran|inadimpl|boleto|crm|reembolso/.test(txt)) return '';
+  return `<div class="card" style="box-shadow:none;background:#eef5ff;border-color:#b8d4fe;padding:12px;margin-top:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div>
+        <div style="font-weight:700;color:var(--navy)">${ic('mail')} Padrões de E-mails e Solicitação de Boleto CRM</div>
+        <div class="t-sub" style="margin-top:3px">Textos prontos para cobrança (1 taxa, múltiplas taxas, jurídico Martins Advocacia), reembolso de desconto e pedido de boleto no CRM.</div>
+      </div>
+      <button class="btn sm primary" onclick="closeModal();go('emails')">${ic('mail')} Abrir Padrões de E-mails</button>
+    </div>
+  </div>`;
+}
+function viewEmailsPadrao(){
+  if(!podeEmailsPadrao()){ go(paginaInicial()); return }
+  const todos=epLista();
+  const q=epBusca.trim().toLowerCase();
+  const filtrados=todos.filter(x=>{
+    if(epCat!=='todos'&&x.cat!==epCat) return false;
+    if(q&&!((x.titulo||'')+' '+(x.uso||'')+' '+(x.assunto||'')+' '+(x.corpo||'')).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const qtdInad=todos.filter(x=>x.cat==='inadimplencia').length;
+  const qtdCrm=todos.filter(x=>x.cat==='crm').length;
+  const qtdReemb=todos.filter(x=>x.cat==='reembolso').length;
+  const customizado=!!(CFG&&Array.isArray(CFG.emailsPadrao)&&CFG.emailsPadrao.length);
+
+  $('#content').innerHTML=`
+    <div class="card" style="margin-bottom:14px;background:linear-gradient(135deg,#0f2942 0%,#1a3f66 100%);color:#fff;border:none">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.8">Comunicação Padronizada · Administração & Gestor</div>
+          <div style="font-size:18px;font-weight:800;margin-top:3px">Padrões de E-mails, Cobrança e Solicitação de Boleto CRM</div>
+          <div style="font-size:12.5px;opacity:.9;margin-top:4px">
+            Preencha a <b>Unidade</b> e o <b>Mês/Meses</b> abaixo para substituir automaticamente <code>XXX</code> e <code>XXXX</code> em todos os modelos, ou copie direto com 1 clique.
+          </div>
+        </div>
+        <div class="rowact" style="gap:8px;flex-wrap:wrap">
+          <button class="btn sm" style="background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25)" onclick="epForm()">+ Novo Padrão</button>
+          ${customizado?`<button class="btn sm ghost" style="color:#fff;border-color:rgba(255,255,255,.25)" onclick="epRestaurarPadrao()">Restaurar originais</button>`:''}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:14px;background:rgba(255,255,255,.1);padding:12px;border-radius:10px">
+        <div>
+          <label style="font-size:11px;font-weight:700;opacity:.9;display:block;margin-bottom:4px">Unidade / Sala (substitui XXX)</label>
+          <input id="epInUnid" value="${esc(epUnidade)}" placeholder="Ex.: 1202 ou 1202 / 1203"
+            oninput="epSetVar('unidade',this.value)"
+            style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:#fff;color:var(--navy);font-weight:600">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;opacity:.9;display:block;margin-bottom:4px">Mês ou Meses em aberto (substitui XXXX)</label>
+          <input id="epInMes" value="${esc(epMes)}" placeholder="Ex.: Setembro de 2026 ou Julho, Agosto e Setembro de 2026"
+            oninput="epSetVar('mes',this.value)"
+            style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:#fff;color:var(--navy);font-weight:600">
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px">
+          <button class="btn sm" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.28);height:36px" onclick="epLimparVars()">Limpar preenchimento</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar" style="margin-bottom:14px;gap:8px;flex-wrap:wrap">
+      <div class="seg" style="flex-wrap:wrap">
+        <button class="${epCat==='todos'?'active':''}" onclick="epCat='todos';render()">Todos (${todos.length})</button>
+        <button class="${epCat==='inadimplencia'?'active':''}" onclick="epCat='inadimplencia';render()">Cobrança de Inadimplência (${qtdInad})</button>
+        <button class="${epCat==='crm'?'active':''}" onclick="epCat='crm';render()">CRM / Solicitação de Boleto (${qtdCrm})</button>
+        <button class="${epCat==='reembolso'?'active':''}" onclick="epCat='reembolso';render()">Reembolso de Desconto (${qtdReemb})</button>
+      </div>
+      <div class="spacer"></div>
+      <input placeholder="Buscar por palavra-chave, assunto, Martins Advocacia, CRM..." value="${esc(epBusca)}"
+        oninput="epBusca=this.value;render()" style="max-width:300px">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr;gap:14px">
+      ${filtrados.map(item=>epRenderCard(item)).join('')||`<div class="card"><div class="empty">${ic('mail','ico-lg')}<div>Nenhum padrão encontrado com esse filtro.</div></div></div>`}
+    </div>`;
+}
+function epRenderCard(item){
+  const textoRenderizado=epRenderTexto(item);
+  const isCrmBoleto=item.id==='em_crm_boleto';
+  return `<div class="card" id="epCard_${esc(item.id)}" style="border-left:4px solid ${item.cat==='inadimplencia'?(item.id==='em_juridico'?'var(--red)':'var(--amber)'):item.cat==='crm'?'var(--green)':'var(--blue)'}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div>
+        <div class="chip-list" style="margin-bottom:6px">
+          <span class="badge ${item.badgeCls||'b-tag'}">${esc(item.catLabel||'Padrão')}</span>
+          ${item.id==='em_juridico'?'<span class="badge b-atr">Martins Advocacia (+90 dias)</span>':''}
+          ${item.id==='em_crm_boleto'?'<span class="badge b-conc">Gerador Interativo CRM</span>':''}
+        </div>
+        <div style="font-size:16px;font-weight:800;color:var(--navy)">${esc(item.titulo)}</div>
+        ${item.uso?`<div class="t-sub" style="margin-top:2px">${esc(item.uso)}</div>`:''}
+      </div>
+      <div class="rowact" style="gap:6px;flex-wrap:wrap">
+        ${item.assunto?`<button class="btn sm ghost" id="btnCpAss_${esc(item.id)}" onclick="epCopiar('${esc(item.id)}','assunto')">Copiar Assunto</button>`:''}
+        <button class="btn sm primary" id="btnCpTxt_${esc(item.id)}" onclick="epCopiar('${esc(item.id)}','corpo')">${ic('check')} ${isCrmBoleto?'Copiar Pedido CRM':'Copiar Texto'}</button>
+        ${item.assunto?`<button class="btn sm" id="btnCpTudo_${esc(item.id)}" onclick="epCopiar('${esc(item.id)}','tudo')">Copiar Assunto + Texto</button>`:''}
+        <button class="btn sm ghost" onclick="epForm('${esc(item.id)}')" title="Editar modelo">${ic('edit')}</button>
+      </div>
+    </div>
+
+    ${item.assunto?`<div style="background:var(--slate-soft);padding:8px 12px;border-radius:8px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <div style="font-size:12.5px"><span class="t-sub">Assunto:</span> <b style="color:var(--navy);user-select:all">${esc(item.assunto)}</b></div>
+      <button class="btn sm ghost" style="padding:3px 8px;font-size:11px" onclick="epCopiar('${esc(item.id)}','assunto')">Copiar assunto</button>
+    </div>`:''}
+
+    ${isCrmBoleto?`<div style="background:#f4f8fd;border:1px solid #d5e4f7;border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">Preenchimento rápido do Pedido de Boleto CRM (marca os parênteses automaticamente):</div>
+      <div class="f3" style="gap:8px;margin-bottom:10px">
+        <div class="field" style="margin:0"><label style="font-size:11px">Parcela Inadimplente</label>
+          <input id="epCrmParc" value="${esc(epCrm.parcela)}" placeholder="Ex.: 09/2026 ou Ago e Set/2026" oninput="epSetCrm('parcela',this.value)">
+        </div>
+        <div class="field" style="margin:0"><label style="font-size:11px">Data de prorrogação</label>
+          <input id="epCrmProrr" value="${esc(epCrm.prorrogacao)}" placeholder="Ex.: 20/10/2026" oninput="epSetCrm('prorrogacao',this.value)">
+        </div>
+        <div class="field" style="margin:0"><label style="font-size:11px">Unidades / Vagas</label>
+          <input id="epCrmUnid" value="${esc(epCrm.unidades)}" placeholder="Usa a unidade do topo ou digite aqui" oninput="epSetCrm('unidades',this.value)">
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:10px;font-size:12.5px">
+        <div>
+          <b style="color:var(--navy)">Tipo de Boleto:</b>
+          <label style="margin-left:8px;cursor:pointer"><input type="checkbox" ${epCrm.bolUnico?'checked':''} onchange="epSetCrm('bolUnico',this.checked)"> Boleto Único</label>
+          <label style="margin-left:8px;cursor:pointer"><input type="checkbox" ${epCrm.porUnid?'checked':''} onchange="epSetCrm('porUnid',this.checked)"> Separado: Por Unidade</label>
+          <label style="margin-left:8px;cursor:pointer"><input type="checkbox" ${epCrm.porVenc?'checked':''} onchange="epSetCrm('porVenc',this.checked)"> Separado: Por Vencimento</label>
+        </div>
+        <div>
+          <b style="color:var(--navy)">Abono:</b>
+          <label style="margin-left:8px;cursor:pointer"><input type="checkbox" ${epCrm.abMulta?'checked':''} onchange="epSetCrm('abMulta',this.checked)"> Multas</label>
+          <label style="margin-left:8px;cursor:pointer"><input type="checkbox" ${epCrm.abJuros?'checked':''} onchange="epSetCrm('abJuros',this.checked)"> Juros</label>
+          <label style="margin-left:8px;cursor:pointer"><input type="checkbox" ${epCrm.abCorr?'checked':''} onchange="epSetCrm('abCorr',this.checked)"> Correção</label>
+        </div>
+      </div>
+      <div class="field" style="margin:0"><label style="font-size:11px">Obs.: Adicionais</label>
+        <input id="epCrmObs" value="${esc(epCrm.obs)}" placeholder="Observações adicionais para o CRM (opcional)" oninput="epSetCrm('obs',this.value)">
+      </div>
+    </div>`:''}
+
+    <pre id="epPrev_${esc(item.id)}" style="margin:0;padding:12px 14px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;white-space:pre-wrap;word-break:break-word;font-family:inherit;font-size:13px;line-height:1.55;color:var(--ink);user-select:all">${esc(textoRenderizado)}</pre>
+  </div>`;
+}
+function epForm(id){
+  if(!podeEmailsPadrao()) return;
+  const l=epLista();
+  const it=id?l.find(x=>x.id===id):null;
+  const cats=[
+    ['inadimplencia','Cobrança de Inadimplência'],
+    ['reembolso','Reembolso de Desconto'],
+    ['crm','CRM / Solicitação de Boleto']
+  ];
+  openModal(it?'Editar Padrão de E-mail / CRM':'Novo Padrão de E-mail / CRM',`
+    <div class="f2">
+      <div class="field"><label>Título *</label><input id="epFTit" value="${esc(it?it.titulo:'')}" placeholder="Ex.: 1 Taxa Condominial em Aberto"></div>
+      <div class="field"><label>Categoria</label><select id="epFCat">${cats.map(([v,lb])=>`<option value="${v}" ${(it&&it.cat===v)?'selected':''}>${lb}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>Quando usar (orientação rápida)</label><input id="epFUso" value="${esc(it?it.uso||'':'')}" placeholder="Ex.: E-mail para condôminos com 1 taxa em aberto"></div>
+    <div class="field"><label>Assunto do E-mail (deixe em branco se for mensagem interna de CRM)</label><input id="epFAss" value="${esc(it?it.assunto||'':'')}" placeholder="Ex.: E-Business – Taxa Condominial em Aberto"></div>
+    <div class="field"><label>Texto / Corpo do Padrão * <span class="t-sub" style="font-weight:400">(use <code>{{UNIDADE}}</code>, <code>{{MES}}</code> ou <code>{{MESES}}</code> para substituição automática)</span></label>
+      <textarea id="epFCorpo" rows="12" style="font-family:inherit;line-height:1.5">${esc(it?it.corpo:'')}</textarea>
+    </div>`,
+    `${it&&!EMAILS_PADRAO_SEED.some(s=>s.id===it.id)?`<button class="btn danger" onclick="epExcluir('${esc(it.id)}')">Excluir</button>`:''}
+     <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn primary" onclick="epSalvar('${esc(it?it.id:'')}')">Salvar</button>`);
+}
+function epSalvar(id){
+  if(!podeEmailsPadrao()) return;
+  const v=sel=>($(sel)&&$(sel).value||'');
+  const titulo=(v('#epFTit')||'').trim();
+  const cat=v('#epFCat')||'inadimplencia';
+  const uso=(v('#epFUso')||'').trim();
+  const assunto=(v('#epFAss')||'').trim();
+  const corpo=v('#epFCorpo')||'';
+  if(!titulo||!corpo.trim()) return toast('Preencha o título e o texto do padrão.');
+  const catMap={inadimplencia:['Cobrança de Inadimplência','b-avencer'],reembolso:['Reembolso de Desconto','b-and'],crm:['CRM / Solicitação de Boleto','b-conc']};
+  const [catLabel,badgeCls]=catMap[cat]||['Padrão','b-tag'];
+  const l=JSON.parse(JSON.stringify(epLista()));
+  if(id){
+    const idx=l.findIndex(x=>x.id===id);
+    if(idx>=0) Object.assign(l[idx],{titulo,cat,catLabel,badgeCls,uso,assunto,corpo});
+  }else{
+    l.push({id:uid(),titulo,cat,catLabel,badgeCls,uso,assunto,corpo});
+  }
+  CFG.emailsPadrao=l;
+  audit(id?'Padrão de e-mail editado':'Novo padrão de e-mail',titulo,catLabel,'c1');
+  save(); closeModal(); render(); toast('Padrão salvo.');
+}
+function epExcluir(id){
+  if(!podeEmailsPadrao()) return;
+  const l=JSON.parse(JSON.stringify(epLista())).filter(x=>x.id!==id);
+  CFG.emailsPadrao=l;
+  save(); closeModal(); render(); toast('Padrão removido.');
+}
+function epRestaurarPadrao(){
+  if(!podeEmailsPadrao()) return;
+  delete CFG.emailsPadrao;
+  save(); render(); toast('Padrões originais restaurados.');
 }
 
 /* ============ MANUTENÇÕES ============ */
@@ -10944,6 +11369,7 @@ function abrirMaisMenu(){
   const itens=[['tarefas-adm','clipboardCheck','Tarefas Administrativas'],
     ['calendario','calendar','Calendário'],['notas','invoice','Notas Fiscais'],
     ['cessoes','contract','Cessão de Direitos'],['vendascustas','money','Vendas e Custas'],['publicidade','megaphone','Publicidade nos Elevadores'],
+    ['emails','mail','Padrões de E-mails'],
     ['leituras','water','Leituras — Água e Energia'],
     ['brigada-inicio','play','Iniciar Check-list'],['brigada','flame','Check-list por Andar'],
     ['brigada-ronda','route','Ronda Diária'],
@@ -10955,7 +11381,7 @@ function abrirMaisMenu(){
       if(['brigada-inicio','brigada'].includes(k)) return !!P().brigada;
       if(k==='brigada-ronda') return !!(P().brigada||P().ronda);
       if(k==='leituras') return !!(P().tipos.length||P().leituras);
-      if(['notas','cessoes','vendascustas','publicidade','calendario','tarefas-adm','relatorios','relmensal'].includes(k)) return P().tipos.length;
+      if(['notas','cessoes','vendascustas','publicidade','emails','calendario','tarefas-adm','relatorios','relmensal'].includes(k)) return P().tipos.length;
       if(['estoque','pedidos'].includes(k)) return P().estoque;
       return true;
     });
@@ -16951,5 +17377,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
