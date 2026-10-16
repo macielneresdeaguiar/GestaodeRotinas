@@ -6472,10 +6472,11 @@ function vcCriarCiclo(dados){
 }
 function vcSalvarEdicaoCiclo(id,dados){
   const c=vcCiclo(id); if(!c) return;
-  if(c.fechado) return toast('Ciclo fechado. Reabra o ciclo antes de alterar os dados da fatura.');
   const vAnt=vcNum($('#vcValAnt')?$('#vcValAnt').value:null);
   const mAnt=vcNum($('#vcMedAnt')?$('#vcMedAnt').value:null);
   const mAtu=vcNum($('#vcConsumo')?$('#vcConsumo').value:null);
+  const lAnt=vcNum($('#vcLeitAnt')?$('#vcLeitAnt').value:null);
+  const lAtu=vcNum($('#vcLeitAtu')?$('#vcLeitAtu').value:null);
   let vFat=vcNum($('#vcValor')?$('#vcValor').value:null);
   const calcRet=vcCalcFaturaRetida(vAnt,mAnt,mAtu);
   const usouRetida=dados&&dados.contaRetida!==undefined
@@ -6489,7 +6490,9 @@ function vcSalvarEdicaoCiclo(id,dados){
     consumoFatura:mAtu,
     contaRetida:usouRetida,
     valorMesPassado:usouRetida?vAnt:null,
-    medidoMesPassado:usouRetida?mAnt:null
+    medidoMesPassado:usouRetida?mAnt:null,
+    leituraRelogioAnt:lAnt,
+    leituraRelogioAtu:lAtu
   };
   c.inicio=o.inicio||c.inicio;
   c.fim=o.fim||c.fim;
@@ -6498,6 +6501,8 @@ function vcSalvarEdicaoCiclo(id,dados){
   c.contaRetida=!!o.contaRetida;
   c.valorMesPassado=o.contaRetida?o.valorMesPassado:null;
   c.medidoMesPassado=o.contaRetida?o.medidoMesPassado:null;
+  if(o.leituraRelogioAnt!==null&&o.leituraRelogioAnt!==undefined) c.leituraRelogioAnt=o.leituraRelogioAnt;
+  if(o.leituraRelogioAtu!==null&&o.leituraRelogioAtu!==undefined) c.leituraRelogioAtu=o.leituraRelogioAtu;
   const det=c.contaRetida
     ?`Fatura calculada (conta retida): mês passado ${brl(c.valorMesPassado)} / ${vcFmtM3(c.medidoMesPassado)} · medido deste mês ${vcFmtM3(c.consumoFatura)} → conta ${brl(c.valorFatura)}`
     :`Fatura atualizada: valor ${brl(c.valorFatura)} · consumo ${vcFmtM3(c.consumoFatura)}`;
@@ -6532,9 +6537,10 @@ function vcExcluirCiclo(id){
 function vcNum(v){
   if(v===null||v===undefined||v==='') return null;
   if(typeof v==='number') return v;
-  // aceita "1.234,56" e "1234.56"
+  // aceita "1.234,56", "1234.56" e milhar com ponto sem centavos como "67.708"
   let t=String(v).trim().replace(/[R$\s]/g,'');
   if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.');
+  else if(/^-?\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,'');
   const n=Number(t); return isNaN(n)?null:n;
 }
 // R$/m³ = valor da fatura ÷ consumo total da fatura.
@@ -7822,7 +7828,6 @@ function vcFormCiclo(editId){
   const ed=editId?vcCiclo(editId):null;
   if(ed&&!P().edit) return toast('Sem permissão.');
   if(!ed&&!P().create) return toast('Sem permissão.');
-  if(ed&&ed.fechado) return toast('Ciclo fechado. Reabra o ciclo antes de editar a fatura.');
   const hoje=today(), d=new Date();
   const serv=ed?ed.servico:vcTab;
   const cid=ed?ed.condoId:(condoFilter==='all'?'c1':condoFilter);
@@ -7830,6 +7835,8 @@ function vcFormCiclo(editId){
   const ant=vcCicloAnterior(serv,cid,comp,ed?ed.id:null);
   const valAntInit=ed&&ed.valorMesPassado!=null?ed.valorMesPassado:(ant&&ant.valorFatura!=null?ant.valorFatura:'');
   const medAntInit=ed&&ed.medidoMesPassado!=null?ed.medidoMesPassado:(ant&&ant.consumoFatura!=null?ant.consumoFatura:'');
+  const leitAntInit=ed&&ed.leituraRelogioAnt!=null?ed.leituraRelogioAnt:'';
+  const leitAtuInit=ed&&ed.leituraRelogioAtu!=null?ed.leituraRelogioAtu:'';
   const un=serv==='agua'?'m³':'kWh';
   $('#modalTitle').textContent=ed?`Editar fatura / Conta retida — ${ed.competencia}`:'Novo ciclo de faturamento';
   $('#modalBody').innerHTML=`
@@ -7838,7 +7845,7 @@ function vcFormCiclo(editId){
         <option value="agua" ${serv==='agua'?'selected':''}>Água</option>
         <option value="energia" ${serv==='energia'?'selected':''}>Energia</option></select></div>
       <div class="field"><label>Condomínio</label><select id="vcCondo" ${ed?'disabled':''} onchange="vcPreencherAntCiclo('${ed?ed.id:''}')">${condosDo('vendascustas').map(x=>`<option value="${x.id}" ${cid===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
-      <div class="field"><label>Competência (MM/AAAA)</label><input id="vcComp" value="${esc(comp)}" placeholder="09/2026" ${ed?'disabled':''} oninput="vcPreencherAntCiclo('${ed?ed.id:''}')"></div>
+      <div class="field"><label>Competência (MM/AAAA)</label><input id="vcComp" value="${esc(comp)}" placeholder="10/2026" ${ed?'disabled':''} oninput="vcPreencherAntCiclo('${ed?ed.id:''}')"></div>
     </div>
     <div class="f2">
       <div class="field"><label>Início do período</label><input type="date" id="vcIni" value="${esc(ed?ed.inicio||hoje:hoje)}"></div>
@@ -7847,41 +7854,42 @@ function vcFormCiclo(editId){
 
     <div class="card" style="box-shadow:none;background:#f4f8ff;border:1px solid #bfd6f6;padding:12px;margin:10px 0">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-        <div style="font-weight:800;color:var(--navy)">${ic('bolt')} Conta retida? Calcular valor da conta automático pelo mês passado</div>
-        <span id="vcAntRefBadge" class="badge b-tag">${ant?`Base sugerida: ciclo ${ant.competencia}`:'Preencha os dados do mês passado'}</span>
+        <div style="font-weight:800;color:var(--navy)">${ic('bolt')} Conta retida? Calcular valor da conta automático</div>
+        <span id="vcAntRefBadge" class="badge b-tag">${ant?`Base puxada: ciclo ${ant.competencia}`:'Preencha os dados do mês passado'}</span>
       </div>
       <div class="t-sub" style="margin-bottom:10px">
-        Informe o <b>valor do mês passado</b>, o <b>medido do mês passado</b> e o <b>medido desse mês</b>: o sistema calcula a tarifa proporcional e preenche o <b>Valor da fatura (R$)</b> automaticamente.
+        Digite a <b>última medição</b> e a <b>medição atual</b> (ou direto o <b>medido desse mês</b>) junto com o <b>valor</b> e <b>medido do mês passado</b> para preencher o valor da conta automaticamente:
       </div>
-      <div class="f3" style="gap:10px">
+      <div class="f3" style="gap:10px;margin-bottom:10px">
         <div class="field" style="margin:0">
-          <label>1. Valor do mês passado (R$)</label>
-          <input id="vcValAnt" value="${valAntInit!==''?String(valAntInit).replace('.',','):''}" placeholder="Ex.: 29.841,10" oninput="vcCalcContaRetida(true)">
+          <label>Última medição do relógio</label>
+          <input id="vcLeitAnt" value="${esc(leitAntInit)}" placeholder="Ex.: 67.708" oninput="vcCalcLeiturasFatura()">
         </div>
         <div class="field" style="margin:0">
-          <label id="lblVcMedAnt">2. Medido do mês passado (${un})</label>
-          <input id="vcMedAnt" value="${medAntInit!==''?String(medAntInit).replace('.',','):''}" placeholder="Ex.: 721" oninput="vcCalcContaRetida(true)">
+          <label>Medição atual do relógio</label>
+          <input id="vcLeitAtu" value="${esc(leitAtuInit)}" placeholder="Ex.: 68402" oninput="vcCalcLeiturasFatura()">
         </div>
         <div class="field" style="margin:0">
-          <label id="lblVcMedAtu">3. Medido desse mês (${un})</label>
-          <input id="vcConsumo" value="${ed&&ed.consumoFatura!=null?String(ed.consumoFatura).replace('.',','):''}" placeholder="Ex.: 745" oninput="vcCalcContaRetida(true)">
+          <label id="lblVcMedAtu">Medido desse mês (${un})</label>
+          <input id="vcConsumo" value="${ed&&ed.consumoFatura!=null?String(ed.consumoFatura).replace('.',','):''}" placeholder="Ex.: 694" oninput="vcCalcContaRetida(true)" style="font-weight:700">
         </div>
       </div>
-      <div style="margin-top:10px;padding-top:8px;border-top:1px dashed #c8daf4">
-        <div class="t-sub" style="margin-bottom:6px"><b>Opcional:</b> se tiver apenas a numeração do relógio geral (leitura do mês passado e leitura desse mês), digite abaixo para calcular o medido desse mês:</div>
-        <div class="f2" style="gap:10px">
-          <div class="field" style="margin:0"><label style="font-size:11px">Leitura do relógio no mês passado</label>
-            <input id="vcLeitAnt" placeholder="Ex.: 67645" oninput="vcCalcLeiturasFatura()"></div>
-          <div class="field" style="margin:0"><label style="font-size:11px">Leitura do relógio nesse mês</label>
-            <input id="vcLeitAtu" placeholder="Ex.: 68390" oninput="vcCalcLeiturasFatura()"></div>
+      <div class="f2" style="gap:10px">
+        <div class="field" style="margin:0">
+          <label>Valor da conta do mês passado (R$)</label>
+          <input id="vcValAnt" value="${valAntInit!==''?String(valAntInit).replace('.',','):''}" placeholder="Ex.: 23.314,06" oninput="vcCalcContaRetida(true)">
+        </div>
+        <div class="field" style="margin:0">
+          <label id="lblVcMedAnt">Medido do mês passado (${un})</label>
+          <input id="vcMedAnt" value="${medAntInit!==''?String(medAntInit).replace('.',','):''}" placeholder="Ex.: 565" oninput="vcCalcContaRetida(true)">
         </div>
       </div>
       <div id="vcRetidaPrev" style="margin-top:10px"></div>
     </div>
 
     <div class="field">
-      <label>Valor da fatura deste mês (R$) <span class="t-sub" style="font-weight:400">(preenchido automaticamente acima ou digite direto se já tiver a conta em mãos)</span></label>
-      <input id="vcValor" value="${ed&&ed.valorFatura!=null?String(ed.valorFatura).replace('.',','):''}" placeholder="29.841,10" oninput="_vcValorAuto=false;vcCalcContaRetida(false)" style="font-weight:700;font-size:15px">
+      <label>Valor da fatura deste mês (R$) <span class="t-sub" style="font-weight:400">(calculado automaticamente acima ou digite direto)</span></label>
+      <input id="vcValor" value="${ed&&ed.valorFatura!=null?String(ed.valorFatura).replace('.',','):''}" placeholder="28.637,09" oninput="_vcValorAuto=false;vcCalcContaRetida(false)" style="font-weight:700;font-size:15px">
     </div>
 
     <div class="feed-item blue"><div class="fi-ic">${ic('gauge')}</div><div style="flex:1">
@@ -7895,6 +7903,8 @@ function vcFormCiclo(editId){
   if($('#vcComp')) $('#vcComp').value=comp;
   if($('#vcIni')) $('#vcIni').value=ed?ed.inicio||hoje:hoje;
   if($('#vcFim')) $('#vcFim').value=ed?ed.fim||hoje:hoje;
+  if($('#vcLeitAnt')) $('#vcLeitAnt').value=leitAntInit!==''?String(leitAntInit):'';
+  if($('#vcLeitAtu')) $('#vcLeitAtu').value=leitAtuInit!==''?String(leitAtuInit):'';
   if($('#vcValAnt')) $('#vcValAnt').value=valAntInit!==''?String(valAntInit).replace('.',','):'';
   if($('#vcMedAnt')) $('#vcMedAnt').value=medAntInit!==''?String(medAntInit).replace('.',','):'';
   if($('#vcConsumo')) $('#vcConsumo').value=ed&&ed.consumoFatura!=null?String(ed.consumoFatura).replace('.',','):'';
@@ -8161,7 +8171,7 @@ function viewVendasCustas(){
         ${cics.map(x=>`<option value="${x.id}" ${x.id===vcCicloAtivo?'selected':''}>${x.competencia}${x.fechado?' (fechado)':''}</option>`).join('')}</select>`:''}
       <div class="spacer"></div>
       ${P().create?`<button class="btn" onclick="vcFormCiclo()">${ic('plus')}Novo ciclo</button>`:''}
-      ${c&&!c.fechado&&P().edit?`<button class="btn ghost" id="btnVcEditarFatura" onclick="vcFormEditarCiclo('${c.id}')">${ic('edit')}Editar fatura / Conta retida</button>`:''}
+      ${c&&P().edit?`<button class="btn ghost" id="btnVcEditarFatura" onclick="vcFormEditarCiclo('${c.id}')">${ic('bolt')}Conta retida / Editar fatura</button>`:''}
       ${c?`<button class="btn ghost" onclick="vcXlsx('${c.id}')">${ic('download')}Gerar planilha (Excel)</button>`:''}
     </div>`;
   if(!c){
@@ -17583,6 +17593,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4b9ed29cb8adf41',t:'MTc5MjE4MzcyNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
