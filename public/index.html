@@ -6410,18 +6410,56 @@ function vcAnteriorDe(serv,cid,comp,unidadeId){
   }
   return null;
 }
+// acha o ciclo anterior do mesmo serviço/condomínio que já tenha valor e consumo da fatura
+function vcCicloAnterior(serv,cid,comp,ignoreId){
+  const todos=vcCiclos.filter(c=>c.servico===serv&&c.condoId===(cid||'c1')&&c.id!==ignoreId
+    &&Number(c.valorFatura)>0&&Number(c.consumoFatura)>0);
+  if(!todos.length) return null;
+  if(comp&&/^\d{2}\/\d{4}$/.test(comp)){
+    const ants=todos.filter(c=>compKey(c.competencia)<compKey(comp))
+      .sort((a,b)=>compKey(b.competencia).localeCompare(compKey(a.competencia)));
+    if(ants.length) return ants[0];
+  }
+  return todos.sort((a,b)=>compKey(b.competencia).localeCompare(compKey(a.competencia)))[0]||null;
+}
+/* Calcula o valor da conta deste mês quando a fatura ficou retida na concessionária:
+   usa a proporção exata do mês passado (valor do mês passado ÷ medido do mês passado)
+   multiplicada pelo medido deste mês. */
+function vcCalcFaturaRetida(valorMesPassado,medidoMesPassado,medidoDesteMes){
+  const vAnt=vcNum(valorMesPassado), mAnt=vcNum(medidoMesPassado), mAtu=vcNum(medidoDesteMes);
+  if(vAnt===null||vAnt<=0||mAnt===null||mAnt<=0) return null;
+  const taxa=vAnt/mAnt;
+  const taxaExib=Math.round(taxa*100)/100;
+  if(mAtu===null||mAtu<0) return {taxa,taxaExib,valorConta:null,medidoAtual:null};
+  const valorConta=Math.round(taxa*mAtu*100)/100;
+  return {taxa,taxaExib,valorConta,medidoAtual:mAtu,valorMesPassado:vAnt,medidoMesPassado:mAnt};
+}
+let _vcValorAuto=false;
 function vcCriarCiclo(dados){
+  const vAnt=vcNum($('#vcValAnt')?$('#vcValAnt').value:null);
+  const mAnt=vcNum($('#vcMedAnt')?$('#vcMedAnt').value:null);
+  const mAtu=vcNum($('#vcConsumo')?$('#vcConsumo').value:null);
+  let vFat=vcNum($('#vcValor')?$('#vcValor').value:null);
+  const calcRet=vcCalcFaturaRetida(vAnt,mAnt,mAtu);
+  const usouRetida=!!(calcRet&&calcRet.valorConta!==null&&(vFat===null||_vcValorAuto));
+  if(usouRetida&&vFat===null) vFat=calcRet.valorConta;
   const o=dados||{servico:$('#vcServ').value,condoId:$('#vcCondo').value,competencia:$('#vcComp').value.trim(),
     inicio:$('#vcIni').value,fim:$('#vcFim').value,
-    valorFatura:vcNum($('#vcValor').value),consumoFatura:vcNum($('#vcConsumo').value)};
+    valorFatura:vFat,consumoFatura:mAtu,
+    contaRetida:usouRetida,
+    valorMesPassado:usouRetida?vAnt:null,
+    medidoMesPassado:usouRetida?mAnt:null};
   if(!o.competencia) return toast('Informe a competência (MM/AAAA).');
   if(!/^\d{2}\/\d{4}$/.test(o.competencia)) return toast('Competência deve estar no formato MM/AAAA.');
   if(vcCiclos.some(c=>c.servico===o.servico&&c.condoId===o.condoId&&c.competencia===o.competencia))
     return toast('Já existe um ciclo desse serviço nessa competência.');
   const us=vcUnidadesDo(o.servico,o.condoId);
   if(!us.length) return toast('Nenhuma unidade cadastrada para este serviço. Cadastre as unidades antes de abrir o ciclo.');
+  const txtHist=o.contaRetida
+    ?`Ciclo criado com conta retida calculada pelo mês passado (mês ant.: ${brl(o.valorMesPassado)} / ${vcFmtM3(o.medidoMesPassado)} · medido mês: ${vcFmtM3(o.consumoFatura)} → ${brl(o.valorFatura)})`
+    :'Ciclo criado';
   const c=Object.assign({id:uid('vc'),fechado:false,criadoPor:session?session.nome:'',criadoEm:nowStamp(),
-    historico:[{q:session?session.nome:'',w:nowStamp(),t:'Ciclo criado'}],linhas:[]},o);
+    historico:[{q:session?session.nome:'',w:nowStamp(),t:txtHist}],linhas:[]},o);
   // Todo ciclo nasce com TODAS as unidades cadastradas do serviço — sempre as mesmas,
   // já com a medição anterior puxada do último ciclo que teve leitura.
   us.forEach(u=>{
@@ -6431,6 +6469,42 @@ function vcCriarCiclo(dados){
   });
   vcCiclos.push(c); vcCicloAtivo=c.id; closeModal(); render();
   toast(`Ciclo ${o.competencia} criado com ${c.linhas.length} unidade(s).`);
+}
+function vcSalvarEdicaoCiclo(id,dados){
+  const c=vcCiclo(id); if(!c) return;
+  if(c.fechado) return toast('Ciclo fechado. Reabra o ciclo antes de alterar os dados da fatura.');
+  const vAnt=vcNum($('#vcValAnt')?$('#vcValAnt').value:null);
+  const mAnt=vcNum($('#vcMedAnt')?$('#vcMedAnt').value:null);
+  const mAtu=vcNum($('#vcConsumo')?$('#vcConsumo').value:null);
+  let vFat=vcNum($('#vcValor')?$('#vcValor').value:null);
+  const calcRet=vcCalcFaturaRetida(vAnt,mAnt,mAtu);
+  const usouRetida=dados&&dados.contaRetida!==undefined
+    ? !!dados.contaRetida
+    : !!(calcRet&&calcRet.valorConta!==null&&(vFat===null||_vcValorAuto));
+  if(usouRetida&&vFat===null&&calcRet) vFat=calcRet.valorConta;
+  const o=dados||{
+    inicio:$('#vcIni')?$('#vcIni').value:c.inicio,
+    fim:$('#vcFim')?$('#vcFim').value:c.fim,
+    valorFatura:vFat,
+    consumoFatura:mAtu,
+    contaRetida:usouRetida,
+    valorMesPassado:usouRetida?vAnt:null,
+    medidoMesPassado:usouRetida?mAnt:null
+  };
+  c.inicio=o.inicio||c.inicio;
+  c.fim=o.fim||c.fim;
+  c.valorFatura=o.valorFatura;
+  c.consumoFatura=o.consumoFatura;
+  c.contaRetida=!!o.contaRetida;
+  c.valorMesPassado=o.contaRetida?o.valorMesPassado:null;
+  c.medidoMesPassado=o.contaRetida?o.medidoMesPassado:null;
+  const det=c.contaRetida
+    ?`Fatura calculada (conta retida): mês passado ${brl(c.valorMesPassado)} / ${vcFmtM3(c.medidoMesPassado)} · medido deste mês ${vcFmtM3(c.consumoFatura)} → conta ${brl(c.valorFatura)}`
+    :`Fatura atualizada: valor ${brl(c.valorFatura)} · consumo ${vcFmtM3(c.consumoFatura)}`;
+  (c.historico=c.historico||[]).push({q:session?session.nome:'',w:nowStamp(),t:det});
+  audit('Fatura do ciclo atualizada',c.competencia,det,c.condoId,'Vendas e Custas');
+  save(); closeModal(); render();
+  toast(`Fatura do ciclo ${c.competencia} atualizada (${brl(c.valorFatura)}).`);
 }
 function vcSincronizarLinhas(id){
   const c=vcCiclo(id); if(!c) return;
@@ -7741,29 +7815,154 @@ function vcMesExt(comp){
 }
 
 /* ---- tela Vendas e Custas ---- */
-function vcFormCiclo(){
-  if(!P().create) return toast('Sem permissão.');
+function vcFormEditarCiclo(id){
+  return vcFormCiclo(id);
+}
+function vcFormCiclo(editId){
+  const ed=editId?vcCiclo(editId):null;
+  if(ed&&!P().edit) return toast('Sem permissão.');
+  if(!ed&&!P().create) return toast('Sem permissão.');
+  if(ed&&ed.fechado) return toast('Ciclo fechado. Reabra o ciclo antes de editar a fatura.');
   const hoje=today(), d=new Date();
-  const comp=`${pad(d.getMonth()+1)}/${d.getFullYear()}`;
-  $('#modalTitle').textContent='Novo ciclo de faturamento';
+  const serv=ed?ed.servico:vcTab;
+  const cid=ed?ed.condoId:(condoFilter==='all'?'c1':condoFilter);
+  const comp=ed?ed.competencia:`${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+  const ant=vcCicloAnterior(serv,cid,comp,ed?ed.id:null);
+  const valAntInit=ed&&ed.valorMesPassado!=null?ed.valorMesPassado:(ant&&ant.valorFatura!=null?ant.valorFatura:'');
+  const medAntInit=ed&&ed.medidoMesPassado!=null?ed.medidoMesPassado:(ant&&ant.consumoFatura!=null?ant.consumoFatura:'');
+  const un=serv==='agua'?'m³':'kWh';
+  $('#modalTitle').textContent=ed?`Editar fatura / Conta retida — ${ed.competencia}`:'Novo ciclo de faturamento';
   $('#modalBody').innerHTML=`
-    <div class="f2">
-      <div class="field"><label>Serviço</label><select id="vcServ">
-        <option value="agua" ${vcTab==='agua'?'selected':''}>Água</option>
-        <option value="energia" ${vcTab==='energia'?'selected':''}>Energia</option></select></div>
-      <div class="field"><label>Condomínio</label><select id="vcCondo">${condosDo('vendascustas').map(x=>`<option value="${x.id}">${x.nome}</option>`).join('')}</select></div>
-      <div class="field"><label>Competência (MM/AAAA)</label><input id="vcComp" value="${comp}" placeholder="08/2026"></div>
-      <div class="field"><label>Valor da fatura (R$)</label><input id="vcValor" placeholder="29.841,10"></div>
-      <div class="field"><label>Início do período</label><input type="date" id="vcIni" value="${hoje}"></div>
-      <div class="field"><label>Fim do período</label><input type="date" id="vcFim" value="${hoje}"></div>
-      <div class="field"><label>Consumo total da fatura</label><input id="vcConsumo" placeholder="721"></div>
+    <div class="f3">
+      <div class="field"><label>Serviço</label><select id="vcServ" ${ed?'disabled':''} onchange="vcPreencherAntCiclo('${ed?ed.id:''}')">
+        <option value="agua" ${serv==='agua'?'selected':''}>Água</option>
+        <option value="energia" ${serv==='energia'?'selected':''}>Energia</option></select></div>
+      <div class="field"><label>Condomínio</label><select id="vcCondo" ${ed?'disabled':''} onchange="vcPreencherAntCiclo('${ed?ed.id:''}')">${condosDo('vendascustas').map(x=>`<option value="${x.id}" ${cid===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
+      <div class="field"><label>Competência (MM/AAAA)</label><input id="vcComp" value="${esc(comp)}" placeholder="09/2026" ${ed?'disabled':''} oninput="vcPreencherAntCiclo('${ed?ed.id:''}')"></div>
     </div>
+    <div class="f2">
+      <div class="field"><label>Início do período</label><input type="date" id="vcIni" value="${esc(ed?ed.inicio||hoje:hoje)}"></div>
+      <div class="field"><label>Fim do período</label><input type="date" id="vcFim" value="${esc(ed?ed.fim||hoje:hoje)}"></div>
+    </div>
+
+    <div class="card" style="box-shadow:none;background:#f4f8ff;border:1px solid #bfd6f6;padding:12px;margin:10px 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <div style="font-weight:800;color:var(--navy)">${ic('bolt')} Conta retida? Calcular valor da conta automático pelo mês passado</div>
+        <span id="vcAntRefBadge" class="badge b-tag">${ant?`Base sugerida: ciclo ${ant.competencia}`:'Preencha os dados do mês passado'}</span>
+      </div>
+      <div class="t-sub" style="margin-bottom:10px">
+        Informe o <b>valor do mês passado</b>, o <b>medido do mês passado</b> e o <b>medido desse mês</b>: o sistema calcula a tarifa proporcional e preenche o <b>Valor da fatura (R$)</b> automaticamente.
+      </div>
+      <div class="f3" style="gap:10px">
+        <div class="field" style="margin:0">
+          <label>1. Valor do mês passado (R$)</label>
+          <input id="vcValAnt" value="${valAntInit!==''?String(valAntInit).replace('.',','):''}" placeholder="Ex.: 29.841,10" oninput="vcCalcContaRetida(true)">
+        </div>
+        <div class="field" style="margin:0">
+          <label id="lblVcMedAnt">2. Medido do mês passado (${un})</label>
+          <input id="vcMedAnt" value="${medAntInit!==''?String(medAntInit).replace('.',','):''}" placeholder="Ex.: 721" oninput="vcCalcContaRetida(true)">
+        </div>
+        <div class="field" style="margin:0">
+          <label id="lblVcMedAtu">3. Medido desse mês (${un})</label>
+          <input id="vcConsumo" value="${ed&&ed.consumoFatura!=null?String(ed.consumoFatura).replace('.',','):''}" placeholder="Ex.: 745" oninput="vcCalcContaRetida(true)">
+        </div>
+      </div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px dashed #c8daf4">
+        <div class="t-sub" style="margin-bottom:6px"><b>Opcional:</b> se tiver apenas a numeração do relógio geral (leitura do mês passado e leitura desse mês), digite abaixo para calcular o medido desse mês:</div>
+        <div class="f2" style="gap:10px">
+          <div class="field" style="margin:0"><label style="font-size:11px">Leitura do relógio no mês passado</label>
+            <input id="vcLeitAnt" placeholder="Ex.: 67645" oninput="vcCalcLeiturasFatura()"></div>
+          <div class="field" style="margin:0"><label style="font-size:11px">Leitura do relógio nesse mês</label>
+            <input id="vcLeitAtu" placeholder="Ex.: 68390" oninput="vcCalcLeiturasFatura()"></div>
+        </div>
+      </div>
+      <div id="vcRetidaPrev" style="margin-top:10px"></div>
+    </div>
+
+    <div class="field">
+      <label>Valor da fatura deste mês (R$) <span class="t-sub" style="font-weight:400">(preenchido automaticamente acima ou digite direto se já tiver a conta em mãos)</span></label>
+      <input id="vcValor" value="${ed&&ed.valorFatura!=null?String(ed.valorFatura).replace('.',','):''}" placeholder="29.841,10" oninput="_vcValorAuto=false;vcCalcContaRetida(false)" style="font-weight:700;font-size:15px">
+    </div>
+
     <div class="feed-item blue"><div class="fi-ic">${ic('gauge')}</div><div style="flex:1">
       <div class="ft">O valor por unidade é calculado sozinho</div>
-      <div class="fd">R$/unidade = valor da fatura ÷ consumo total. As medições anteriores vêm do ciclo passado.</div></div></div>`;
+      <div class="fd">R$/unidade = valor da fatura ÷ consumo total. As medições anteriores de cada loja/sala vêm do ciclo passado.</div></div></div>`;
   $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
-    <button class="btn" onclick="vcCriarCiclo()">Criar ciclo</button>`;
+    <button class="btn primary" onclick="${ed?`vcSalvarEdicaoCiclo('${ed.id}')`:'vcCriarCiclo()'}">${ed?'Salvar fatura':'Criar ciclo'}</button>`;
   $('#modal').classList.add('open');
+  if($('#vcServ')) $('#vcServ').value=serv;
+  if($('#vcCondo')) $('#vcCondo').value=cid;
+  if($('#vcComp')) $('#vcComp').value=comp;
+  if($('#vcIni')) $('#vcIni').value=ed?ed.inicio||hoje:hoje;
+  if($('#vcFim')) $('#vcFim').value=ed?ed.fim||hoje:hoje;
+  if($('#vcValAnt')) $('#vcValAnt').value=valAntInit!==''?String(valAntInit).replace('.',','):'';
+  if($('#vcMedAnt')) $('#vcMedAnt').value=medAntInit!==''?String(medAntInit).replace('.',','):'';
+  if($('#vcConsumo')) $('#vcConsumo').value=ed&&ed.consumoFatura!=null?String(ed.consumoFatura).replace('.',','):'';
+  if($('#vcValor')) $('#vcValor').value=ed&&ed.valorFatura!=null?String(ed.valorFatura).replace('.',','):'';
+  _vcValorAuto=!!(ed&&ed.contaRetida);
+  vcCalcContaRetida(false);
+}
+function vcPreencherAntCiclo(editId){
+  const serv=$('#vcServ')?$('#vcServ').value:vcTab;
+  const cid=$('#vcCondo')?$('#vcCondo').value:'c1';
+  const comp=$('#vcComp')?$('#vcComp').value.trim():'';
+  const un=serv==='agua'?'m³':'kWh';
+  const l1=$('#lblVcMedAnt'), l2=$('#lblVcMedAtu');
+  if(l1) l1.textContent=`2. Medido do mês passado (${un})`;
+  if(l2) l2.textContent=`3. Medido desse mês (${un})`;
+  const ant=vcCicloAnterior(serv,cid,comp,editId||null);
+  const b=$('#vcAntRefBadge');
+  if(ant){
+    if($('#vcValAnt')) $('#vcValAnt').value=String(ant.valorFatura).replace('.',',');
+    if($('#vcMedAnt')) $('#vcMedAnt').value=String(ant.consumoFatura).replace('.',',');
+    if(b) b.textContent=`Base sugerida: ciclo ${ant.competencia}`;
+  }else{
+    if(b) b.textContent='Preencha os dados do mês passado';
+  }
+  vcCalcContaRetida(true);
+}
+function vcCalcLeiturasFatura(){
+  const a=vcNum($('#vcLeitAnt')?$('#vcLeitAnt').value:null);
+  const b=vcNum($('#vcLeitAtu')?$('#vcLeitAtu').value:null);
+  if(a!==null&&b!==null&&b>=a){
+    const diff=Math.round((b-a)*100)/100;
+    if($('#vcConsumo')) $('#vcConsumo').value=String(diff).replace('.',',');
+    vcCalcContaRetida(true);
+  }
+}
+function vcCalcContaRetida(forcarAuto){
+  const serv=$('#vcServ')?$('#vcServ').value:vcTab;
+  const un=serv==='agua'?'m³':'kWh';
+  const vAnt=vcNum($('#vcValAnt')?$('#vcValAnt').value:null);
+  const mAnt=vcNum($('#vcMedAnt')?$('#vcMedAnt').value:null);
+  const mAtu=vcNum($('#vcConsumo')?$('#vcConsumo').value:null);
+  const box=$('#vcRetidaPrev');
+  const inpVal=$('#vcValor');
+  const res=vcCalcFaturaRetida(vAnt,mAnt,mAtu);
+  if(!res){
+    if(box) box.innerHTML='';
+    return null;
+  }
+  if(res.valorConta!==null && inpVal && (forcarAuto || !String(inpVal.value||'').trim() || _vcValorAuto)){
+    inpVal.value=res.valorConta.toFixed(2).replace('.',',');
+    _vcValorAuto=true;
+  }
+  if(box){
+    if(res.valorConta!==null){
+      box.innerHTML=`<div style="background:#e8f6ee;border:1px solid #9adbb5;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:12px;color:#145a32">Tarifa do mês passado: <b>${brl(res.taxaExib)} / ${un}</b> (${brl(vAnt)} ÷ ${vcFmtM3(mAnt)} ${un})</div>
+          <div style="font-size:14px;font-weight:800;color:#0f5132;margin-top:2px">Valor da conta calculado p/ este mês: ${brl(res.valorConta)} <span style="font-weight:500;font-size:12px">(${vcFmtM3(mAtu)} ${un} × ${brl(res.taxaExib)})</span></div>
+        </div>
+        <span class="badge b-conc">Preenchido automático</span>
+      </div>`;
+    }else{
+      box.innerHTML=`<div style="background:#fff;border:1px solid #d0e0f5;border-radius:8px;padding:8px 12px;font-size:12.5px;color:var(--navy)">
+        Tarifa base do mês passado: <b>${brl(res.taxaExib)} / ${un}</b> (${brl(vAnt)} ÷ ${vcFmtM3(mAnt)} ${un}) — informe o <b>Medido desse mês</b> para calcular o valor da conta.
+      </div>`;
+    }
+  }
+  return res;
 }
 function vcFormUnidade(id){
   if(!P().create) return toast('Sem permissão.');
@@ -7962,6 +8161,7 @@ function viewVendasCustas(){
         ${cics.map(x=>`<option value="${x.id}" ${x.id===vcCicloAtivo?'selected':''}>${x.competencia}${x.fechado?' (fechado)':''}</option>`).join('')}</select>`:''}
       <div class="spacer"></div>
       ${P().create?`<button class="btn" onclick="vcFormCiclo()">${ic('plus')}Novo ciclo</button>`:''}
+      ${c&&!c.fechado&&P().edit?`<button class="btn ghost" id="btnVcEditarFatura" onclick="vcFormEditarCiclo('${c.id}')">${ic('edit')}Editar fatura / Conta retida</button>`:''}
       ${c?`<button class="btn ghost" onclick="vcXlsx('${c.id}')">${ic('download')}Gerar planilha (Excel)</button>`:''}
     </div>`;
   if(!c){
@@ -7972,8 +8172,14 @@ function viewVendasCustas(){
   const dv=vcDivergencia(c);
   html+=`
     <div class="grid metrics" style="margin-bottom:14px">
-      <div class="card metric"><div class="lbl">Valor da fatura</div><div class="val" style="font-size:22px">${brl(c.valorFatura)}</div>
-        <div class="sub">${c.inicio?fmt(c.inicio):'—'} a ${c.fim?fmt(c.fim):'—'}</div></div>
+      <div class="card metric">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+          <div class="lbl">Valor da fatura</div>
+          ${c.contaRetida?'<span class="badge b-avencer" style="font-size:10px">Conta retida</span>':''}
+        </div>
+        <div class="val" style="font-size:22px">${brl(c.valorFatura)}</div>
+        <div class="sub">${c.contaRetida&&c.valorMesPassado?`Base ant.: ${brl(c.valorMesPassado)} ÷ ${vcFmtM3(c.medidoMesPassado)} ${un}`:`${c.inicio?fmt(c.inicio):'—'} a ${c.fim?fmt(c.fim):'—'}`}</div>
+      </div>
       <div class="card metric"><div class="lbl">Consumo da fatura</div><div class="val" style="font-size:22px">${vcFmtM3(c.consumoFatura)}</div><div class="sub">${un}</div></div>
       <div class="card metric blue"><div class="lbl">Valor por ${un}</div><div class="val" style="font-size:22px">${brl(t.unit)}</div>
         <div class="sub">fatura ÷ consumo</div></div>
