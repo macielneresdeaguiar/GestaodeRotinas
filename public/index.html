@@ -2218,6 +2218,7 @@ function load(d){
     if(migrarUnidSind()) mig=true;
     if(migrarSalasIptu()) mig=true;
     if(migrarCessoesLgpd()) mig=true;
+    if(migrarEnergiaPadrao()) mig=true;
     if(mig) save();
     migrarLaudosParaFora();   // assincrona: salva sozinha quando terminar
     return true;
@@ -6434,30 +6435,41 @@ function vcCalcFaturaRetida(valorMesPassado,medidoMesPassado,medidoDesteMes){
   const valorConta=Math.round(taxa*mAtu*100)/100;
   return {taxa,taxaExib,valorConta,medidoAtual:mAtu,valorMesPassado:vAnt,medidoMesPassado:mAnt};
 }
+const VC_TAXA_PADRAO_ENERGIA=0.88;
+function vcTaxaPadraoEnergia(){
+  const v=CFG&&CFG.vcTaxaEnergia!=null?Number(CFG.vcTaxaEnergia):VC_TAXA_PADRAO_ENERGIA;
+  return v>0?v:VC_TAXA_PADRAO_ENERGIA;
+}
 let _vcValorAuto=false;
 function vcCriarCiclo(dados){
+  const servUI=$('#vcServ')?$('#vcServ').value:vcTab;
   const vAnt=vcNum($('#vcValAnt')?$('#vcValAnt').value:null);
   const mAnt=vcNum($('#vcMedAnt')?$('#vcMedAnt').value:null);
   const mAtu=vcNum($('#vcConsumo')?$('#vcConsumo').value:null);
   let vFat=vcNum($('#vcValor')?$('#vcValor').value:null);
-  const calcRet=vcCalcFaturaRetida(vAnt,mAnt,mAtu);
+  const txFixaUI=vcNum($('#vcTaxaFixa')?$('#vcTaxaFixa').value:null);
+  const calcRet=servUI==='agua'?vcCalcFaturaRetida(vAnt,mAnt,mAtu):null;
   const usouRetida=!!(calcRet&&calcRet.valorConta!==null&&(vFat===null||_vcValorAuto));
   if(usouRetida&&vFat===null) vFat=calcRet.valorConta;
-  const o=dados||{servico:$('#vcServ').value,condoId:$('#vcCondo').value,competencia:$('#vcComp').value.trim(),
+  const o=dados||{servico:servUI,condoId:$('#vcCondo').value,competencia:$('#vcComp').value.trim(),
     inicio:$('#vcIni').value,fim:$('#vcFim').value,
     valorFatura:vFat,consumoFatura:mAtu,
+    taxaFixa:servUI==='energia'?(txFixaUI||vcTaxaPadraoEnergia()):null,
     contaRetida:usouRetida,
     valorMesPassado:usouRetida?vAnt:null,
     medidoMesPassado:usouRetida?mAnt:null};
+  if(o.servico==='energia'&&o.taxaFixa&&CFG) CFG.vcTaxaEnergia=Number(o.taxaFixa);
   if(!o.competencia) return toast('Informe a competência (MM/AAAA).');
   if(!/^\d{2}\/\d{4}$/.test(o.competencia)) return toast('Competência deve estar no formato MM/AAAA.');
   if(vcCiclos.some(c=>c.servico===o.servico&&c.condoId===o.condoId&&c.competencia===o.competencia))
     return toast('Já existe um ciclo desse serviço nessa competência.');
   const us=vcUnidadesDo(o.servico,o.condoId);
   if(!us.length) return toast('Nenhuma unidade cadastrada para este serviço. Cadastre as unidades antes de abrir o ciclo.');
-  const txtHist=o.contaRetida
-    ?`Ciclo criado com conta retida calculada pelo mês passado (mês ant.: ${brl(o.valorMesPassado)} / ${vcFmtM3(o.medidoMesPassado)} · medido mês: ${vcFmtM3(o.consumoFatura)} → ${brl(o.valorFatura)})`
-    :'Ciclo criado';
+  const txtHist=o.servico==='energia'&&o.taxaFixa
+    ?`Ciclo criado com tarifa padrão fixa de ${brl(o.taxaFixa)}`
+    :o.contaRetida
+      ?`Ciclo criado com conta retida calculada pelo mês passado (mês ant.: ${brl(o.valorMesPassado)} / ${vcFmtM3(o.medidoMesPassado)} · medido mês: ${vcFmtM3(o.consumoFatura)} → ${brl(o.valorFatura)})`
+      :'Ciclo criado';
   const c=Object.assign({id:uid('vc'),fechado:false,criadoPor:session?session.nome:'',criadoEm:nowStamp(),
     historico:[{q:session?session.nome:'',w:nowStamp(),t:txtHist}],linhas:[]},o);
   // Todo ciclo nasce com TODAS as unidades cadastradas do serviço — sempre as mesmas,
@@ -6477,8 +6489,9 @@ function vcSalvarEdicaoCiclo(id,dados){
   const mAtu=vcNum($('#vcConsumo')?$('#vcConsumo').value:null);
   const lAnt=vcNum($('#vcLeitAnt')?$('#vcLeitAnt').value:null);
   const lAtu=vcNum($('#vcLeitAtu')?$('#vcLeitAtu').value:null);
+  const txFixaUI=vcNum($('#vcTaxaFixa')?$('#vcTaxaFixa').value:null);
   let vFat=vcNum($('#vcValor')?$('#vcValor').value:null);
-  const calcRet=vcCalcFaturaRetida(vAnt,mAnt,mAtu);
+  const calcRet=c.servico==='agua'?vcCalcFaturaRetida(vAnt,mAnt,mAtu):null;
   const usouRetida=dados&&dados.contaRetida!==undefined
     ? !!dados.contaRetida
     : !!(calcRet&&calcRet.valorConta!==null&&(vFat===null||_vcValorAuto));
@@ -6488,6 +6501,7 @@ function vcSalvarEdicaoCiclo(id,dados){
     fim:$('#vcFim')?$('#vcFim').value:c.fim,
     valorFatura:vFat,
     consumoFatura:mAtu,
+    taxaFixa:c.servico==='energia'?(txFixaUI||c.taxaFixa||vcTaxaPadraoEnergia()):c.taxaFixa,
     contaRetida:usouRetida,
     valorMesPassado:usouRetida?vAnt:null,
     medidoMesPassado:usouRetida?mAnt:null,
@@ -6498,18 +6512,22 @@ function vcSalvarEdicaoCiclo(id,dados){
   c.fim=o.fim||c.fim;
   c.valorFatura=o.valorFatura;
   c.consumoFatura=o.consumoFatura;
+  if(o.taxaFixa!==undefined) c.taxaFixa=o.taxaFixa;
+  if(c.servico==='energia'&&c.taxaFixa&&CFG) CFG.vcTaxaEnergia=Number(c.taxaFixa);
   c.contaRetida=!!o.contaRetida;
   c.valorMesPassado=o.contaRetida?o.valorMesPassado:null;
   c.medidoMesPassado=o.contaRetida?o.medidoMesPassado:null;
   if(o.leituraRelogioAnt!==null&&o.leituraRelogioAnt!==undefined) c.leituraRelogioAnt=o.leituraRelogioAnt;
   if(o.leituraRelogioAtu!==null&&o.leituraRelogioAtu!==undefined) c.leituraRelogioAtu=o.leituraRelogioAtu;
-  const det=c.contaRetida
-    ?`Fatura calculada (conta retida): mês passado ${brl(c.valorMesPassado)} / ${vcFmtM3(c.medidoMesPassado)} · medido deste mês ${vcFmtM3(c.consumoFatura)} → conta ${brl(c.valorFatura)}`
-    :`Fatura atualizada: valor ${brl(c.valorFatura)} · consumo ${vcFmtM3(c.consumoFatura)}`;
+  const det=c.servico==='energia'&&c.taxaFixa
+    ?`Tarifa padrão de energia atualizada: ${brl(c.taxaFixa)}`
+    :c.contaRetida
+      ?`Fatura calculada (conta retida): mês passado ${brl(c.valorMesPassado)} / ${vcFmtM3(c.medidoMesPassado)} · medido deste mês ${vcFmtM3(c.consumoFatura)} → conta ${brl(c.valorFatura)}`
+      :`Fatura atualizada: valor ${brl(c.valorFatura)} · consumo ${vcFmtM3(c.consumoFatura)}`;
   (c.historico=c.historico||[]).push({q:session?session.nome:'',w:nowStamp(),t:det});
   audit('Fatura do ciclo atualizada',c.competencia,det,c.condoId,'Vendas e Custas');
   save(); closeModal(); render();
-  toast(`Fatura do ciclo ${c.competencia} atualizada (${brl(c.valorFatura)}).`);
+  toast(c.servico==='energia'&&c.taxaFixa?`Ciclo ${c.competencia} atualizado (tarifa padrão ${brl(c.taxaFixa)}).`:`Fatura do ciclo ${c.competencia} atualizada (${brl(c.valorFatura)}).`);
 }
 function vcSincronizarLinhas(id){
   const c=vcCiclo(id); if(!c) return;
@@ -6543,13 +6561,16 @@ function vcNum(v){
   else if(/^-?\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,'');
   const n=Number(t); return isNaN(n)?null:n;
 }
-// R$/m³ = valor da fatura ÷ consumo total da fatura.
+// R$/m³ = valor da fatura ÷ consumo total da fatura (ou tarifa fixa padrão de R$ 0,88 para Energia).
 // vcValorUnit -> exibição (2 casas). vcTaxa -> precisão cheia, usada na conta,
 // exatamente como a planilha faz (41,38848... e não o 41,39 mostrado na tela).
 function vcTaxa(c){
   if(!c) return 0;
+  if(c.taxaFixa!==undefined&&c.taxaFixa!==null&&Number(c.taxaFixa)>0) return Number(c.taxaFixa);
   const v=Number(c.valorFatura)||0, q=Number(c.consumoFatura)||0;
-  return q?v/q:0;
+  if(v>0&&q>0) return v/q;
+  if(c.servico==='energia') return vcTaxaPadraoEnergia();
+  return 0;
 }
 function vcValorUnit(c){ return Math.round(vcTaxa(c)*100)/100 }
 function vcConsumoLinha(l){
@@ -7602,10 +7623,10 @@ function vcCicloVenda(v,comp){
   if(!cands.length) return {ciclo:null,alvo,exato:false};
   const ex=cands.find(c=>c.competencia===alvo);
   if(ex) return {ciclo:ex,alvo,exato:true};
-  const ant=cands.filter(c=>compKey(c.competencia)<compKey(alvo))
+  const rec=cands.filter(c=>compKey(c.competencia)<=compKey(comp))
     .sort((a,b)=>compKey(b.competencia).localeCompare(compKey(a.competencia)))[0];
-  if(ant) return {ciclo:ant,alvo,exato:false};
-  const pos=cands.slice().sort((a,b)=>compKey(a.competencia).localeCompare(compKey(b.competencia)))[0];
+  if(rec) return {ciclo:rec,alvo,exato:false};
+  const pos=cands.slice().sort((a,b)=>compKey(b.competencia).localeCompare(compKey(a.competencia)))[0];
   return {ciclo:pos,alvo,exato:false};
 }
 // valor: fixo repete · água/energia vem do rateio · variável vem do que foi digitado
@@ -7837,6 +7858,7 @@ function vcFormCiclo(editId){
   const medAntInit=ed&&ed.medidoMesPassado!=null?ed.medidoMesPassado:(ant&&ant.consumoFatura!=null?ant.consumoFatura:'');
   const leitAntInit=ed&&ed.leituraRelogioAnt!=null?ed.leituraRelogioAnt:'';
   const leitAtuInit=ed&&ed.leituraRelogioAtu!=null?ed.leituraRelogioAtu:'';
+  const taxaEnergiaInit=ed&&ed.taxaFixa!=null?ed.taxaFixa:vcTaxaPadraoEnergia();
   const un=serv==='agua'?'m³':'kWh';
   $('#modalTitle').textContent=ed?`Editar fatura / Conta retida — ${ed.competencia}`:'Novo ciclo de faturamento';
   $('#modalBody').innerHTML=`
@@ -7852,49 +7874,65 @@ function vcFormCiclo(editId){
       <div class="field"><label>Fim do período</label><input type="date" id="vcFim" value="${esc(ed?ed.fim||hoje:hoje)}"></div>
     </div>
 
-    <div class="card" style="box-shadow:none;background:#f4f8ff;border:1px solid #bfd6f6;padding:12px;margin:10px 0">
+    <div id="vcBoxEnergia" class="card" style="box-shadow:none;background:#f0fdf4;border:1px solid #9adbb5;padding:12px;margin:10px 0;display:${serv==='energia'?'block':'none'}">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-        <div style="font-weight:800;color:var(--navy)">${ic('bolt')} Conta retida? Calcular valor da conta automático</div>
-        <span id="vcAntRefBadge" class="badge b-tag">${ant?`Base puxada: ciclo ${ant.competencia}`:'Preencha os dados do mês passado'}</span>
+        <div style="font-weight:800;color:#0f5132">${ic('bolt')} Tarifa Padrão Fixa de Energia (R$ 0,88)</div>
+        <span class="badge b-conc">Padrão fixo ativo</span>
       </div>
-      <div class="t-sub" style="margin-bottom:10px">
-        Digite a <b>última medição</b> e a <b>medição atual</b> (ou direto o <b>medido desse mês</b>) junto com o <b>valor</b> e <b>medido do mês passado</b> para preencher o valor da conta automaticamente:
+      <div class="t-sub" style="margin-bottom:10px;color:#145a32">
+        Como são duas contas de energia e ficam retidas sempre, o cálculo mantém por padrão o mesmo valor unitário de <b>R$ 0,88</b> (sem precisar preencher Valor da Fatura nem Consumo Total da Fatura).
       </div>
-      <div class="f3" style="gap:10px;margin-bottom:10px">
-        <div class="field" style="margin:0">
-          <label>Última medição do relógio</label>
-          <input id="vcLeitAnt" value="${esc(leitAntInit)}" placeholder="Ex.: 67.708" oninput="vcCalcLeiturasFatura()">
-        </div>
-        <div class="field" style="margin:0">
-          <label>Medição atual do relógio</label>
-          <input id="vcLeitAtu" value="${esc(leitAtuInit)}" placeholder="Ex.: 68402" oninput="vcCalcLeiturasFatura()">
-        </div>
-        <div class="field" style="margin:0">
-          <label id="lblVcMedAtu">Medido desse mês (${un})</label>
-          <input id="vcConsumo" value="${ed&&ed.consumoFatura!=null?String(ed.consumoFatura).replace('.',','):''}" placeholder="Ex.: 694" oninput="vcCalcContaRetida(true)" style="font-weight:700">
-        </div>
+      <div class="field" style="margin:0;max-width:240px">
+        <label>Valor unitário padrão (R$)</label>
+        <input id="vcTaxaFixa" value="${String(taxaEnergiaInit.toFixed?taxaEnergiaInit.toFixed(2):taxaEnergiaInit).replace('.',',')}" placeholder="0,88" style="font-weight:800;font-size:15px">
       </div>
-      <div class="f2" style="gap:10px">
-        <div class="field" style="margin:0">
-          <label>Valor da conta do mês passado (R$)</label>
-          <input id="vcValAnt" value="${valAntInit!==''?String(valAntInit).replace('.',','):''}" placeholder="Ex.: 23.314,06" oninput="vcCalcContaRetida(true)">
-        </div>
-        <div class="field" style="margin:0">
-          <label id="lblVcMedAnt">Medido do mês passado (${un})</label>
-          <input id="vcMedAnt" value="${medAntInit!==''?String(medAntInit).replace('.',','):''}" placeholder="Ex.: 565" oninput="vcCalcContaRetida(true)">
-        </div>
-      </div>
-      <div id="vcRetidaPrev" style="margin-top:10px"></div>
     </div>
 
-    <div class="field">
-      <label>Valor da fatura deste mês (R$) <span class="t-sub" style="font-weight:400">(calculado automaticamente acima ou digite direto)</span></label>
-      <input id="vcValor" value="${ed&&ed.valorFatura!=null?String(ed.valorFatura).replace('.',','):''}" placeholder="28.637,09" oninput="_vcValorAuto=false;vcCalcContaRetida(false)" style="font-weight:700;font-size:15px">
+    <div id="vcBoxAguaRetida" style="display:${serv==='agua'?'block':'none'}">
+      <div class="card" style="box-shadow:none;background:#f4f8ff;border:1px solid #bfd6f6;padding:12px;margin:10px 0">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          <div style="font-weight:800;color:var(--navy)">${ic('bolt')} Conta retida? Calcular valor da conta automático</div>
+          <span id="vcAntRefBadge" class="badge b-tag">${ant?`Base puxada: ciclo ${ant.competencia}`:'Preencha os dados do mês passado'}</span>
+        </div>
+        <div class="t-sub" style="margin-bottom:10px">
+          Digite a <b>última medição</b> e a <b>medição atual</b> (ou direto o <b>medido desse mês</b>) junto com o <b>valor</b> e <b>medido do mês passado</b> para preencher o valor da conta automaticamente:
+        </div>
+        <div class="f3" style="gap:10px;margin-bottom:10px">
+          <div class="field" style="margin:0">
+            <label>Última medição do relógio</label>
+            <input id="vcLeitAnt" value="${esc(leitAntInit)}" placeholder="Ex.: 67.708" oninput="vcCalcLeiturasFatura()">
+          </div>
+          <div class="field" style="margin:0">
+            <label>Medição atual do relógio</label>
+            <input id="vcLeitAtu" value="${esc(leitAtuInit)}" placeholder="Ex.: 68402" oninput="vcCalcLeiturasFatura()">
+          </div>
+          <div class="field" style="margin:0">
+            <label id="lblVcMedAtu">Medido desse mês (${un})</label>
+            <input id="vcConsumo" value="${ed&&ed.consumoFatura!=null?String(ed.consumoFatura).replace('.',','):''}" placeholder="Ex.: 694" oninput="vcCalcContaRetida(true)" style="font-weight:700">
+          </div>
+        </div>
+        <div class="f2" style="gap:10px">
+          <div class="field" style="margin:0">
+            <label>Valor da conta do mês passado (R$)</label>
+            <input id="vcValAnt" value="${valAntInit!==''?String(valAntInit).replace('.',','):''}" placeholder="Ex.: 23.314,06" oninput="vcCalcContaRetida(true)">
+          </div>
+          <div class="field" style="margin:0">
+            <label id="lblVcMedAnt">Medido do mês passado (${un})</label>
+            <input id="vcMedAnt" value="${medAntInit!==''?String(medAntInit).replace('.',','):''}" placeholder="Ex.: 565" oninput="vcCalcContaRetida(true)">
+          </div>
+        </div>
+        <div id="vcRetidaPrev" style="margin-top:10px"></div>
+      </div>
+
+      <div class="field">
+        <label>Valor da fatura deste mês (R$) <span class="t-sub" style="font-weight:400">(calculado automaticamente acima ou digite direto)</span></label>
+        <input id="vcValor" value="${ed&&ed.valorFatura!=null?String(ed.valorFatura).replace('.',','):''}" placeholder="28.637,09" oninput="_vcValorAuto=false;vcCalcContaRetida(false)" style="font-weight:700;font-size:15px">
+      </div>
     </div>
 
     <div class="feed-item blue"><div class="fi-ic">${ic('gauge')}</div><div style="flex:1">
       <div class="ft">O valor por unidade é calculado sozinho</div>
-      <div class="fd">R$/unidade = valor da fatura ÷ consumo total. As medições anteriores de cada loja/sala vêm do ciclo passado.</div></div></div>`;
+      <div class="fd">${serv==='energia'?'Em Energia o sistema multiplica o consumo medido de cada unidade pela tarifa padrão fixa de R$ 0,88.':'R$/unidade = valor da fatura ÷ consumo total. As medições anteriores de cada loja/sala vêm do ciclo passado.'}</div></div></div>`;
   $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
     <button class="btn primary" onclick="${ed?`vcSalvarEdicaoCiclo('${ed.id}')`:'vcCriarCiclo()'}">${ed?'Salvar fatura':'Criar ciclo'}</button>`;
   $('#modal').classList.add('open');
@@ -7903,6 +7941,7 @@ function vcFormCiclo(editId){
   if($('#vcComp')) $('#vcComp').value=comp;
   if($('#vcIni')) $('#vcIni').value=ed?ed.inicio||hoje:hoje;
   if($('#vcFim')) $('#vcFim').value=ed?ed.fim||hoje:hoje;
+  if($('#vcTaxaFixa')) $('#vcTaxaFixa').value=String(taxaEnergiaInit.toFixed?taxaEnergiaInit.toFixed(2):taxaEnergiaInit).replace('.',',');
   if($('#vcLeitAnt')) $('#vcLeitAnt').value=leitAntInit!==''?String(leitAntInit):'';
   if($('#vcLeitAtu')) $('#vcLeitAtu').value=leitAtuInit!==''?String(leitAtuInit):'';
   if($('#vcValAnt')) $('#vcValAnt').value=valAntInit!==''?String(valAntInit).replace('.',','):'';
@@ -7917,9 +7956,12 @@ function vcPreencherAntCiclo(editId){
   const cid=$('#vcCondo')?$('#vcCondo').value:'c1';
   const comp=$('#vcComp')?$('#vcComp').value.trim():'';
   const un=serv==='agua'?'m³':'kWh';
+  const be=$('#vcBoxEnergia'), ba=$('#vcBoxAguaRetida');
+  if(be&&be.style) be.style.display=serv==='energia'?'block':'none';
+  if(ba&&ba.style) ba.style.display=serv==='agua'?'block':'none';
   const l1=$('#lblVcMedAnt'), l2=$('#lblVcMedAtu');
-  if(l1) l1.textContent=`2. Medido do mês passado (${un})`;
-  if(l2) l2.textContent=`3. Medido desse mês (${un})`;
+  if(l1) l1.textContent=`Medido do mês passado (${un})`;
+  if(l2) l2.textContent=`Medido desse mês (${un})`;
   const ant=vcCicloAnterior(serv,cid,comp,editId||null);
   const b=$('#vcAntRefBadge');
   if(ant){
@@ -8180,19 +8222,20 @@ function viewVendasCustas(){
     $('#content').innerHTML=html; return;
   }
   const dv=vcDivergencia(c);
+  const usaTaxaFixa=!!(c.taxaFixa||(c.servico==='energia'&&!c.valorFatura));
   html+=`
     <div class="grid metrics" style="margin-bottom:14px">
       <div class="card metric">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
           <div class="lbl">Valor da fatura</div>
-          ${c.contaRetida?'<span class="badge b-avencer" style="font-size:10px">Conta retida</span>':''}
+          ${c.contaRetida?'<span class="badge b-avencer" style="font-size:10px">Conta retida</span>':usaTaxaFixa?'<span class="badge b-conc" style="font-size:10px">Tarifa fixa</span>':''}
         </div>
-        <div class="val" style="font-size:22px">${brl(c.valorFatura)}</div>
+        <div class="val" style="font-size:22px">${c.valorFatura?brl(c.valorFatura):'—'}</div>
         <div class="sub">${c.contaRetida&&c.valorMesPassado?`Base ant.: ${brl(c.valorMesPassado)} ÷ ${vcFmtM3(c.medidoMesPassado)} ${un}`:`${c.inicio?fmt(c.inicio):'—'} a ${c.fim?fmt(c.fim):'—'}`}</div>
       </div>
-      <div class="card metric"><div class="lbl">Consumo da fatura</div><div class="val" style="font-size:22px">${vcFmtM3(c.consumoFatura)}</div><div class="sub">${un}</div></div>
+      <div class="card metric"><div class="lbl">Consumo da fatura</div><div class="val" style="font-size:22px">${c.consumoFatura?vcFmtM3(c.consumoFatura):'—'}</div><div class="sub">${usaTaxaFixa?'duas contas / retida':un}</div></div>
       <div class="card metric blue"><div class="lbl">Valor por ${un}</div><div class="val" style="font-size:22px">${brl(t.unit)}</div>
-        <div class="sub">fatura ÷ consumo</div></div>
+        <div class="sub">${usaTaxaFixa?'tarifa padrão fixa':'fatura ÷ consumo'}</div></div>
       <div class="card metric green"><div class="lbl">Total a cobrar</div><div class="val" style="font-size:22px">${brl(t.total)}</div>
         <div class="sub">venda ${brl(t.venda)} · custa ${brl(t.custa)}</div></div>
       <div class="card metric ${t.pend?'amber':'green'}"><div class="lbl">Medições</div><div class="val">${t.medidos}/${t.linhas}</div>
@@ -8337,6 +8380,39 @@ function migrarVendasCustas(){
   });
   vcAjustarVendas();
   CFG.vcSeed='v3';
+}
+function migrarEnergiaPadrao(forcar){
+  let mudou=false;
+  if(!CFG.vcTaxaEnergia){ CFG.vcTaxaEnergia=0.88; mudou=true; }
+  // Garante na base real (que já possui os ciclos reais 09/2026 ou 10/2026 de água) a medição de energia
+  // de 16/09/2026 a 16/10/2026 da Capital Espresso (13.418,40 -> 14.089,00 = 670,60 × R$ 0,88 = R$ 590,13)
+  const temBaseReal=forcar||vcCiclos.some(c=>c.servico==='agua'&&(c.id==='vc_9s06f0z'||c.id==='vc_lqw0j0e'||c.consumoFatura===565||c.consumoFatura===694));
+  if(CFG.vcEnergia088!=='v1' && temBaseReal){
+    const uCap=vcUnidades.find(u=>u.servico==='energia'&&u.condoId==='c1'&&/CAPITAL ESPRESSO/i.test(u.unidade));
+    const uVan=vcUnidades.find(u=>u.servico==='energia'&&u.condoId==='c1'&&/VANTAGE/i.test(u.unidade));
+    if(uCap){
+      let ce=vcCiclos.find(c=>c.servico==='energia'&&c.condoId==='c1'&&c.competencia==='10/2026');
+      if(!ce){
+        const linhas=[{unidadeId:uCap.id,nome:uCap.nome,unidade:uCap.unidade,cnpj:uCap.cnpj||'',tipo:uCap.tipo||'VENDA',
+          anterior:13418.40,atual:14089.00,foto:null,medidoPor:'Planilha',medidoEm:'histórico',obs:'Medição 16/09/2026 a 16/10/2026 (cobrança boleto 11/2026)'}];
+        if(uVan) linhas.push({unidadeId:uVan.id,nome:uVan.nome,unidade:uVan.unidade,cnpj:uVan.cnpj||'',tipo:uVan.tipo||'VENDA',
+          anterior:null,atual:null,foto:null,medidoPor:null,medidoEm:null,obs:''});
+        ce={id:'vc_en2610',servico:'energia',condoId:'c1',competencia:'10/2026',
+          inicio:'2026-09-16',fim:'2026-10-16',valorFatura:null,consumoFatura:null,taxaFixa:0.88,
+          fechado:true,criadoPor:'Maciel',criadoEm:nowStamp(),
+          historico:[{q:'Sistema',w:nowStamp(),t:'Ciclo de energia registrado com tarifa padrão fixa de R$ 0,88 (16/09/2026 a 16/10/2026 — boleto 11/2026)'}],
+          linhas};
+        vcCiclos.push(ce);
+      }else{
+        ce.inicio='2026-09-16'; ce.fim='2026-10-16'; ce.taxaFixa=0.88;
+        const l=(ce.linhas||[]).find(x=>x.unidadeId===uCap.id);
+        if(l){ l.anterior=13418.40; l.atual=14089.00; }
+      }
+      CFG.vcEnergia088='v1';
+      mudou=true;
+    }
+  }
+  return mudou;
 }
 
 /* ============ PUBLICIDADE NOS ELEVADORES (locação de espaços p/ divulgação) ============ */
@@ -17409,8 +17485,9 @@ function aplicarSnapshot(d){
   const _migUS=migrarUnidSind();
   const _migSI=migrarSalasIptu();
   const _migLgpd=migrarCessoesLgpd();
+  const _migEn=migrarEnergiaPadrao();
   _booting=false;
-  if(_migCat||_migCh||_migDup||_migUS||_migSI||_migLgpd) save();
+  if(_migCat||_migCh||_migDup||_migUS||_migSI||_migLgpd||_migEn) save();
   /* Tambem aqui, e nao so no load(): o snapshot que chega do servidor passa
      por aplicarSnapshot, nao por load. Sem esta linha a migracao rodava na
      base local e logo em seguida era sobrescrita pelo dado do servidor, que
@@ -17593,6 +17670,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4b9ed29cb8adf41',t:'MTc5MjE4MzcyNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-</body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4ba3957080a9872',t:'MTc5MjE4Njg0Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
