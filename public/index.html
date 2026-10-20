@@ -2595,7 +2595,7 @@ function buildNav(){
     items.push(['analises','helmet','Análise de Projetos']);
     items.push(['unidades','grid','Unidades do Prédio']);
     items.push(['ocupacao','building','Taxa de Ocupação']);
-    items.push(['locacao','door','Salas para Locação']);
+    items.push(['locacao','door','Salas p/ Locação e Venda']);
   }
   /* Carteira particular do sindico: so aparece para quem tem perms.sindico
      (hoje Maciel e Alef). Fica num grupo proprio para nao se confundir com
@@ -2648,7 +2648,7 @@ function render(){
     'tarefas-adm':'Tarefas Administrativas','tarefas-gestor':'Tarefas do Gestor',calendario:'Calendário',rotina:'Minha Rotina',
     hoje:'Tarefas de Hoje — Planejamento Diário',leituras:'Leituras / Água e Energia',notas:'Controle de Notas Fiscais',
     estoque:'Controle de Estoque',pedidos:'Pedidos de Material',relmensal:'Relatório Mensal de Gestão',
-    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',emails:'Padrões de E-mails e Solicitação de Boleto CRM',analises:'Análise de Projetos — Check-list de Aprovação',ocupacao:'Taxa de Ocupação — Mapa de Salas',locacao:'Salas para Locação — Estoque de Salas Vagas','brigada-inicio':'Brigada — Iniciar Check-list',brigada:'Brigada de Incêndio — Check-list por Andar','brigada-ronda':(session&&!P().brigada&&P().ronda)?'Ronda Diária e Chamados':'Brigada — Ronda Diária','brigada-form':'Brigada — Check-list',relatorios:'Relatórios',config:'Configurações'};
+    apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',emails:'Padrões de E-mails e Solicitação de Boleto CRM',analises:'Análise de Projetos — Check-list de Aprovação',ocupacao:'Taxa de Ocupação — Mapa de Salas',locacao:'Salas para Locação e Venda — Estoque Disponível','brigada-inicio':'Brigada — Iniciar Check-list',brigada:'Brigada de Incêndio — Check-list por Andar','brigada-ronda':(session&&!P().brigada&&P().ronda)?'Ronda Diária e Chamados':'Brigada — Ronda Diária','brigada-form':'Brigada — Check-list',relatorios:'Relatórios',config:'Configurações'};
   /* A portaria so tem duas telas. Travar aqui, no roteador, cobre tambem
      as telas que nunca tiveram verificacao propria (brigada, ronda, mapa
      de salas), em vez de depender de cada uma lembrar de conferir. */
@@ -6142,8 +6142,11 @@ function viewCessoes(){
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           ${totGrupo>1?`<span class="badge b-and" style="font-size:11px">${idx+1}ª etapa</span>`:''}
           <b style="color:var(--navy);font-size:14px">${esc(c.nome)}</b>
+          ${c.nomeEspaco?`<span class="badge b-conc" title="Nome do espaço que aparece na Taxa de Ocupação">Espaço: ${esc(c.nomeEspaco)}</span>`:''}
+          ${c.atividade?`<span class="badge b-tag" title="Atividade / ramo da sala">${esc(c.atividade)}</span>`:''}
           <span class="badge ${c.tipo==='Volta p/ Proprietário'?'b-avencer':'b-tag'}">${esc(c.tipo)}</span>
-          ${c.tipo==='Proprietário'&&c.destinoOcupacao==='locacao'?`<span class="badge b-and" title="Sala ficará vaga e disponível em Salas para Locação">Para locação</span>`:''}
+          ${c.tipo==='Proprietário'&&c.destinoOcupacao==='locacao'?`<span class="badge b-and" title="Sala ficará vaga e disponível">${esc(c.locModalidade||'Para locação')}</span>`:''}
+          ${c.tipo==='Proprietário'&&c.destinoOcupacao==='fechada'?`<span class="badge b-pend" title="Proprietário deixará fechada sem locar nem vender">Fechada s/ locação</span>`:''}
           ${c.tipo==='Proprietário'&&c.destinoOcupacao==='ocupar'?`<span class="badge b-conc" title="Proprietário vai ocupar a sala">Vai ocupar</span>`:''}
           ${badgeCess(st)}
         </div>
@@ -6253,54 +6256,83 @@ function editCess(id){
   const v=vencCessao(cad);
   const sAtual=c?ocuSalaPorNumero(c.condoId||'c1',c.unidade):null;
   const destIni=c?.destinoOcupacao||'ocupar';
+  const locModIni=c?.locModalidade||(destIni==='fechada'?'Fechada':(sAtual?.locModalidade||'Locação'));
   const locTipoIni=c?.locTipo!==undefined?c.locTipo:(sAtual?.locTipo||'Proprietário');
   const locNomeIni=c?.locNome!==undefined?c.locNome:(sAtual?.locNome||'');
   const locTelIni=c?.locTel!==undefined?c.locTel:(sAtual?.locTel||'');
+  const espacoIni=c?.nomeEspaco!==undefined?c.nomeEspaco:'';
+  const ativIni=c?.atividade!==undefined?c.atividade:(sAtual?.atividade||'');
   $('#modalTitle').textContent=c?'Editar Cessão de Direitos':'Nova Cessão de Direitos';
   $('#modalBody').innerHTML=`
     ${c?alertaOutrasDaSalaHtml(c,'abrir'):''}
     <div class="f2">
       <div class="field"><label>Condomínio</label><select id="csCondo">${condosDo('cessoes').map(x=>`<option value="${x.id}" ${c?.condoId===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
       <div class="field"><label>Sala / Unidade</label>
-        ${campoSala('csUni',c?.unidade||'',c?.condoId||'c1')}</div>
+        ${campoSala('csUni',c?.unidade||'',c?.condoId||'c1','csSalaEscolhida()')}</div>
       <div class="field"><label>Tipo</label><select id="csTipo" onchange="csTipoMudou()">${CESS_TIPOS.map(t=>`<option ${c?.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="field"><label>Status</label><select id="csStatus">${CESS_STATUS.map(t=>`<option ${c?.status===t?'selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="field"><label>Nome / Razão Social</label><input id="csNome" value="${esc(c?.nome||'')}"></div>
+      <div class="field"><label>Nome / Razão Social (Titular do Contrato)</label><input id="csNome" value="${esc(c?.nome||'')}" placeholder="Pessoa física ou jurídica no contrato"></div>
       <div class="field"><label>Contato</label><input id="csCont" value="${esc(c?.contato||'')}" placeholder="(61) 90000-0000"></div>
       <div class="field"><label>E-mail do cedente</label><input type="email" id="csEmail" value="${esc(c?.email||'')}" placeholder="nome@empresa.com.br"></div>
       <div class="field"><label>Data de cadastro</label><input type="date" id="csCad" value="${cad}" onchange="csPreviewVenc()"></div>
+    </div>
+    <div id="csBoxEspacoAtiv" class="card" style="box-shadow:none;background:#f4fbf7;border:1px solid #b7e4c7;padding:12px;margin:10px 0">
+      <div style="font-weight:700;color:var(--navy);font-size:13px;margin-bottom:6px">${ic('building')} Identificação na Taxa de Ocupação (Espaço e Atividade da Sala)</div>
+      <div class="f2">
+        <div class="field">
+          <label>Nome do Espaço / Empresa na Sala (vai p/ Taxa de Ocupação)</label>
+          <input id="csNomeEspaco" value="${esc(espacoIni)}" placeholder="Ex.: Clínica Sorriso, Studio Pilates, Advocacia X...">
+          <div class="t-sub">Quando o contrato está no CPF da pessoa, preencha aqui o nome do espaço para aparecer na Taxa de Ocupação.</div>
+        </div>
+        <div class="field">
+          <label>Atividade / Ramo da Sala (pergunte ao solicitante)</label>
+          <input id="csAtividade" value="${esc(ativIni)}" placeholder="Ex.: Odontologia, Psicologia, Advocacia, Contabilidade...">
+          <div class="t-sub">Aparece na Taxa de Ocupação e atualiza automaticamente o ramo desta unidade.</div>
+        </div>
+      </div>
     </div>
     <div id="csBoxPropDestino" class="card" style="box-shadow:none;background:#f0f6ff;border:1px solid #bdd6f7;padding:12px;margin:10px 0;display:none">
       <div id="csBoxPropEscolha">
         <div class="field" style="margin-bottom:8px">
           <label style="color:var(--navy);font-weight:700">Destino da sala após esta Cessão de Proprietário</label>
           <select id="csDestinoOcup" onchange="csTipoMudou()">
-            <option value="ocupar" ${destIni!=='locacao'?'selected':''}>Vai ocupar a sala (status fica Ocupada na Taxa de Ocupação)</option>
-            <option value="locacao" ${destIni==='locacao'?'selected':''}>Vai ficar para locação / sala vazia (entra em Salas para Locação)</option>
+            <option value="ocupar" ${destIni==='ocupar'?'selected':''}>Vai ocupar a sala (status fica Ocupada na Taxa de Ocupação)</option>
+            <option value="locacao" ${destIni==='locacao'?'selected':''}>Vai deixar disponível para Locação e/ou Venda (entra em Salas p/ Locação e Venda)</option>
+            <option value="fechada" ${destIni==='fechada'?'selected':''}>Vai deixar fechada — sem interesse em locar nem vender (sai das disponíveis)</option>
           </select>
         </div>
       </div>
       <div id="csBoxLocCampos" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-          <b style="color:var(--navy);font-size:13px">${ic('door')} Dados para o módulo Salas para Locação</b>
+          <b style="color:var(--navy);font-size:13px">${ic('door')} Dados para o módulo Salas p/ Locação e Venda</b>
           <button type="button" class="btn ghost sm" onclick="csPuxarPropLoc()">Usar nome e telefone acima</button>
         </div>
-        <div class="f3">
-          <div class="field"><label>Quem vai alugar?</label>
+        <div class="f2" style="margin-bottom:8px">
+          <div class="field"><label>Disponível para:</label>
+            <select id="csLocMod">
+              <option value="Locação" ${locModIni==='Locação'?'selected':''}>Somente Locação</option>
+              <option value="Venda" ${locModIni==='Venda'?'selected':''}>Somente Venda</option>
+              <option value="Locação e Venda" ${locModIni==='Locação e Venda'?'selected':''}>Locação e Venda</option>
+              <option value="Fechada" ${locModIni==='Fechada'?'selected':''}>Fechada (sem interesse em locar/vender)</option>
+            </select>
+          </div>
+          <div class="field"><label>Quem é o responsável?</label>
             <select id="csLocTipo">
               <option value="Proprietário" ${locTipoIni==='Proprietário'?'selected':''}>Proprietário</option>
               <option value="Imobiliária" ${locTipoIni==='Imobiliária'?'selected':''}>Imobiliária / Corretor</option>
               <option value="" ${!locTipoIni?'selected':''}>Ainda não informado</option>
             </select>
           </div>
+        </div>
+        <div class="f2">
           <div class="field"><label>Nome (Imobiliária ou Proprietário)</label>
             <input id="csLocNome" value="${esc(locNomeIni)}" placeholder="Ex.: Imobiliária X ou nome do proprietário">
           </div>
-          <div class="field"><label>Telefone para locação</label>
+          <div class="field"><label>Telefone para locação / venda</label>
             <input id="csLocTel" value="${esc(locTelIni)}" placeholder="(61) 90000-0000">
           </div>
         </div>
-        <div class="t-sub">A sala ficará como <b>Vaga</b> na Taxa de Ocupação e aparecerá automaticamente na tela <b>Salas para Locação</b>. Se deixar o nome/telefone em branco com "Proprietário", o sistema usa o nome e contato da cessão.</div>
+        <div class="t-sub">A sala ficará como <b>Vaga</b> na Taxa de Ocupação e aparecerá automaticamente em <b>Salas p/ Locação e Venda</b> (exceto se marcada como Fechada sem interesse).</div>
       </div>
     </div>
     <div class="check" style="margin-bottom:10px"><input type="checkbox" id="csFis" ${c?.contratoFisico?'checked':''}>
@@ -6317,28 +6349,44 @@ function editCess(id){
     <button class="btn" onclick="saveCess('${id||''}')">Salvar</button>`;
   $('#modal').classList.add('open');
   if($('#csTipo')) $('#csTipo').value=c?.tipo||CESS_TIPOS[0];
+  if($('#csNomeEspaco')) $('#csNomeEspaco').value=espacoIni;
+  if($('#csAtividade')) $('#csAtividade').value=ativIni;
   if($('#csDestinoOcup')) $('#csDestinoOcup').value=destIni;
+  if($('#csLocMod')) $('#csLocMod').value=locModIni;
   if($('#csLocTipo')) $('#csLocTipo').value=locTipoIni;
   if($('#csLocNome')) $('#csLocNome').value=locNomeIni;
   if($('#csLocTel')) $('#csLocTel').value=locTelIni;
+  salaInfo('csUni');
   csTipoMudou();
   csVencEscolha=c?c.vencimento:null; csPreviewVenc(c?c.vencimento:null);
 }
+function csSalaEscolhida(){
+  salaInfo('csUni');
+  const v=($('#csUni')&&$('#csUni').value||'').trim();
+  if(!v) return;
+  const s=salasDoCondo('c1').find(x=>ocuMesmaSala(x.numero,v));
+  if(s&&s.atividade&&$('#csAtividade')&&!$('#csAtividade').value.trim()){
+    $('#csAtividade').value=s.atividade;
+  }
+}
 function csTipoMudou(){
   const tp=$('#csTipo')?$('#csTipo').value:'';
-  const box=$('#csBoxPropDestino'), escBox=$('#csBoxPropEscolha'), locBox=$('#csBoxLocCampos');
+  const box=$('#csBoxPropDestino'), escBox=$('#csBoxPropEscolha'), locBox=$('#csBoxLocCampos'), espBox=$('#csBoxEspacoAtiv');
   if(!box) return;
   if(tp==='Proprietário'){
     box.style.display='';
     if(escBox) escBox.style.display='';
     const dest=$('#csDestinoOcup')?$('#csDestinoOcup').value:'ocupar';
     if(locBox) locBox.style.display=dest==='locacao'?'':'none';
+    if(espBox) espBox.style.display=dest==='ocupar'?'':'none';
   }else if(tp==='Volta p/ Proprietário'){
     box.style.display='';
     if(escBox) escBox.style.display='none';
     if(locBox) locBox.style.display='';
+    if(espBox) espBox.style.display='none';
   }else{
     box.style.display='none';
+    if(espBox) espBox.style.display='';
   }
 }
 function csPuxarPropLoc(){
@@ -6352,8 +6400,10 @@ function sincronizarSalaCessao(c){
   if(!c||!c.unidade) return;
   const s=ocuSalaPorNumero(c.condoId||'c1',c.unidade);
   if(!s) return;
-  const ehVaga=(c.tipo==='Volta p/ Proprietário')||(c.tipo==='Proprietário'&&c.destinoOcupacao==='locacao');
+  const ehVaga=(c.tipo==='Volta p/ Proprietário')||(c.tipo==='Proprietário'&&(c.destinoOcupacao==='locacao'||c.destinoOcupacao==='fechada'));
   if(ehVaga){
+    const mod=c.destinoOcupacao==='fechada'?'Fechada':(c.locModalidade||s.locModalidade||'Locação');
+    s.locModalidade=mod;
     const lt=c.locTipo!==undefined?c.locTipo:(c.destinoOcupacao==='locacao'?'Proprietário':(s.locTipo||''));
     const ln=(c.locNome||'').trim()||(lt==='Proprietário'?(c.nome||'').trim():'');
     const ltel=(c.locTel||'').trim()||(lt==='Proprietário'?(c.contato||'').trim():'');
@@ -6361,12 +6411,17 @@ function sincronizarSalaCessao(c){
     if(ln) s.locNome=ln;
     if(ltel) s.locTel=ltel;
     if(c.status==='Concluída'){
-      s.status='Vaga'; s.ocupante=''; s.tipo='Vago'; s.manualEm=null;
+      s.status='Vaga'; s.ocupante=''; s.nomeEspaco=''; s.tipo='Vago'; s.manualEm=null;
     }
-  }else if(c.status==='Concluída'){
-    s.status='Ocupada'; s.ocupante=c.nome||s.ocupante||'';
-    s.tipo=c.tipo==='Proprietário'?'Proprietário':'Locatário';
-    s.manualEm=null;
+  }else{
+    if(String(c.atividade||'').trim()) s.atividade=c.atividade.trim();
+    if(c.status==='Concluída'){
+      const nomeExib=(c.nomeEspaco||'').trim()||c.nome||s.ocupante||'';
+      s.status='Ocupada'; s.ocupante=nomeExib;
+      if((c.nomeEspaco||'').trim()) s.nomeEspaco=c.nomeEspaco.trim();
+      s.tipo=c.tipo==='Proprietário'?'Proprietário':'Locatário';
+      s.manualEm=null;
+    }
   }
 }
 let csVencEscolha=null;
@@ -6392,15 +6447,19 @@ function csSetVenc(d){csVencEscolha=d;csPreviewVenc(d)}
 function saveCess(id,dados){
   const tpDom=$('#csTipo')?$('#csTipo').value:'';
   const destDom=tpDom==='Proprietário'?(($('#csDestinoOcup')&&$('#csDestinoOcup').value)||'ocupar'):(tpDom==='Volta p/ Proprietário'?'locacao':'');
+  const locModDom=destDom==='fechada'?'Fechada':(($('#csLocMod')&&$('#csLocMod').value)||'Locação');
   const locTipoDom=($('#csLocTipo')&&$('#csLocTipo').value)!==undefined?$('#csLocTipo').value:'';
   const locNomeDom=($('#csLocNome')&&$('#csLocNome').value||'').trim();
   const locTelDom=($('#csLocTel')&&$('#csLocTel').value||'').trim();
+  const espacoDom=($('#csNomeEspaco')&&$('#csNomeEspaco').value||'').trim();
+  const ativDom=($('#csAtividade')&&$('#csAtividade').value||'').trim();
   const o=dados?Object.assign({},dados,{doc:''}):{condoId:$('#csCondo').value,unidade:$('#csUni').value.trim(),tipo:tpDom,
-    status:$('#csStatus').value,nome:$('#csNome').value.trim(),doc:'',
+    status:$('#csStatus').value,nome:$('#csNome').value.trim(),nomeEspaco:espacoDom,atividade:ativDom,doc:'',
     contato:$('#csCont').value.trim(),email:($('#csEmail')?$('#csEmail').value:'').trim(),cadastro:$('#csCad').value,
     contratoFisico:$('#csFis').checked,contratoEmail:$('#csMail').checked,anexo:$('#csAnexo').value.trim(),
     obs:($('#csObs')?$('#csObs').value:'').trim(),
     destinoOcupacao:destDom,
+    locModalidade:(destDom==='locacao'||destDom==='fechada'||tpDom==='Volta p/ Proprietário')?locModDom:'',
     locTipo:(destDom==='locacao'||tpDom==='Volta p/ Proprietário')?locTipoDom:'',
     locNome:(destDom==='locacao'||tpDom==='Volta p/ Proprietário')?(locNomeDom||(locTipoDom==='Proprietário'?($('#csNome').value||'').trim():'')):'',
     locTel:(destDom==='locacao'||tpDom==='Volta p/ Proprietário')?(locTelDom||(locTipoDom==='Proprietário'?($('#csCont').value||'').trim():'')):'',
@@ -6436,17 +6495,20 @@ function openCess(id){
   $('#modalBody').innerHTML=`
     ${alertaOutrasDaSalaHtml(c,'abrir')}
     <div class="chip-list" style="margin-bottom:14px">${badgeCondo(c.condoId)}<span class="badge b-tag">${c.tipo}</span>${
-      c.tipo==='Proprietário'&&c.destinoOcupacao==='locacao'?`<span class="badge b-and">Para locação (sala vaga)</span>`:
-      (c.tipo==='Proprietário'&&c.destinoOcupacao==='ocupar'?`<span class="badge b-conc">Vai ocupar a sala</span>`:'')
+      c.tipo==='Proprietário'&&c.destinoOcupacao==='locacao'?`<span class="badge b-and">${esc(c.locModalidade||'Para locação')}</span>`:
+      (c.tipo==='Proprietário'&&c.destinoOcupacao==='fechada'?`<span class="badge b-pend">Fechada s/ locação ou venda</span>`:
+      (c.tipo==='Proprietário'&&c.destinoOcupacao==='ocupar'?`<span class="badge b-conc">Vai ocupar a sala</span>`:''))
     }${badgeCess(st)}</div>
     <div class="f2">
-      <div><div class="t-sub">Nome / Razão Social</div><b>${esc(c.nome)}</b></div>
+      <div><div class="t-sub">Nome / Razão Social (Contrato)</div><b>${esc(c.nome)}</b></div>
+      <div><div class="t-sub">Nome do Espaço (Taxa de Ocupação)</div><b>${esc(c.nomeEspaco||c.nome||'—')}</b></div>
+      <div><div class="t-sub">Atividade / Ramo da Sala</div><b>${esc(c.atividade||ocuSalaPorNumero(c.condoId||'c1',c.unidade)?.atividade||'—')}</b></div>
       <div><div class="t-sub">Contato</div><b>${esc(c.contato||'—')}</b></div>
       <div><div class="t-sub">E-mail do cedente</div><b>${c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:'—'}</b></div>
       <div><div class="t-sub">Cadastro</div><b>${fmt(c.cadastro)}</b></div>
       <div><div class="t-sub">Vencimento previsto</div><b>${fmt(c.vencimento)}</b></div>
       <div><div class="t-sub">Anexo</div><b>${c.anexo?''+esc(c.anexo):'—'}</b></div>
-      ${c.destinoOcupacao==='locacao'||c.locNome||c.locTel?`<div><div class="t-sub">Responsável pela locação</div><b>${esc((c.locTipo?c.locTipo+': ':'')+(c.locNome||c.nome||'—'))} ${c.locTel?'· '+esc(c.locTel):''}</b></div>`:''}
+      ${c.destinoOcupacao==='locacao'||c.locNome||c.locTel?`<div><div class="t-sub">Responsável (${esc(c.locModalidade||'Locação')})</div><b>${esc((c.locTipo?c.locTipo+': ':'')+(c.locNome||c.nome||'—'))} ${c.locTel?'· '+esc(c.locTel):''}</b></div>`:''}
       ${c.concluidoEm?`<div><div class="t-sub">Concluída em</div><b>${fmt(c.concluidoEm)}</b></div>
         <div><div class="t-sub">Concluída por</div><b>${esc(c.concluidoPor||'')}</b></div>`:''}
     </div>
@@ -9839,26 +9901,48 @@ function quickComplete(kind,id,fromDrill){
     <div class="feed-item blue" style="margin-bottom:16px"><div></div><div>
       <div class="ft">${esc(cfg.nome(reg))}</div><div class="fd">${esc(cfg.sub(reg))}</div></div></div>
     ${kind==='cessao'?alertaOutrasDaSalaHtml(reg,'concluir'):''}
+    ${kind==='cessao'&&reg.tipo!=='Volta p/ Proprietário'?`
+      <div class="card" style="box-shadow:none;background:#f4fbf7;border:1px solid #b7e4c7;padding:12px;margin-bottom:14px">
+        <div class="f2">
+          <div class="field"><label>Nome do Espaço na Sala (Taxa de Ocupação)</label>
+            <input id="qcNomeEspaco" value="${esc(reg.nomeEspaco||'')}" placeholder="Ex.: Clínica X, Advocacia Y...">
+          </div>
+          <div class="field"><label>Atividade / Ramo da Sala</label>
+            <input id="qcAtividade" value="${esc(reg.atividade||ocuSalaPorNumero(reg.condoId||'c1',reg.unidade)?.atividade||'')}" placeholder="Ex.: Odontologia, Psicologia...">
+          </div>
+        </div>
+      </div>`:''}
     ${kind==='cessao'&&(reg.tipo==='Proprietário'||reg.tipo==='Volta p/ Proprietário')?`
       <div class="card" style="box-shadow:none;background:#f0f6ff;border:1px solid #bdd6f7;padding:12px;margin-bottom:14px">
         ${reg.tipo==='Proprietário'?`<div class="field" style="margin-bottom:8px">
           <label style="color:var(--navy);font-weight:700">Destino da sala após esta Cessão de Proprietário</label>
           <select id="qcDestinoOcup" onchange="const b=document.querySelector('#qcLocBox');if(b)b.style.display=this.value==='locacao'?'':'none'">
-            <option value="ocupar" ${reg.destinoOcupacao!=='locacao'?'selected':''}>Vai ocupar a sala (status fica Ocupada na Taxa de Ocupação)</option>
-            <option value="locacao" ${reg.destinoOcupacao==='locacao'?'selected':''}>Vai ficar para locação / sala vazia (entra em Salas para Locação)</option>
+            <option value="ocupar" ${reg.destinoOcupacao==='ocupar'||!reg.destinoOcupacao?'selected':''}>Vai ocupar a sala (status fica Ocupada na Taxa de Ocupação)</option>
+            <option value="locacao" ${reg.destinoOcupacao==='locacao'?'selected':''}>Disponível para Locação e/ou Venda (entra em Salas p/ Locação e Venda)</option>
+            <option value="fechada" ${reg.destinoOcupacao==='fechada'?'selected':''}>Vai deixar fechada — sem interesse em locar nem vender</option>
           </select>
         </div>`:''}
         <div id="qcLocBox" style="display:${reg.tipo==='Volta p/ Proprietário'||reg.destinoOcupacao==='locacao'?'':'none'}">
-          <div class="f3">
-            <div class="field"><label>Quem vai alugar?</label>
+          <div class="f2" style="margin-bottom:8px">
+            <div class="field"><label>Disponível para:</label>
+              <select id="qcLocMod">
+                <option value="Locação" ${(reg.locModalidade||'Locação')==='Locação'?'selected':''}>Somente Locação</option>
+                <option value="Venda" ${reg.locModalidade==='Venda'?'selected':''}>Somente Venda</option>
+                <option value="Locação e Venda" ${reg.locModalidade==='Locação e Venda'?'selected':''}>Locação e Venda</option>
+                <option value="Fechada" ${reg.locModalidade==='Fechada'?'selected':''}>Fechada (sem interesse)</option>
+              </select>
+            </div>
+            <div class="field"><label>Quem é o responsável?</label>
               <select id="qcLocTipo">
                 <option value="Proprietário" ${(reg.locTipo||'Proprietário')==='Proprietário'?'selected':''}>Proprietário</option>
                 <option value="Imobiliária" ${reg.locTipo==='Imobiliária'?'selected':''}>Imobiliária / Corretor</option>
                 <option value="" ${reg.locTipo===''?'selected':''}>Ainda não informado</option>
               </select>
             </div>
-            <div class="field"><label>Nome p/ locação</label><input id="qcLocNome" value="${esc(reg.locNome||reg.nome||'')}"></div>
-            <div class="field"><label>Telefone p/ locação</label><input id="qcLocTel" value="${esc(reg.locTel||reg.contato||'')}"></div>
+          </div>
+          <div class="f2">
+            <div class="field"><label>Nome p/ locação ou venda</label><input id="qcLocNome" value="${esc(reg.locNome||reg.nome||'')}"></div>
+            <div class="field"><label>Telefone p/ locação ou venda</label><input id="qcLocTel" value="${esc(reg.locTel||reg.contato||'')}"></div>
           </div>
         </div>
       </div>`:''}
@@ -9874,7 +9958,10 @@ function quickComplete(kind,id,fromDrill){
     <button class="btn green" onclick="qcConfirm()">${ic('check')} Confirmar conclusão</button>`;
   $('#modal').classList.add('open');
   if(kind==='cessao'&&reg){
+    if($('#qcNomeEspaco')) $('#qcNomeEspaco').value=reg.nomeEspaco||'';
+    if($('#qcAtividade')) $('#qcAtividade').value=reg.atividade||(ocuSalaPorNumero(reg.condoId||'c1',reg.unidade)?.atividade||'');
     if($('#qcDestinoOcup')) $('#qcDestinoOcup').value=reg.destinoOcupacao||'ocupar';
+    if($('#qcLocMod')) $('#qcLocMod').value=reg.locModalidade||'Locação';
     if($('#qcLocTipo')) $('#qcLocTipo').value=reg.locTipo!==undefined?reg.locTipo:'Proprietário';
     if($('#qcLocNome')) $('#qcLocNome').value=reg.locNome||reg.nome||'';
     if($('#qcLocTel')) $('#qcLocTel').value=reg.locTel||reg.contato||'';
@@ -9890,10 +9977,14 @@ function qcConfirm(){
 }
 function finishCess(id,data,obs,anexo){
   const c=cessoes.find(x=>x.id===id); if(!c) return;
+  if($('#qcNomeEspaco')&&$('#qcNomeEspaco').value!==undefined) c.nomeEspaco=$('#qcNomeEspaco').value.trim();
+  if($('#qcAtividade')&&$('#qcAtividade').value!==undefined&&$('#qcAtividade').value.trim()) c.atividade=$('#qcAtividade').value.trim();
   if(c.tipo==='Proprietário'&&$('#qcDestinoOcup')&&$('#qcDestinoOcup').value){
     c.destinoOcupacao=$('#qcDestinoOcup').value;
   }
-  if((c.tipo==='Volta p/ Proprietário'||c.destinoOcupacao==='locacao')&&$('#qcLocTipo')){
+  if(c.destinoOcupacao==='fechada') c.locModalidade='Fechada';
+  else if((c.tipo==='Volta p/ Proprietário'||c.destinoOcupacao==='locacao')&&$('#qcLocTipo')){
+    if($('#qcLocMod')&&$('#qcLocMod').value) c.locModalidade=$('#qcLocMod').value;
     c.locTipo=$('#qcLocTipo').value;
     c.locNome=($('#qcLocNome')&&$('#qcLocNome').value.trim())||(c.locTipo==='Proprietário'?c.nome:'');
     c.locTel=($('#qcLocTel')&&$('#qcLocTel').value.trim())||(c.locTipo==='Proprietário'?c.contato:'');
@@ -13928,7 +14019,17 @@ function mesExtenso(m){
 function brigAbrir(cid,andar,sis){
   let i=brigInsp.filter(x=>x.condoId===cid&&x.andar===andar&&x.sistema===sis&&
     String(x.data).slice(0,7)===brigMesAtual()).sort((a,b)=>b.data.localeCompare(a.data))[0];
-  if(!i){ i=brigNova(andar,sis); i.condoId=cid; brigInsp.push(i); save(); }
+  if(!i){
+    i=brigNova(andar,sis); i.condoId=cid; brigInsp.push(i); save();
+  }else if(i.status!=='Concluído'&&session){
+    /* Se o check-list ainda está em andamento (ex.: alguém abriu/pulou antes),
+       assume automaticamente o nome da pessoa logada que vai preenchê-lo agora. */
+    i.responsavel=session.nome;
+    i.userId=session.id;
+    i.data=today();
+    i.hora=nowHora();
+    save();
+  }
   brigAtual=i.id; page='brigada-form'; buildNav(); render();
 }
 function brigVoltar(){ brigAtual=null; page='brigada'; buildNav(); render(); }
@@ -14035,6 +14136,7 @@ function brigConcluir(id){
   if(nc.length) msg+='\n\n'+nc.length+' ponto(s) não conforme(s) — será aberto um aviso automático para o Gestor.';
   if(semFoto) msg+='\n('+semFoto+' sem foto anexada — a foto é opcional.)';
   if(!confirm(msg)) return;
+  if(session){ i.responsavel=session.nome; i.userId=session.id; }
   i.status='Concluído'; i.data=i.data||today(); i.concluidoEm=nowStamp();
   i.historico.push({q:session.nome,w:nowStamp(),t:'Check-list concluído — '+nc.length+' não conformidade(s)'});
   const t=brigGerarAlerta(i);
@@ -14046,6 +14148,7 @@ function brigConcluir(id){
 function brigReabrir(id){
   const i=_bi(id); if(!i)return;
   if(!confirm('Reabrir este check-list para correção?')) return;
+  if(session){ i.responsavel=session.nome; i.userId=session.id; }
   i.status='Em andamento';
   i.historico.push({q:session.nome,w:nowStamp(),t:'Check-list reaberto'});
   save(); render();
@@ -14388,6 +14491,13 @@ function viewBrigInicio(){
     <div class="card" style="margin-bottom:14px">
       <div class="ap-faixa">${ic('play')} INICIAR CHECK-LIST</div>
       <div style="padding:14px">
+        <div class="feed-item blue" style="margin-bottom:12px">
+          <div class="fi-ic">${ic('user')}</div>
+          <div style="flex:1">
+            <div class="ft">Responsável logado(a): <b>${esc(session?session.nome:'—')}</b></div>
+            <div class="fd">O nome do responsável é preenchido automaticamente com o seu usuário logado ao abrir cada check-list.</div>
+          </div>
+        </div>
         <div class="muted" style="margin-bottom:12px">
           Escolha o que vai inspecionar hoje. O sistema abre andar por andar,
           começando no 24º e descendo até o último, e avança sozinho quando você concluir.
@@ -14487,8 +14597,22 @@ function brigFinalizarSessao(){
     `<button class="btn" onclick="closeModal()">Fechar</button>
      <button class="btn primary" onclick="closeModal();brigPdfGeral('${s.cid}',brigMesAtual())">Ver relatório</button>`);
 }
+function brigRascunhoIntocado(i){
+  if(!i||i.status==='Concluído') return false;
+  if(String(i.obs||'').trim()) return false;
+  return !(i.pontos||[]).some(p=>p.sit!=='CONFORME'||String(p.obs||'').trim()||(p.fotos&&p.fotos.length)||Object.keys(p.itens||{}).length);
+}
+function brigDescartarRascunhoVazio(id){
+  if(!id) return;
+  const i=brigInsp.find(x=>x.id===id);
+  if(i&&brigRascunhoIntocado(i)){
+    brigInsp=brigInsp.filter(x=>x.id!==id);
+    save();
+  }
+}
 function brigAbandonar(){
   if(!confirm('Encerrar a sequência? O que já foi concluído fica salvo.')) return;
+  brigDescartarRascunhoVazio(brigAtual);
   brigSessao=null; page='brigada'; buildNav(); render();
 }
 /* barra de progresso mostrada dentro do check-list quando há sessão */
@@ -14513,6 +14637,7 @@ function brigBarraSessao(){
 }
 function brigPular(){
   if(!brigSessao) return;
+  brigDescartarRascunhoVazio(brigAtual);
   brigSessao.pos++;
   if(brigSessao.pos>=brigSessao.fila.length) return brigFinalizarSessao();
   brigAbrirDaSessao();
@@ -16627,7 +16752,7 @@ function ocuSalaPorNumero(cid,num){
 }
 function cessDeixaVaga(c){
   if(!c) return false;
-  return c.tipo==='Volta p/ Proprietário'||(c.tipo==='Proprietário'&&c.destinoOcupacao==='locacao');
+  return c.tipo==='Volta p/ Proprietário'||(c.tipo==='Proprietário'&&(c.destinoOcupacao==='locacao'||c.destinoOcupacao==='fechada'));
 }
 /* O status é calculado; o cadastro manual só entra quando nada o contradiz. */
 function ocuStatus(s){
@@ -16641,7 +16766,7 @@ function ocuStatus(s){
   const dtManual=s.manualEm?String(s.manualEm):'';
   const cesVal=cessoes.filter(c=>c.condoId===s.condoId&&ocuMesmaSala(c.unidade,s.numero)&&
     c.status==='Concluída'&&(!dtManual||String(c.concluidoEm||c.cadastro||'')>dtManual));
-  /* 3. saída registrada na Cessão de Direitos (ou Proprietário p/ locação) deixa a sala vaga */
+  /* 3. saída registrada na Cessão de Direitos (ou Proprietário p/ locação/fechada) deixa a sala vaga */
   const saiu=cesVal.filter(cessDeixaVaga)
     .sort((a,b)=>String(b.cadastro).localeCompare(String(a.cadastro)))[0];
   /* 4. entrada posterior reocupa */
@@ -16662,14 +16787,36 @@ function ocuMesmaSala(a,b){
   const n=x=>String(x||'').trim().toLowerCase().replace(/^sala\s*/,'').replace(/\s+/g,'');
   return n(a)&&n(a)===n(b);
 }
-/* quem ocupa hoje, preferindo a cessão mais recente (respeitando ajuste manual recente) */
+/* quem ocupa hoje, preferindo o Nome do Espaço da cessão mais recente (respeitando ajuste manual recente) */
 function ocuOcupante(s){
   if(!s||ocuStatus(s)==='Vaga') return '';
   const dtManual=s.manualEm?String(s.manualEm):'';
   const entrou=cessoes.filter(c=>c.condoId===s.condoId&&ocuMesmaSala(c.unidade,s.numero)&&
     !cessDeixaVaga(c)&&c.status==='Concluída'&&(!dtManual||String(c.concluidoEm||c.cadastro||'')>dtManual))
     .sort((a,b)=>String(b.cadastro).localeCompare(String(a.cadastro)))[0];
-  return (entrou&&entrou.nome)||s.ocupante||'';
+  if(entrou){
+    return String(entrou.nomeEspaco||'').trim()||String(s.nomeEspaco||'').trim()||entrou.nome||s.ocupante||'';
+  }
+  return String(s.nomeEspaco||'').trim()||s.ocupante||'';
+}
+/* atividade / ramo da sala (manual na sala ou vinda da cessão mais recente) */
+function ocuAtividade(s){
+  if(!s) return '';
+  if(String(s.atividade||'').trim()) return String(s.atividade).trim();
+  const cesAtiv=cessoes.filter(c=>c.condoId===s.condoId&&ocuMesmaSala(c.unidade,s.numero)&&String(c.atividade||'').trim())
+    .sort((a,b)=>String(b.cadastro).localeCompare(String(a.cadastro)))[0];
+  return cesAtiv?String(cesAtiv.atividade).trim():'';
+}
+function ocuSetAtividade(id,val){
+  if(!P().edit) return toast('Sem permissão.');
+  const s=salas.find(x=>x.id===id); if(!s) return;
+  const nv=String(val||'').trim();
+  if((s.atividade||'')===nv) return;
+  s.atividade=nv;
+  (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),t:nv?('Atividade definida: '+nv):'Atividade limpa'});
+  audit('Atividade da sala atualizada','Sala '+s.numero,nv||'—',s.condoId);
+  save();
+  toast(nv?`Atividade da sala ${s.numero}: ${nv}`:`Atividade da sala ${s.numero} removida.`);
 }
 function ocuResumo(cid){
   const l=ocuSalas(cid);
@@ -16699,6 +16846,7 @@ function ocuAutoStatusForm(){
 }
 function ocuSalvarSala(id){
   const ocTxt=($('#slOcup')&&$('#slOcup').value.trim())||'';
+  const atTxt=($('#slAtiv')&&$('#slAtiv').value.trim())||'';
   let stVal=($('#slStatus')&&$('#slStatus').value)||'Vaga';
   let tpVal=($('#slTipo')&&$('#slTipo').value)||'Locatário';
   /* Se preencheu o nome da empresa/ocupante, muda automaticamente o status para Ocupada */
@@ -16712,9 +16860,12 @@ function ocuSalvarSala(id){
     vagas:parseInt(($('#slVagas')&&$('#slVagas').value)||'0',10)||0,
     deposito:(($('#slDep')&&$('#slDep').value)||'').trim(),
     ocupante:stVal==='Vaga'?'':ocTxt,
+    nomeEspaco:stVal==='Vaga'?'':ocTxt,
+    atividade:atTxt,
     tipo:tpVal,
     status:stVal,
     obs:($('#slObs')&&$('#slObs').value.trim())||''};
+  if($('#slLocMod')) o.locModalidade=$('#slLocMod').value||'Locação';
   if($('#slLocTipo')) o.locTipo=$('#slLocTipo').value||'';
   if($('#slLocNome')) o.locNome=($('#slLocNome').value||'').trim();
   if($('#slLocTel')) o.locTel=($('#slLocTel').value||'').trim();
@@ -16724,7 +16875,7 @@ function ocuSalvarSala(id){
   if(id){
     const s=salas.find(x=>x.id===id); if(!s) return;
     Object.assign(s,o); s.manual=true; s.manualEm=today();
-    (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),t:'Cadastro editado'+(o.ocupante?' · Ocupada por '+o.ocupante:' · '+o.status)});
+    (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),t:'Cadastro editado'+(o.ocupante?' · Ocupada por '+o.ocupante:' · '+o.status)+(o.atividade?' · Ativ.: '+o.atividade:'')});
     toast('Sala atualizada.');
   }else{
     salas.push({id:uid('sl'),...o,manual:true,manualEm:today(),
@@ -16739,6 +16890,8 @@ function ocuFormSala(id){
   const s=id?salas.find(x=>x.id===id):null;
   const stReal=s?ocuStatus(s):'Vaga';
   const ocReal=s?(ocuOcupante(s)||s.ocupante||''):'';
+  const atReal=s?ocuAtividade(s):'';
+  const modReal=s?(s.locModalidade||'Locação'):'Locação';
   openModal(s?('Sala '+s.numero):'Nova sala',
     `<div class="f2">
       <div class="field"><label>Condomínio</label><select id="slCondo">
@@ -16748,22 +16901,33 @@ function ocuFormSala(id){
       <div class="field"><label>Área privativa (m²)</label><input type="number" step="0.01" id="slArea" value="${s?.area??''}" placeholder="ex.: 38,55"></div>
       <div class="field"><label>Vagas de garagem</label><input type="number" min="0" id="slVagas" value="${s?.vagas??0}"></div>
       <div class="field"><label>Depósito (nº)</label><input id="slDep" value="${esc(s?.deposito||'')}" placeholder="deixe vazio se não tem"></div>
-      <div class="field"><label>Ocupante atual (ao preencher, muda p/ Ocupada)</label><input id="slOcup" value="${esc(ocReal)}" placeholder="nome da empresa ou pessoa que vai ocupar" oninput="ocuAutoStatusForm()"></div>
+      <div class="field"><label>Nome do Espaço / Ocupante (ao preencher, muda p/ Ocupada)</label><input id="slOcup" value="${esc(ocReal)}" placeholder="nome do espaço, empresa ou pessoa" oninput="ocuAutoStatusForm()"></div>
+      <div class="field"><label>Atividade / Ramo da Sala</label><input id="slAtiv" value="${esc(atReal)}" placeholder="Ex.: Odontologia, Advocacia, Contabilidade..."></div>
       <div class="field"><label>Vínculo</label><select id="slTipo">
         ${['Proprietário','Locatário','Vago'].map(t=>`<option ${(s?.tipo||'Locatário')===t?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="field"><label>Situação</label><select id="slStatus" onchange="ocuAutoStatusForm()">
         ${OCU_STATUS.map(t=>`<option ${stReal===t?'selected':''}>${t}</option>`).join('')}</select></div>
      </div>
      <div id="slBoxLocacao" class="card" style="box-shadow:none;background:#f0f6ff;border:1px solid #bdd6f7;padding:12px;margin:10px 0;display:${stReal==='Vaga'&&!ocReal?'':'none'}">
-       <b style="color:var(--navy);font-size:13px">${ic('door')} Dados de locação (sala vaga — módulo Salas para Locação)</b>
-       <div class="f3" style="margin-top:6px">
-         <div class="field"><label>Responsável por locar</label>
+       <b style="color:var(--navy);font-size:13px">${ic('door')} Dados de disponibilidade (módulo Salas p/ Locação e Venda)</b>
+       <div class="f2" style="margin-top:6px">
+         <div class="field"><label>Disponível para:</label>
+           <select id="slLocMod">
+             <option value="Locação" ${modReal==='Locação'?'selected':''}>Somente Locação</option>
+             <option value="Venda" ${modReal==='Venda'?'selected':''}>Somente Venda</option>
+             <option value="Locação e Venda" ${modReal==='Locação e Venda'?'selected':''}>Locação e Venda</option>
+             <option value="Fechada" ${modReal==='Fechada'?'selected':''}>Fechada (sem interesse em locar/vender)</option>
+           </select>
+         </div>
+         <div class="field"><label>Responsável</label>
            <select id="slLocTipo">
              <option value="" ${!s?.locTipo?'selected':''}>Não informado</option>
              <option value="Imobiliária" ${s?.locTipo==='Imobiliária'?'selected':''}>Imobiliária / Corretor</option>
              <option value="Proprietário" ${s?.locTipo==='Proprietário'?'selected':''}>Proprietário</option>
            </select>
          </div>
+       </div>
+       <div class="f2" style="margin-top:6px">
          <div class="field"><label>Nome (Imobiliária ou Proprietário)</label>
            <input id="slLocNome" value="${esc(s?.locNome||'')}" placeholder="empresa ou pessoa">
          </div>
@@ -16786,8 +16950,10 @@ function ocuFormSala(id){
     if($('#slDep')) $('#slDep').value=s.deposito||'';
     if($('#slObs')) $('#slObs').value=s.obs||'';
     if($('#slOcup')) $('#slOcup').value=ocReal;
+    if($('#slAtiv')) $('#slAtiv').value=atReal;
     if($('#slTipo')) $('#slTipo').value=s.tipo||'Locatário';
     if($('#slStatus')) $('#slStatus').value=stReal;
+    if($('#slLocMod')) $('#slLocMod').value=modReal;
     if($('#slLocTipo')) $('#slLocTipo').value=s.locTipo||'';
     if($('#slLocNome')) $('#slLocNome').value=s.locNome||'';
     if($('#slLocTel')) $('#slLocTel').value=s.locTel||'';
@@ -17131,8 +17297,11 @@ function ocuAlternar(id){
 function ocuPreencher(id){
   const s=salas.find(x=>x.id===id); if(!s) return;
   openModal('Ocupar a sala '+s.numero,
-    `<div class="field"><label>Quem vai ocupar (Empresa ou Pessoa)</label>
-       <input id="ocuNome" value="${esc(s.ocupante||'')}" placeholder="nome ou razão social"
+    `<div class="field"><label>Nome do Espaço / Empresa na Sala (vai para a Taxa de Ocupação)</label>
+       <input id="ocuNome" value="${esc(s.ocupante||'')}" placeholder="nome do espaço, empresa ou razão social"
+         onkeydown="if(event.key==='Enter')ocuPreencherConf('${id}')"></div>
+     <div class="field"><label>Atividade / Ramo da Sala</label>
+       <input id="ocuAtiv" value="${esc(ocuAtividade(s)||'')}" placeholder="Ex.: Odontologia, Advocacia, Contabilidade..."
          onkeydown="if(event.key==='Enter')ocuPreencherConf('${id}')"></div>
      <div class="field"><label>Vínculo</label><select id="ocuTipo">
        ${['Locatário','Proprietário'].map(t=>`<option ${s.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
@@ -17140,17 +17309,21 @@ function ocuPreencher(id){
     `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
      <button class="btn" onclick="ocuPreencherConf('${id}')">${ic('check')}Ocupar</button>`);
   if($('#ocuNome')) $('#ocuNome').value=s.ocupante||'';
+  if($('#ocuAtiv')) $('#ocuAtiv').value=ocuAtividade(s)||'';
   if($('#ocuTipo')) $('#ocuTipo').value=s.tipo==='Proprietário'?'Proprietário':'Locatário';
   setTimeout(()=>{const i=$('#ocuNome'); if(i&&i.focus)i.focus()},80);
 }
 function ocuPreencherConf(id){
   const s=salas.find(x=>x.id===id); if(!s) return;
   const n=($('#ocuNome')&&$('#ocuNome').value.trim())||'';
+  const at=($('#ocuAtiv')&&$('#ocuAtiv').value.trim())||'';
   if(!n) return toast('Informe quem vai ocupar a sala.');
-  s.ocupante=n; s.tipo=($('#ocuTipo')&&$('#ocuTipo').value)||'Locatário'; s.status='Ocupada';
+  s.ocupante=n; s.nomeEspaco=n;
+  if(at) s.atividade=at;
+  s.tipo=($('#ocuTipo')&&$('#ocuTipo').value)||'Locatário'; s.status='Ocupada';
   s.manual=true; s.manualEm=today();
-  (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),t:'Ocupada por '+n});
-  audit('Sala ocupada',s.numero,n,s.condoId);
+  (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),t:'Ocupada por '+n+(at?' ('+at+')':'')});
+  audit('Sala ocupada',s.numero,n+(at?' · '+at:''),s.condoId);
   save(); closeModal(); render(); toast('Sala '+s.numero+' ocupada por '+n+'.');
 }
 /* ---- gráfico de ocupação por andar ---- */
@@ -17222,7 +17395,7 @@ function campoSala(id,valor,cid,onchange){
    ${salaDatalist(cid)}
    <div class="sala-info" id="${id}_info"></div>`;
 }
-/* mostra quem está na sala digitada — confere na hora se é a unidade certa */
+/* mostra quem está na sala digitada e sua atividade — confere na hora se é a unidade certa */
 function salaInfo(id){
   const el=$('#'+id), box=$('#'+id+'_info');
   if(!el||!box) return;
@@ -17231,9 +17404,14 @@ function salaInfo(id){
   const s=salasDoCondo('c1').find(x=>ocuMesmaSala(x.numero,v));
   if(!s){ box.innerHTML='<span class="t-sub">Unidade fora da relação do prédio — será usada assim mesmo.</span>'; return }
   const st=s.id?ocuStatus(s):(s.ocupante?'Ocupada':'Vaga');
+  const oc=s.id?ocuOcupante(s):(s.ocupante||'');
+  const at=s.id?ocuAtividade(s):(s.atividade||'');
   const cor=st==='Vaga'?'#c2384a':(st==='Em obra'?'#a8690b':'#1d7a4c');
   box.innerHTML=`<span class="t-sub">${esc(s.andar||'')} · <b style="color:${cor}">${esc(st)}</b>${
-    s.ocupante?' · '+esc(s.ocupante):''}</span>`;
+    oc?' · '+esc(oc):''}${at?` · Atividade: <b>${esc(at)}</b>`:' · <i>Sem atividade cadastrada (pergunte ao solicitante)</i>'}</span>`;
+  if(id==='csUni'&&at&&$('#csAtividade')&&!$('#csAtividade').value.trim()){
+    $('#csAtividade').value=at;
+  }
 }
 
 /* ---- gráfico de pizza: visão rápida da ocupação ---- */
@@ -17336,7 +17514,7 @@ function viewOcupacao(){
   if(ocuFiltro) l=l.filter(s=>ocuStatus(s)===ocuFiltro);
   if(ocuAndar) l=l.filter(s=>(s.andar||'—')===ocuAndar);
   if(ocuBusca){ const q=ocuBusca.toLowerCase();
-    l=l.filter(s=>(String(s.numero)+' '+(ocuOcupante(s)||'')+' '+(s.andar||'')).toLowerCase().includes(q)); }
+    l=l.filter(s=>(String(s.numero)+' '+(ocuOcupante(s)||'')+' '+(ocuAtividade(s)||'')+' '+(s.andar||'')).toLowerCase().includes(q)); }
 
   if(!salas.filter(s=>s.condoId===cid).length){
     $('#content').innerHTML=`<div class="card" style="text-align:center;padding:40px">
@@ -17362,7 +17540,7 @@ function viewOcupacao(){
       <div class="val">${r.Ocupada}</div><div class="sub">com ocupante ativo</div></div>
     <div class="card metric ${r.Vaga?'red':''}" onclick="ocuFiltro='Vaga';render()">
       <div class="lbl">${ic('empty')}Vagas</div>
-      <div class="val">${r.Vaga}</div><div class="sub">disponíveis para locação</div></div>
+      <div class="val">${r.Vaga}</div><div class="sub">${locSalasVagas(cid).length} disponíveis p/ locação ou venda</div></div>
     <div class="card metric amber" onclick="ocuFiltro='Em obra';render()">
       <div class="lbl">${ic('helmet')}Em obra</div>
       <div class="val">${r['Em obra']}</div><div class="sub">reforma em andamento</div></div>
@@ -17371,13 +17549,15 @@ function viewOcupacao(){
   const ia=iaCard('Leitura da ocupação',iaOcupacao(cid),false)+ocuPizza(cid)+ocuGrafico(cid);
 
   const linhas=l.map(s=>{
-    const st=ocuStatus(s), oc=ocuOcupante(s);
+    const st=ocuStatus(s), oc=ocuOcupante(s), at=ocuAtividade(s);
     const cls={'Ocupada':'ocu-ok','Vaga':'ocu-vaga','Em obra':'ocu-obra','Reservada':'ocu-res'}[st]||'';
     const bd={'Ocupada':'b-conc','Vaga':'b-atr','Em obra':'b-and','Reservada':'b-pend'}[st]||'b-tag';
     const auto=st!==(s.status||'Vaga');
+    const modVaga=s.locModalidade||'Locação';
     return `<tr class="${cls}">
       <td><b>${esc(s.numero)}</b>${s.andar?`<div class="t-sub">${esc(ocuAndarRot(s.andar))}</div>`:''}</td>
-      <td>${oc?esc(oc):(st==='Vaga'&&(s.locNome||s.locTel)?`<span class="t-sub">Para locação: <b>${esc(s.locTipo?s.locTipo+' — ':'')}${esc(s.locNome||'—')}</b>${s.locTel?' · '+esc(s.locTel):''}</span>`:'—')}${oc?`<div class="t-sub">${esc(s.tipo||'')}</div>`:''}</td>
+      <td>${oc?`<b>${esc(oc)}</b>`:(st==='Vaga'?(modVaga==='Fechada'?`<span class="badge b-pend">Fechada s/ interesse</span>`:`<span class="t-sub">${esc(modVaga)}: <b>${esc(s.locTipo?s.locTipo+' — ':'')}${esc(s.locNome||'Sem contato')}</b>${s.locTel?' · '+esc(s.locTel):''}</span>`):'—')}${oc?`<div class="t-sub">${esc(s.tipo||'')}</div>`:''}</td>
+      <td>${P().edit?`<input value="${esc(at)}" placeholder="Ex.: Odontologia, Advocacia..." onchange="ocuSetAtividade('${s.id}',this.value)" style="width:100%;min-width:145px;padding:5px 8px;font-size:12.5px;border:1px solid #d5deec;border-radius:6px;background:#fff">`:(at?esc(at):'<span class="t-sub">—</span>')}</td>
       <td>${s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}</td>
       <td>${s.vagas?s.vagas+(s.vagas>1?' vagas':' vaga'):'—'}</td>
       <td>${String(s.deposito||'').trim()?`<span class="badge b-condo">nº ${esc(s.deposito)}</span>`:'<span class="t-sub">—</span>'}</td>
@@ -17388,22 +17568,22 @@ function viewOcupacao(){
         ${P().edit?`<button class="btn ${st==='Ocupada'?'ghost':''} sm" onclick="ocuAlternar('${s.id}')"
           title="${st==='Ocupada'?'Marcar como vaga':'Registrar quem ocupou'}">${
           st==='Ocupada'?'Liberar':'Ocupar'}</button>`:''}
-        ${st==='Vaga'&&P().edit?`<button class="btn ghost sm" onclick="locFormSala('${s.id}')" title="Informar quem está alugando (Imobiliária ou Proprietário)">${ic('door')}</button>`:''}
+        ${st==='Vaga'&&P().edit?`<button class="btn ghost sm" onclick="locFormSala('${s.id}')" title="Configurar Locação / Venda / Sala Fechada">${ic('door')}</button>`:''}
         ${P().edit?`<button class="btn ghost sm" onclick="ocuFormSala('${s.id}')">${ic('settings')}</button>`:''}
       </td></tr>`;
   }).join('');
 
   $('#content').innerHTML=cards+ia+`
     <div class="toolbar no-print">
-      <input placeholder="Buscar sala ou ocupante" value="${esc(ocuBusca)}"
-        oninput="ocuBusca=this.value;render()" style="min-width:190px">
+      <input placeholder="Buscar sala, espaço ou atividade" value="${esc(ocuBusca)}"
+        oninput="ocuBusca=this.value;render()" style="min-width:210px">
       <select onchange="ocuFiltro=this.value;render()">
         ${opt([''].concat(OCU_STATUS),ocuFiltro,'Situação')}</select>
       <select onchange="ocuAndar=this.value;render()">
         ${opt([''].concat([...new Set(ocuSalas(cid).map(x=>x.andar||'—'))]),ocuAndar,'Andar')}</select>
       ${ocuFiltro||ocuBusca||ocuAndar?`<button class="btn ghost sm" onclick="ocuFiltro='';ocuBusca='';ocuAndar='';render()">${ic('close')}Limpar</button>`:''}
       <div class="spacer"></div>
-      <button class="btn ghost" onclick="go('locacao')">${ic('door')}Salas p/ Locação (${r.Vaga})</button>
+      <button class="btn ghost" onclick="go('locacao')">${ic('door')}Salas p/ Locação e Venda (${locSalasVagas(cid).length})</button>
       <button class="btn ghost" onclick="ocuExportar()">${ic('download')}Exportar Excel</button>
       ${P().create?`<button class="btn ghost" onclick="ocuImportar()">${ic('upload')}Importar lista</button>`:''}
       ${session.role==='Gestor'?`<button class="btn ghost" onclick="ocuRestaurar()" title="Recarregar a relação original do prédio">${ic('refresh')}Restaurar relação</button>`:''}
@@ -17411,14 +17591,14 @@ function viewOcupacao(){
     </div>
     <div class="card" style="padding:0;overflow:hidden">
       <div class="tablewrap"><table><thead><tr>
-        <th>Sala</th><th>Ocupante</th><th>Área</th><th>Vagas</th><th>Depósito</th>
+        <th>Sala</th><th>Espaço / Ocupante</th><th>Atividade / Ramo</th><th>Área</th><th>Vagas</th><th>Depósito</th>
         <th>Situação</th><th>Observação</th>
         <th style="text-align:right">Ações</th></tr></thead>
-      <tbody>${linhas||'<tr><td colspan="8" class="t-sub">Nenhuma sala nesse filtro.</td></tr>'}</tbody>
+      <tbody>${linhas||'<tr><td colspan="9" class="t-sub">Nenhuma sala nesse filtro.</td></tr>'}</tbody>
       </table></div></div>
     <div class="legend">
-      <span><b>Automático:</b> a sala entra em obra pela Análise de Projetos e muda de ocupante pela Cessão de Direitos.</span>
-      <span><b>Taxa de ocupação:</b> considera ocupadas, em obra e reservadas sobre o total de salas.</span>
+      <span><b>Automático:</b> a sala entra em obra pela Análise de Projetos e muda de espaço/ocupante e atividade pela Cessão de Direitos.</span>
+      <span><b>Atividade:</b> digite diretamente na coluna Atividade / Ramo para atualizar na hora.</span>
     </div>`;
 }
 /* análise da ocupação para o painel de IA */
@@ -17445,9 +17625,9 @@ function ocuExportar(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const l=ocuSalas(cid);
   if(!l.length) return toast('Nada para exportar.');
-  const linhas=[['Sala','Andar','Área (m²)','Vagas','Depósito','Ocupante','Vínculo','Situação','Observação']]
+  const linhas=[['Sala','Andar','Área (m²)','Vagas','Depósito','Espaço / Ocupante','Atividade / Ramo','Vínculo','Situação','Observação']]
     .concat(l.map(s=>[s.numero,s.andar||'',s.area||'',s.vagas||0,s.deposito||'',
-      ocuOcupante(s)||'',s.tipo||'',ocuStatus(s),s.obs||'']));
+      ocuOcupante(s)||'',ocuAtividade(s)||'',s.tipo||'',ocuStatus(s),s.obs||'']));
   baixarCsv('ocupacao_'+cid+'_'+today()+'.csv',linhas);
   audit('Exportou o mapa de ocupação',condoName(cid),l.length+' sala(s)',cid);
 }
@@ -17488,26 +17668,67 @@ function ocuImportarConf(){
 }
 
 /* ============================================================
-   SALAS PARA LOCAÇÃO (ESTOQUE DE SALAS VAGAS E CONTATO DE QUEM ALUGA)
-   Lista automaticamente todas as salas vagas (ocuStatus === 'Vaga') e
-   permite informar o responsável pela locação (Imobiliária ou Proprietário),
-   nome da empresa/pessoa e telefone, além de ocupar a sala quando alugada.
+   SALAS PARA LOCAÇÃO E VENDA (ESTOQUE DE SALAS DISPONÍVEIS)
+   Lista automaticamente todas as salas vagas (ocuStatus === 'Vaga') que
+   estão disponíveis para Locação, Venda ou Locação e Venda.
+   Salas cujos proprietários NÃO têm interesse em vender nem alugar
+   (locModalidade === 'Fechada' ou semInteresse === true) saem da lista
+   de disponíveis e podem ser consultadas/reativadas no filtro "Fechadas".
    ============================================================ */
-let locFiltroResp='', locBusca='', locAndar='';
+let locFiltroResp='', locFiltroMod='', locBusca='', locAndar='';
+const LOC_MODALIDADES=['Locação','Venda','Locação e Venda','Fechada'];
+function locSalaFechada(s){
+  return !!(s&&(s.locModalidade==='Fechada'||s.semInteresse===true));
+}
+function locModalidadeSala(s){
+  if(!s) return 'Locação';
+  if(locSalaFechada(s)) return 'Fechada';
+  if(s.locModalidade==='Venda'||s.locModalidade==='Locação e Venda'||s.locModalidade==='Locação') return s.locModalidade;
+  return 'Locação';
+}
+/* Salas disponíveis para Locação e/ou Venda (exclui as fechadas sem interesse) */
 function locSalasVagas(cid){
-  return ocuSalas(cid).filter(s=>ocuStatus(s)==='Vaga');
+  return ocuSalas(cid).filter(s=>ocuStatus(s)==='Vaga'&&!locSalaFechada(s));
+}
+/* Salas vagas que o proprietário prefere deixar fechadas (sem interesse em locar nem vender) */
+function locSalasFechadas(cid){
+  return ocuSalas(cid).filter(s=>ocuStatus(s)==='Vaga'&&locSalaFechada(s));
 }
 function locTemResponsavel(s){
   return !!(s&&(String(s.locNome||'').trim()||String(s.locTel||'').trim()||String(s.locTipo||'').trim()));
 }
 function locResumo(cid){
   const vagas=locSalasVagas(cid);
+  const fechadas=locSalasFechadas(cid);
   const comResp=vagas.filter(locTemResponsavel);
   const semResp=vagas.filter(s=>!locTemResponsavel(s));
   const imob=vagas.filter(s=>s.locTipo==='Imobiliária');
   const prop=vagas.filter(s=>s.locTipo==='Proprietário');
+  const soLoc=vagas.filter(s=>locModalidadeSala(s)==='Locação');
+  const soVenda=vagas.filter(s=>locModalidadeSala(s)==='Venda');
+  const locEVenda=vagas.filter(s=>locModalidadeSala(s)==='Locação e Venda');
   const areaVaga=vagas.reduce((t,s)=>t+(Number(s.area)||0),0);
-  return {total:vagas.length,comResp:comResp.length,semResp:semResp.length,imob:imob.length,prop:prop.length,areaVaga};
+  return {total:vagas.length,fechadas:fechadas.length,comResp:comResp.length,semResp:semResp.length,
+    imob:imob.length,prop:prop.length,soLoc:soLoc.length,soVenda:soVenda.length,locEVenda:locEVenda.length,areaVaga};
+}
+function locSetModalidade(id,mod){
+  if(!P().edit) return toast('Sem permissão.');
+  const s=salas.find(x=>x.id===id); if(!s) return;
+  s.locModalidade=mod||'Locação';
+  s.semInteresse=(s.locModalidade==='Fechada');
+  (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),
+    t:s.semInteresse?'Sala marcada como Fechada (sem interesse em locar/vender)':('Modalidade alterada para '+s.locModalidade)});
+  audit('Modalidade da sala vaga alterada','Sala '+s.numero,s.locModalidade,s.condoId);
+  save(); render();
+  toast(s.semInteresse
+    ?`Sala ${s.numero} marcada como Fechada (sem interesse) e retirada da lista de disponíveis.`
+    :`Sala ${s.numero}: disponível para ${s.locModalidade}.`);
+}
+function locMarcarFechada(id){
+  locSetModalidade(id,'Fechada');
+}
+function locReativarSala(id,mod){
+  locSetModalidade(id,mod||'Locação');
 }
 function locFormSala(id){
   if(!P().edit) return toast('Sem permissão.');
@@ -17515,11 +17736,12 @@ function locFormSala(id){
   /* Se existir cessão recente desta sala ainda sem dados copiados, sugere como padrão */
   const cesProp=cessoes.filter(c=>c.condoId===s.condoId&&ocuMesmaSala(c.unidade,s.numero)&&(c.tipo==='Proprietário'||c.tipo==='Volta p/ Proprietário'))
     .sort((a,b)=>String(b.cadastro).localeCompare(String(a.cadastro)))[0];
+  const modIni=locModalidadeSala(s);
   const tpIni=s.locTipo||(cesProp?'Proprietário':'');
   const nmIni=s.locNome||(cesProp&&!s.locNome?cesProp.nome:'')||'';
   const tlIni=s.locTel||(cesProp&&!s.locTel?cesProp.contato:'')||'';
   const obIni=s.locObs||s.obs||'';
-  openModal('Responsável pela locação — Sala '+s.numero,
+  openModal('Locação e Venda — Sala '+s.numero,
     `<div class="feed-item blue" style="margin-bottom:12px">
        <div class="fi-ic">${ic('door')}</div>
        <div style="flex:1">
@@ -17528,27 +17750,38 @@ function locFormSala(id){
        </div>
      </div>
      <div class="f2">
-       <div class="field"><label>Quem está alugando?</label>
+       <div class="field"><label>Disponibilidade da sala</label>
+         <select id="locMod">
+           <option value="Locação" ${modIni==='Locação'?'selected':''}>Somente Locação</option>
+           <option value="Venda" ${modIni==='Venda'?'selected':''}>Somente Venda</option>
+           <option value="Locação e Venda" ${modIni==='Locação e Venda'?'selected':''}>Locação e Venda</option>
+           <option value="Fechada" ${modIni==='Fechada'?'selected':''}>Fechada (sem interesse em vender ou alugar)</option>
+         </select>
+       </div>
+       <div class="field"><label>Quem é o responsável?</label>
          <select id="locTipo">
            <option value="Imobiliária" ${tpIni==='Imobiliária'?'selected':''}>Imobiliária / Corretor</option>
            <option value="Proprietário" ${tpIni==='Proprietário'?'selected':''}>Proprietário</option>
            <option value="" ${!tpIni?'selected':''}>Ainda não informado</option>
          </select>
        </div>
+     </div>
+     <div class="f2">
+       <div class="field"><label>Nome da empresa (Imobiliária) ou pessoa (Proprietário / Corretor)</label>
+         <input id="locNome" value="${esc(nmIni)}" placeholder="Ex.: Zulene Imóveis / João da Silva">
+       </div>
        <div class="field"><label>Telefone / WhatsApp</label>
          <input id="locTel" value="${esc(tlIni)}" placeholder="(61) 90000-0000">
        </div>
      </div>
-     <div class="field"><label>Nome da empresa (Imobiliária) ou pessoa (Proprietário / Corretor)</label>
-       <input id="locNome" value="${esc(nmIni)}" placeholder="Ex.: Zulene Imóveis / João da Silva">
-     </div>
-     <div class="field"><label>Observações da locação (opcional)</label>
+     <div class="field"><label>Observações (opcional)</label>
        <input id="locObs" value="${esc(obIni)}" placeholder="Ex.: Chaves na administração, placa na janela...">
      </div>
-     <div class="t-sub">Essas informações aparecem no estoque de <b>Salas para Locação</b> para facilitar a indicação a interessados.</div>`,
+     <div class="t-sub">Se o proprietário <b>não tem interesse nem em vender nem em alugar</b> (só quer deixar fechada), selecione <b>Fechada</b> para tirá-la da lista de salas disponíveis.</div>`,
     `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
      ${locTemResponsavel(s)?`<button class="btn danger ghost" onclick="locLimparResp('${s.id}')">${ic('trash')}Limpar contato</button>`:''}
-     <button class="btn" onclick="locSalvarSala('${s.id}')">${ic('check')}Salvar responsável</button>`);
+     <button class="btn" onclick="locSalvarSala('${s.id}')">${ic('check')}Salvar</button>`);
+  if($('#locMod')) $('#locMod').value=modIni;
   if($('#locTipo')) $('#locTipo').value=tpIni;
   if($('#locNome')) $('#locNome').value=nmIni;
   if($('#locTel')) $('#locTel').value=tlIni;
@@ -17557,16 +17790,20 @@ function locFormSala(id){
 function locSalvarSala(id){
   if(!P().edit) return toast('Sem permissão.');
   const s=salas.find(x=>x.id===id); if(!s) return;
+  const mod=($('#locMod')&&$('#locMod').value)||'Locação';
   let tp=($('#locTipo')&&$('#locTipo').value)||'';
   const nm=($('#locNome')&&$('#locNome').value.trim())||'';
   const tl=($('#locTel')&&$('#locTel').value.trim())||'';
   const ob=($('#locObs')&&$('#locObs').value.trim())||'';
   if((nm||tl)&&!tp) tp='Imobiliária';
+  s.locModalidade=mod; s.semInteresse=(mod==='Fechada');
   s.locTipo=tp; s.locNome=nm; s.locTel=tl; s.locObs=ob;
-  (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),t:`Responsável p/ locação atualizado: ${tp||'—'} ${nm||''} ${tl||''}`.trim()});
-  audit('Sala p/ locação atualizada','Sala '+s.numero,(tp?tp+': ':'')+(nm||'—')+(tl?' · '+tl:''),s.condoId);
+  (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),t:`Disponibilidade (${mod}) / responsável atualizado: ${tp||'—'} ${nm||''} ${tl||''}`.trim()});
+  audit('Sala p/ locação/venda atualizada','Sala '+s.numero,mod+' · '+(tp?tp+': ':'')+(nm||'—')+(tl?' · '+tl:''),s.condoId);
   save(); closeModal(); render();
-  toast('Responsável pela locação da sala '+s.numero+' salvo.');
+  toast(mod==='Fechada'
+    ?`Sala ${s.numero} marcada como Fechada (sem interesse) e retirada das disponíveis.`
+    :`Sala ${s.numero} salva (${mod}).`);
 }
 function locLimparResp(id){
   if(!P().edit) return toast('Sem permissão.');
@@ -17576,11 +17813,12 @@ function locLimparResp(id){
   save(); closeModal(); render();
   toast('Contato de locação removido da sala '+s.numero+'.');
 }
-function locWhatsLink(tel,num){
+function locWhatsLink(tel,num,mod){
   const d=String(tel||'').replace(/\D/g,'');
   if(!d) return '';
   const f=d.length<=11&&!d.startsWith('55')?'55'+d:d;
-  const msg=encodeURIComponent(`Olá! Gostaria de informações sobre a locação da unidade ${num} no Edifício E-Business Águas Claras.`);
+  const finalidade=mod==='Venda'?'venda':(mod==='Locação e Venda'?'locação/venda':'locação');
+  const msg=encodeURIComponent(`Olá! Gostaria de informações sobre a ${finalidade} da unidade ${num} no Edifício E-Business Águas Claras.`);
   return `https://wa.me/${f}?text=${msg}`;
 }
 function locCopiarTel(v){
@@ -17593,49 +17831,63 @@ function locCopiarTel(v){
 function locExportar(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const vagas=locSalasVagas(cid);
-  if(!vagas.length) return toast('Nenhuma sala vaga para exportar.');
-  const linhas=[['Sala','Andar','Área Privativa (m²)','Vagas Garagem','Depósito','Responsável (Tipo)','Nome (Imobiliária / Proprietário)','Telefone / Contato','Observação']]
+  if(!vagas.length) return toast('Nenhuma sala disponível para exportar.');
+  const linhas=[['Sala','Andar','Área Privativa (m²)','Vagas Garagem','Depósito','Modalidade','Responsável (Tipo)','Nome (Imobiliária / Proprietário)','Telefone / Contato','Observação']]
     .concat(vagas.map(s=>[s.numero,s.andar||'',s.area||'',s.vagas||0,s.deposito||'',
-      s.locTipo||'Não informado',s.locNome||'',s.locTel||'',s.locObs||s.obs||'']));
-  baixarCsv('salas_para_locacao_'+cid+'_'+today()+'.csv',linhas);
-  audit('Exportou estoque de salas para locação',condoName(cid),vagas.length+' sala(s)',cid);
+      locModalidadeSala(s),s.locTipo||'Não informado',s.locNome||'',s.locTel||'',s.locObs||s.obs||'']));
+  baixarCsv('salas_locacao_venda_'+cid+'_'+today()+'.csv',linhas);
+  audit('Exportou estoque de salas para locação e venda',condoName(cid),vagas.length+' sala(s)',cid);
 }
 function locCopiarWhats(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const vagas=locSalasVagas(cid);
-  if(!vagas.length) return toast('Nenhuma sala vaga no momento.');
-  const txt=['*SALAS DISPONÍVEIS PARA LOCAÇÃO — '+condoName(cid).toUpperCase()+'* ('+fmt(today())+')','']
+  if(!vagas.length) return toast('Nenhuma sala disponível no momento.');
+  const txt=['*SALAS DISPONÍVEIS PARA LOCAÇÃO E VENDA — '+condoName(cid).toUpperCase()+'* ('+fmt(today())+')','']
     .concat(vagas.map(s=>{
       const ar=s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'';
+      const mod=locModalidadeSala(s);
       const resp=locTemResponsavel(s)?`${s.locTipo?s.locTipo+': ':''}${s.locNome||'—'}${s.locTel?' ('+s.locTel+')':''}`:'Contato ainda não informado';
-      return `• *${s.numero}* (${s.andar?ocuAndarRot(s.andar):'—'}${ar?' · '+ar:''}) — ${resp}`;
+      return `• *${s.numero}* (${s.andar?ocuAndarRot(s.andar):'—'}${ar?' · '+ar:''}) [${mod}] — ${resp}`;
     })).join('\n');
   if(navigator.clipboard&&navigator.clipboard.writeText)
-    navigator.clipboard.writeText(txt).then(()=>toast('Lista de salas para locação copiada!'),()=>toast('Copiado.'));
+    navigator.clipboard.writeText(txt).then(()=>toast('Lista de salas para locação e venda copiada!'),()=>toast('Copiado.'));
   else toast('Lista gerada.');
   return txt;
 }
 function viewSalasLocacao(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const res=locResumo(cid);
-  let l=locSalasVagas(cid);
+  const vendoFechadas=(locFiltroMod==='Fechada');
+  let l=vendoFechadas?locSalasFechadas(cid):locSalasVagas(cid);
+  if(!vendoFechadas&&locFiltroMod){
+    l=l.filter(s=>locModalidadeSala(s)===locFiltroMod);
+  }
   if(locFiltroResp==='com') l=l.filter(locTemResponsavel);
   else if(locFiltroResp==='sem') l=l.filter(s=>!locTemResponsavel(s));
   else if(locFiltroResp==='Imobiliária'||locFiltroResp==='Proprietário') l=l.filter(s=>s.locTipo===locFiltroResp);
   if(locAndar) l=l.filter(s=>(s.andar||'—')===locAndar);
   if(locBusca){
     const q=locBusca.toLowerCase();
-    l=l.filter(s=>(String(s.numero)+' '+(s.andar||'')+' '+(s.locTipo||'')+' '+(s.locNome||'')+' '+(s.locTel||'')+' '+(s.locObs||s.obs||'')).toLowerCase().includes(q));
+    l=l.filter(s=>(String(s.numero)+' '+(s.andar||'')+' '+locModalidadeSala(s)+' '+(s.locTipo||'')+' '+(s.locNome||'')+' '+(s.locTel||'')+' '+(s.locObs||s.obs||'')).toLowerCase().includes(q));
   }
-  const andares=[...new Set(locSalasVagas(cid).map(x=>x.andar||'—'))];
+  const baseAndar=vendoFechadas?locSalasFechadas(cid):locSalasVagas(cid);
+  const andares=[...new Set(baseAndar.map(x=>x.andar||'—'))];
   const linhas=l.map(s=>{
     const tem=locTemResponsavel(s);
-    const wLink=locWhatsLink(s.locTel,s.numero);
+    const mod=locModalidadeSala(s);
+    const wLink=locWhatsLink(s.locTel,s.numero,mod);
     const bdTipo=s.locTipo==='Imobiliária'?'b-and':(s.locTipo==='Proprietário'?'b-conc':'b-pend');
+    const bdMod=mod==='Venda'?'b-avencer':(mod==='Locação e Venda'?'b-conc':(mod==='Fechada'?'b-pend':'b-and'));
     return `<tr>
       <td><b>${esc(s.numero)}</b>${s.andar?`<div class="t-sub">${esc(ocuAndarRot(s.andar))}</div>`:''}</td>
       <td>${s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}
         <div class="t-sub">${s.vagas?s.vagas+(s.vagas>1?' vagas':' vaga'):'sem vaga'}${String(s.deposito||'').trim()?' · Dep. nº '+esc(s.deposito):''}</div></td>
+      <td>${P().edit?`<select onchange="locSetModalidade('${s.id}',this.value)" style="padding:4px 8px;font-size:12px;border-radius:6px;border:1px solid #cdd7e6;font-weight:600">
+          <option value="Locação" ${mod==='Locação'?'selected':''}>Somente Locação</option>
+          <option value="Venda" ${mod==='Venda'?'selected':''}>Somente Venda</option>
+          <option value="Locação e Venda" ${mod==='Locação e Venda'?'selected':''}>Locação e Venda</option>
+          <option value="Fechada" ${mod==='Fechada'?'selected':''}>Fechada (sem interesse)</option>
+        </select>`:`<span class="badge ${bdMod}">${esc(mod)}</span>`}</td>
       <td><span class="badge ${bdTipo}">${esc(s.locTipo||(tem?'Informado':'Não informado'))}</span></td>
       <td>${s.locNome?`<b>${esc(s.locNome)}</b>`:'<span class="t-sub">—</span>'}</td>
       <td>${s.locTel?`<span style="font-variant-numeric:tabular-nums"><b>${esc(s.locTel)}</b></span>
@@ -17645,67 +17897,77 @@ function viewSalasLocacao(){
         </div>`:'<span class="t-sub">—</span>'}</td>
       <td class="t-sub">${esc(s.locObs||s.obs||'—')}</td>
       <td style="text-align:right;white-space:nowrap" class="no-print">
-        ${P().edit?`<button class="btn ${tem?'ghost':''} sm" onclick="locFormSala('${s.id}')">${ic('edit')} ${tem?'Editar responsável':'Informar quem aluga'}</button>`:''}
-        ${P().edit?`<button class="btn green sm" onclick="ocuPreencher('${s.id}')" title="Marcar sala como ocupada e informar a empresa que entrou">${ic('check')} Ocupar</button>`:''}
+        ${P().edit?`<button class="btn ${tem?'ghost':''} sm" onclick="locFormSala('${s.id}')">${ic('edit')} ${tem?'Editar':'Configurar'}</button>`:''}
+        ${P().edit&&!vendoFechadas?`<button class="btn ghost sm" onclick="locMarcarFechada('${s.id}')" title="Proprietário sem interesse em vender nem alugar — retirar das disponíveis">Fechada s/ interesse</button>`:''}
+        ${P().edit&&vendoFechadas?`<button class="btn sm" onclick="locReativarSala('${s.id}','Locação')" title="Voltar para a lista de disponíveis">${ic('refresh')} Reativar</button>`:''}
+        ${P().edit?`<button class="btn green sm" onclick="ocuPreencher('${s.id}')" title="Marcar sala como ocupada e informar o espaço que entrou">${ic('check')} Ocupar</button>`:''}
       </td>
     </tr>`;
   }).join('');
 
   $('#content').innerHTML=`
     <div class="grid metrics" style="margin-bottom:14px">
-      <div class="card metric ${res.total?'amber':'green'}" onclick="locFiltroResp='';render()">
-        <div class="lbl">${ic('door')}Salas vagas (Estoque)</div>
+      <div class="card metric ${res.total?'amber':'green'}" onclick="locFiltroMod='';locFiltroResp='';render()">
+        <div class="lbl">${ic('door')}Salas Disponíveis</div>
         <div class="val">${res.total}</div>
-        <div class="sub">${res.areaVaga.toLocaleString('pt-BR',{maximumFractionDigits:0})} m² disponíveis</div>
+        <div class="sub">${res.areaVaga.toLocaleString('pt-BR',{maximumFractionDigits:0})} m² p/ locação ou venda</div>
       </div>
-      <div class="card metric green" onclick="locFiltroResp='com';render()">
-        <div class="lbl">${ic('checkCircle')}Com responsável</div>
-        <div class="val">${res.comResp}</div>
-        <div class="sub">já têm contato p/ locação</div>
+      <div class="card metric" onclick="locFiltroMod='Locação';render()">
+        <div class="lbl">${ic('building')}Só Locação</div>
+        <div class="val">${res.soLoc}</div>
+        <div class="sub">disponíveis p/ alugar</div>
       </div>
-      <div class="card metric" onclick="locFiltroResp='Imobiliária';render()">
-        <div class="lbl">${ic('building')}Com Imobiliária</div>
-        <div class="val">${res.imob}</div>
-        <div class="sub">corretor / imobiliária</div>
+      <div class="card metric" onclick="locFiltroMod='Venda';render()">
+        <div class="lbl">${ic('tag')}Só Venda</div>
+        <div class="val">${res.soVenda}</div>
+        <div class="sub">disponíveis p/ venda</div>
       </div>
-      <div class="card metric" onclick="locFiltroResp='Proprietário';render()">
-        <div class="lbl">${ic('user')}Com Proprietário</div>
-        <div class="val">${res.prop}</div>
-        <div class="sub">direto com o dono</div>
+      <div class="card metric green" onclick="locFiltroMod='Locação e Venda';render()">
+        <div class="lbl">${ic('checkCircle')}Locação e Venda</div>
+        <div class="val">${res.locEVenda}</div>
+        <div class="sub">ambas as modalidades</div>
       </div>
-      <div class="card metric ${res.semResp?'red':''}" onclick="locFiltroResp='sem';render()">
+      <div class="card metric ${res.semResp?'red':''}" onclick="locFiltroMod='';locFiltroResp='sem';render()">
         <div class="lbl">${ic('alert')}Sem contato</div>
         <div class="val">${res.semResp}</div>
-        <div class="sub">aguardando informar quem aluga</div>
+        <div class="sub">${res.comResp} já têm responsável</div>
       </div>
     </div>
 
     <div class="card" style="margin-bottom:14px;background:var(--slate-soft);box-shadow:none;padding:12px 14px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div class="t-sub" style="line-height:1.5;flex:1;min-width:240px">
-          <b>Estoque automático de salas vagas:</b> todas as unidades que estão <b>Vagas</b> na
-          <a href="#" onclick="event.preventDefault();go('ocupacao')"><b>Taxa de Ocupação</b></a> (ou que tiveram
-          <a href="#" onclick="event.preventDefault();go('cessoes')"><b>Cessão de Proprietário marcada para locação / Volta p/ Proprietário</b></a>)
-          aparecem automaticamente aqui. Clique em <b>Informar quem aluga</b> para anotar o nome e telefone da imobiliária ou do proprietário, ou em <b>Ocupar</b> quando uma empresa entrar na sala.
+          <b>Estoque disponível p/ Locação e Venda:</b> escolha em cada sala se está para <b>Somente Locação</b>, <b>Somente Venda</b> ou <b>Locação e Venda</b>.
+          Se o proprietário <b>não tem interesse nem em vender nem em alugar</b> (só quer deixar fechada), clique em <b>Fechada s/ interesse</b> para retirá-la desta lista de salas disponíveis.
         </div>
-        <button class="btn ghost sm no-print" onclick="go('ocupacao')">${ic('building')} Ir para Taxa de Ocupação</button>
+        <div class="rowact no-print">
+          ${res.fechadas||vendoFechadas?`<button class="btn ${vendoFechadas?'':'ghost'} sm" onclick="locFiltroMod=locFiltroMod==='Fechada'?'':'Fechada';render()">${vendoFechadas?'← Voltar p/ Disponíveis ('+res.total+')':'Fechadas s/ interesse ('+res.fechadas+')'}</button>`:''}
+          <button class="btn ghost sm" onclick="go('ocupacao')">${ic('building')} Ir para Taxa de Ocupação</button>
+        </div>
       </div>
     </div>
 
     <div class="toolbar no-print">
       <input placeholder="Buscar sala, imobiliária, proprietário, telefone..." value="${esc(locBusca)}"
-        oninput="locBusca=this.value;render()" style="min-width:230px">
+        oninput="locBusca=this.value;render()" style="min-width:220px">
+      <select onchange="locFiltroMod=this.value;render()">
+        <option value="" ${locFiltroMod===''?'selected':''}>Todas disponíveis (${res.total})</option>
+        <option value="Locação" ${locFiltroMod==='Locação'?'selected':''}>Somente Locação (${res.soLoc})</option>
+        <option value="Venda" ${locFiltroMod==='Venda'?'selected':''}>Somente Venda (${res.soVenda})</option>
+        <option value="Locação e Venda" ${locFiltroMod==='Locação e Venda'?'selected':''}>Locação e Venda (${res.locEVenda})</option>
+        <option value="Fechada" ${locFiltroMod==='Fechada'?'selected':''}>Fechadas s/ interesse (${res.fechadas})</option>
+      </select>
       <select onchange="locFiltroResp=this.value;render()">
-        <option value="" ${locFiltroResp===''?'selected':''}>Todas as salas vagas (${res.total})</option>
-        <option value="com" ${locFiltroResp==='com'?'selected':''}>Com responsável informado (${res.comResp})</option>
-        <option value="sem" ${locFiltroResp==='sem'?'selected':''}>Sem contato cadastrado (${res.semResp})</option>
+        <option value="" ${locFiltroResp===''?'selected':''}>Qualquer responsável</option>
+        <option value="com" ${locFiltroResp==='com'?'selected':''}>Com responsável (${res.comResp})</option>
+        <option value="sem" ${locFiltroResp==='sem'?'selected':''}>Sem contato (${res.semResp})</option>
         <option value="Imobiliária" ${locFiltroResp==='Imobiliária'?'selected':''}>Só Imobiliária (${res.imob})</option>
         <option value="Proprietário" ${locFiltroResp==='Proprietário'?'selected':''}>Só Proprietário (${res.prop})</option>
       </select>
       <select onchange="locAndar=this.value;render()">
         ${opt([''].concat(andares),locAndar,'Andar')}
       </select>
-      ${locFiltroResp||locBusca||locAndar?`<button class="btn ghost sm" onclick="locFiltroResp='';locBusca='';locAndar='';render()">${ic('close')}Limpar</button>`:''}
+      ${locFiltroMod||locFiltroResp||locBusca||locAndar?`<button class="btn ghost sm" onclick="locFiltroMod='';locFiltroResp='';locBusca='';locAndar='';render()">${ic('close')}Limpar</button>`:''}
       <div class="spacer"></div>
       <button class="btn ghost" onclick="locCopiarWhats()">${ic('copy')}Copiar p/ WhatsApp</button>
       <button class="btn ghost" onclick="locExportar()">${ic('download')}Exportar Planilha</button>
@@ -17714,11 +17976,11 @@ function viewSalasLocacao(){
 
     <div class="card" style="padding:0;overflow:hidden">
       <div class="tablewrap"><table><thead><tr>
-        <th>Sala</th><th>Área / Vagas</th><th>Quem Aluga</th><th>Nome (Empresa ou Pessoa)</th>
+        <th>Sala</th><th>Área / Vagas</th><th>Disponível para</th><th>Responsável</th><th>Nome (Empresa ou Pessoa)</th>
         <th>Telefone / Contato</th><th>Observação</th>
         <th style="text-align:right" class="no-print">Ações</th>
       </tr></thead>
-      <tbody>${linhas||'<tr><td colspan="7" class="t-sub" style="text-align:center;padding:24px">Nenhuma sala vaga encontrada nesse filtro.</td></tr>'}</tbody>
+      <tbody>${linhas||`<tr><td colspan="8" class="t-sub" style="text-align:center;padding:24px">${vendoFechadas?'Nenhuma sala marcada como fechada sem interesse.':'Nenhuma sala disponível encontrada nesse filtro.'}</td></tr>`}</tbody>
       </table></div>
     </div>`;
 }
@@ -17742,9 +18004,9 @@ function migrarSalasLocacao(){
       }
     }
   });
-  /* 3. Sincroniza cessões que deixam a sala para locação */
+  /* 3. Sincroniza cessões que deixam a sala para locação/fechada ou trazem nome do espaço/atividade */
   (cessoes||[]).forEach(c=>{
-    if(c&&c.tipo==='Proprietário'&&c.destinoOcupacao==='locacao'){
+    if(c&&((c.tipo==='Proprietário'&&(c.destinoOcupacao==='locacao'||c.destinoOcupacao==='fechada'))||c.nomeEspaco||c.atividade)){
       sincronizarSalaCessao(c);
     }
   });
@@ -18151,6 +18413,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d1d02ffc5309d2',t:'MTc5MjQzNDE5OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d80256fa7feede',t:'MTc5MjQ5OTE2Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+</body>
 </html>
