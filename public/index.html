@@ -1073,11 +1073,26 @@ tr.ap-apr:hover td{background:#f7f9fc}
 }
 
 @media print{
+  @page{size:A4;margin:8mm}
   .sidebar,.topbar,.tabbar,.fab,.overlay,.no-print,.bulkbar,.toast{display:none !important}
-  .main{margin-left:0 !important}
-  body{background:#fff;font-size:11px}
-  .card,.tablewrap{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+  .main{margin-left:0 !important;padding:0 !important}
+  .content{padding:0 !important}
+  body{background:#fff;font-size:10px}
+  .card,.tablewrap{box-shadow:none !important;border:1px solid #ccc;break-inside:auto;padding:8px}
+  .metrics{grid-template-columns:repeat(5,1fr) !important;gap:6px !important;margin-bottom:8px !important}
+  .card.metric{padding:6px 8px !important;break-inside:avoid}
+  .card.metric .val{font-size:16px !important;margin-top:2px !important}
+  .card.metric .lbl{font-size:8.5px !important}
+  .card.metric .sub{font-size:9px !important}
   .metric::before{display:none}
+  table{display:table !important;width:100% !important;min-width:0 !important;border-collapse:collapse}
+  thead{display:table-header-group !important}
+  tbody{display:table-row-group !important}
+  tr,tbody tr{display:table-row !important;padding:0 !important;margin:0 !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;break-inside:avoid;page-break-inside:avoid}
+  th,td{display:table-cell !important;padding:4px 6px !important;font-size:9.5px !important;border-bottom:1px solid #d5deec !important;vertical-align:middle}
+  td:first-child{margin-bottom:0 !important;padding-bottom:4px !important}
+  td[data-l]::before{display:none !important;content:none !important}
+  select{border:0 !important;padding:0 !important;font-size:9.5px !important;background:transparent !important;-webkit-appearance:none;appearance:none}
 }
 
 /* ===== Manutenções obrigatórias: linhas em cartão (substitui a tabela apertada) ===== */
@@ -4507,7 +4522,7 @@ function viewUnidSind(){
       <div class="spacer"></div>
       ${P().create?`<button class="btn" onclick="usForm()">+ Nova unidade</button>`:''}
       <button class="btn ghost" onclick="usExportar()">${ic('download')} Baixar planilha</button>
-      <button class="btn ghost" onclick="window.print()">${ic('print')} Imprimir</button>
+      <button class="btn ghost" onclick="usImprimirPdf()">${ic('print')} Imprimir / PDF</button>
     </div>
 
     ${Object.keys(porPredio).length?Object.entries(porPredio).map(([pr,ll])=>`
@@ -4610,10 +4625,52 @@ function usExportar(){
     u.area!=null?u.area:'', u.fi!=null?u.fi:'',
     u.iptu||'', u.conferir?'SIM':'', u.obs||'']);
   _baixar('unidades-'+SIND_NOME.toLowerCase()+'-'+today()+'.xlsx',
-    new Blob([xlsxAbas([{nome:'Unidades do síndico',colunas,linhas}])],
+    new Blob([xlsxAbas([{nome:'Unidades do síndico',titulo:'Carteira Particular de Unidades — '+SIND_NOME,colunas,linhas}])],
       {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
   audit('Carteira do síndico exportada',l.length+' unidade(s)','',null,'Carteira do síndico');
   toast('Planilha gerada.');
+}
+function usImprimirPdf(){
+  const l=usLista();
+  if(!l.length) return toast('Nenhuma unidade para imprimir com esse filtro.');
+  const porPredio={};
+  l.forEach(u=>{ (porPredio[u.predio]=porPredio[u.predio]||[]).push(u); });
+  const areaTot=usArea(l);
+  const kpis=[
+    {val:l.length,lbl:'Total de Unidades'},
+    {val:Object.keys(porPredio).length,lbl:'Prédios / Empreendimentos'},
+    {val:(areaTot?areaTot.toLocaleString('pt-BR',{minimumFractionDigits:2}):'0,00')+' m²',lbl:'Área Total'},
+    {val:l.filter(u=>u.predio==='E-Business').length,lbl:'No E-Business'},
+    {val:l.filter(u=>u.iptu).length,lbl:'Com IPTU'},
+    {val:l.filter(u=>u.conferir).length,lbl:'A Conferir'}
+  ];
+  const secoes=Object.entries(porPredio).map(([pr,ll],idx)=>{
+    const arPr=usArea(ll);
+    return `<div class="faixa ${idx===0?'azul':''}">
+      <span>${esc(pr)} (${ll.length} ${ll.length===1?'unidade':'unidades'})</span>
+      <span>${arPr?arPr.toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':''}</span>
+    </div>
+    <table><thead><tr>
+      <th style="width:16%">Unidade</th><th style="width:14%">Tipo</th>
+      <th style="width:14%" class="num">Área (m²)</th><th style="width:14%" class="num">Fração Ideal</th>
+      <th style="width:18%" class="cnt">Inscrição do IPTU</th><th style="width:24%">Observação</th>
+    </tr></thead><tbody>
+      ${ll.map(u=>`<tr>
+        <td><b>${esc(u.unidade)}</b></td>
+        <td>${esc(u.tipo||'—')}</td>
+        <td class="num">${u.area!=null?Number(u.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}</td>
+        <td class="num">${u.fi!=null?Number(u.fi).toLocaleString('pt-BR',{minimumFractionDigits:4})+'%':'—'}</td>
+        <td class="cnt"><b>${esc(u.iptu||'—')}</b></td>
+        <td>${u.conferir?'<span class="tag t-ven">Conferir</span> ':''}${esc(u.obs||'—')}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  }).join('');
+  abrirRelatorioPadraoPdf(
+    'Carteira de Unidades do Síndico — '+SIND_NOME,
+    'Condomínio E-Business · Emitido em '+fmt(today()),
+    kpis, secoes,
+    'Relatório consolidado da carteira particular do síndico · Dados de área e IPTU conforme desmembramento oficial.'
+  );
 }
 
 /* Desmembramento oficial do GDF: 261 unidades do E-Business.
@@ -4892,9 +4949,33 @@ const UNID_EB={'Loja 01':['52011119',232.55,0.972],
                   comum. E a que aparece no carne do IPTU. Ex.: 1201 = 80,64 m2.
    Da quase o dobro. Guardar so uma faria o sistema oferecer uma sala de
    38 m2 como se fosse de 80. */
+function salaSeedRow(numero){
+  return (typeof SALAS_SEED!=='undefined'?SALAS_SEED:[]).find(x=>String(x[0])===String(numero)||ocuMesmaSala(x[0],numero));
+}
 function salaSeedArea(numero){
-  const r=(typeof SALAS_SEED!=='undefined'?SALAS_SEED:[]).find(x=>String(x[0])===String(numero));
+  const r=salaSeedRow(numero);
   return r?Number(r[3])||null:null;
+}
+function salaSeedVagas(numero){
+  const r=salaSeedRow(numero);
+  return r?Number(r[4])||0:0;
+}
+function salaSeedDep(numero){
+  const r=salaSeedRow(numero);
+  return r?String(r[5]||''):'';
+}
+function ocuVagasSala(s){
+  if(!s) return 0;
+  const v=Number(s.vagas);
+  if(v>0) return v;
+  if(s.condoId==='c1'||!s.condoId) return salaSeedVagas(s.numero);
+  return 0;
+}
+function ocuDepSala(s){
+  if(!s) return '';
+  if(String(s.deposito||'').trim()) return String(s.deposito).trim();
+  if(s.condoId==='c1'||!s.condoId) return salaSeedDep(s.numero);
+  return '';
 }
 function migrarSalasIptu(){
   const ver=+String(CFG.salasIptu||'v0').replace('v','')||0;
@@ -4911,6 +4992,10 @@ function migrarSalasIptu(){
     /* conserta a v1, que gravou a area do IPTU no lugar da privativa */
     const priv=salaSeedArea(s.numero);
     if(priv&&(s.area==null||s.area===''||Number(s.area)===d[1])){ s.area=priv; mudou=true }
+    const vg=salaSeedVagas(s.numero);
+    if(vg&&(!s.vagas||Number(s.vagas)<=0)){ s.vagas=vg; mudou=true }
+    const dp=salaSeedDep(s.numero);
+    if(dp&&!String(s.deposito||'').trim()){ s.deposito=dp; mudou=true }
     if(mudou){ n++;
       s.historico=s.historico||[];
       s.historico.push({q:'Sistema',w:nowStamp(),
@@ -4965,11 +5050,14 @@ function viewUnidades(){
   const areaTot=todas.reduce((t,s)=>t+(Number(s.area)||0),0);
   const areaIptuTot=todas.reduce((t,s)=>t+(Number(s.areaIptu)||0),0);
   const fiTot=todas.reduce((t,s)=>t+(Number(s.fi)||0),0);
+  const vagasTot=todas.reduce((t,s)=>t+ocuVagasSala(s),0);
+  const depTot=todas.filter(s=>ocuDepSala(s)).length;
   const semIptu=todas.filter(s=>!s.iptu).length;
   const r=ocuResumo(cid);
 
   const linha=s=>{
     const st=ocuStatus(s), oc=ocuOcupante(s);
+    const vg=ocuVagasSala(s), dp=ocuDepSala(s);
     const ces=unCessoesDa(s), ana=unAnalisesDa(s);
     const cesAberta=ces.filter(c=>cessStatusAuto(c)!=='Concluída'&&cessStatusAuto(c)!=='Cancelada').length;
     return `<tr>
@@ -4977,6 +5065,7 @@ function viewUnidades(){
         <div class="t-sub">${esc(s.andar?ocuAndarRot(s.andar):'—')}</div></td>
       <td style="white-space:nowrap">${unFmtArea(s.area)}</td>
       <td style="white-space:nowrap" class="muted">${unFmtArea(s.areaIptu)}</td>
+      <td style="white-space:nowrap">${vg?`<b>${vg}</b> ${vg>1?'vagas':'vaga'}`:'—'}${dp?`<div class="t-sub">Dep. nº ${esc(dp)}</div>`:''}</td>
       <td style="white-space:nowrap">${s.fi!=null&&s.fi!==''?Number(s.fi).toFixed(4).replace('.',',')+'%':'—'}</td>
       <td><span style="font-variant-numeric:tabular-nums">${esc(s.iptu||'—')}</span>
         ${s.iptu?`<button class="btn sm ghost no-print" style="margin-left:6px;padding:2px 7px"
@@ -4995,13 +5084,13 @@ function viewUnidades(){
   $('#content').innerHTML=`
     <div class="grid metrics" style="margin-bottom:14px">
       <div class="card metric"><div class="lbl">Unidades</div><div class="val">${todas.length}</div>
-        <div class="sub">${andares.length} andares</div></div>
+        <div class="sub">${andares.length} andares · ${vagasTot} vagas (Convenção)</div></div>
       <div class="card metric"><div class="lbl">Área privativa total</div>
         <div class="val" style="font-size:21px">${unFmtArea(areaTot)}</div>
         <div class="sub">${unFmtArea(areaIptuTot)} no carnê do IPTU</div></div>
       <div class="card metric"><div class="lbl">Fração ideal somada</div>
         <div class="val" style="font-size:21px">${fiTot.toFixed(4).replace('.',',')}%</div>
-        <div class="sub">o restante é área comum</div></div>
+        <div class="sub">o restante é área comum (${depTot} depósitos)</div></div>
       <div class="card metric ${semIptu?'amber':'green'}"><div class="lbl">Sem IPTU cadastrado</div>
         <div class="val">${semIptu}</div><div class="sub">${semIptu?'completar':'todas conferidas'}</div></div>
     </div>
@@ -5011,7 +5100,7 @@ function viewUnidades(){
         São <b>duas áreas diferentes</b>: a <b>privativa</b> é a da relação de salas do
         condomínio, que serve para alugar e para a ocupação; a <b>área no IPTU</b> vem do
         desmembramento do GDF e soma a fração de área comum, por isso dá quase o dobro.
-        Fração ideal e inscrição também vêm do desmembramento.
+        Fração ideal e inscrição também vêm do desmembramento, e as <b>vagas de garagem (${vagasTot} vagas) e depósitos (${depTot})</b> vêm da <b>Convenção do Condomínio</b> (cláusulas 2.3 e 2.4.1).
         O ocupante e a situação não são digitados aqui: saem do mesmo cálculo da
         <a href="#" onclick="event.preventDefault();go('ocupacao')"><b>Taxa de Ocupação</b></a>,
         que já lê a <a href="#" onclick="event.preventDefault();go('cessoes')"><b>Cessão de Direitos</b></a>
@@ -5038,7 +5127,7 @@ function viewUnidades(){
         <option value="semiptu" ${unSo==='semiptu'?'selected':''}>Sem IPTU</option></select>
       <div class="spacer"></div>
       <button class="btn ghost" onclick="unExportar()">${ic('download')} Baixar planilha</button>
-      <button class="btn ghost" onclick="window.print()">${ic('print')} Imprimir</button>
+      <button class="btn ghost" onclick="unImprimirPdf()">${ic('print')} Imprimir / PDF</button>
     </div>
 
     <div class="card">
@@ -5048,6 +5137,7 @@ function viewUnidades(){
       ${l.length?`<div class="tablewrap"><table style="min-width:860px">
         <thead><tr><th>Unidade</th><th>Área privativa</th>
           <th title="Área do desmembramento, que soma a fração de área comum">Área no IPTU</th>
+          <th title="Vagas de garagem e depósito conforme a Convenção do Condomínio">Vagas / Dep.</th>
           <th>Fração</th><th>Inscrição do IPTU</th>
           <th>Ocupante</th><th>Situação</th><th class="no-print">Vínculos</th></tr></thead>
         <tbody>${l.map(linha).join('')}</tbody></table></div>`
@@ -5063,12 +5153,17 @@ function unCopiar(v){
 function unEditar(id){
   const s=salas.find(x=>x.id===id); if(!s) return;
   if(!P().edit) return toast('Sem permissão.');
+  const vg=ocuVagasSala(s), dp=ocuDepSala(s);
   openModal('Unidade '+s.numero,
     `<div class="f2">
       <div class="field"><label>Área privativa (m²)</label>
         <input id="unAr" type="number" step="0.01" value="${s.area!=null?s.area:''}"></div>
       <div class="field"><label>Área no IPTU (m²)</label>
         <input id="unAi" type="number" step="0.01" value="${s.areaIptu!=null?s.areaIptu:''}"></div>
+      <div class="field"><label>Vagas de garagem (Convenção)</label>
+        <input id="unVg" type="number" min="0" value="${vg}"></div>
+      <div class="field"><label>Depósito vinculado (nº)</label>
+        <input id="unDp" value="${esc(dp)}" placeholder="vazio se não tiver"></div>
       <div class="field"><label>Fração ideal (%)</label>
         <input id="unFi" type="number" step="0.0001" value="${s.fi!=null?s.fi:''}"></div>
       <div class="field"><label>Inscrição do IPTU</label>
@@ -5086,9 +5181,11 @@ function unSalvar(id){
   const s=salas.find(x=>x.id===id); if(!s) return;
   if(!P().edit) return toast('Sem permissão.');
   const v=x=>{const e=document.querySelector(x);return e?e.value.trim():''};
-  const antes={area:s.area,areaIptu:s.areaIptu,fi:s.fi,iptu:s.iptu,andar:s.andar};
+  const antes={area:s.area,areaIptu:s.areaIptu,fi:s.fi,iptu:s.iptu,andar:s.andar,vagas:s.vagas,deposito:s.deposito};
   s.area=v('#unAr')?+v('#unAr'):null;
   s.areaIptu=v('#unAi')?+v('#unAi'):null;
+  if(document.querySelector('#unVg')&&v('#unVg')!=='') s.vagas=+v('#unVg');
+  if(document.querySelector('#unDp')) s.deposito=v('#unDp');
   s.fi=v('#unFi')?+v('#unFi'):null;
   s.iptu=usIptuNorm(v('#unIp'));
   s.andar=v('#unAn');
@@ -5104,17 +5201,67 @@ function unExportar(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const l=unLista(cid);
   if(!l.length) return toast('Nada para exportar com esse filtro.');
-  const colunas=['Unidade','Andar','Área privativa (m²)','Área no IPTU (m²)','Fração ideal (%)',
+  const colunas=['Unidade','Andar','Área privativa (m²)','Área no IPTU (m²)','Vagas Garagem (Convenção)','Depósito','Fração ideal (%)',
     'Inscrição IPTU','Ocupante','Vínculo','Situação','Cessões','Análises de projeto'];
   const linhas=l.map(s=>[s.numero,s.andar||'',s.area!=null?s.area:'',
-    s.areaIptu!=null?s.areaIptu:'',s.fi!=null?s.fi:'',
-    s.iptu||'',ocuOcupante(s)||'',s.tipo||'',ocuStatus(s),
+    s.areaIptu!=null?s.areaIptu:'',ocuVagasSala(s),ocuDepSala(s),s.fi!=null?s.fi:'',
+    s.iptu||'',ocuOcupante(s)||'Vazia',ocuStatus(s)==='Vaga'?'Vago':(s.tipo||''),ocuStatus(s),
     unCessoesDa(s).length,unAnalisesDa(s).length]);
   _baixar('unidades-'+(condoName(cid)||'predio').toLowerCase().replace(/\W+/g,'-')+'-'+today()+'.xlsx',
-    new Blob([xlsxAbas([{nome:'Unidades do prédio',colunas,linhas}])],
+    new Blob([xlsxAbas([{nome:'Unidades do prédio',titulo:'Relação Oficial de Unidades do Prédio — '+condoName(cid),colunas,linhas}])],
       {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
   audit('Unidades do prédio exportadas',l.length+' unidade(s)','',cid,'Unidades do prédio');
   toast('Planilha gerada.');
+}
+function unImprimirPdf(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const l=unLista(cid);
+  if(!l.length) return toast('Nenhuma unidade para imprimir com esse filtro.');
+  const r=ocuResumo(cid);
+  const arPriv=l.reduce((t,s)=>t+(Number(s.area)||0),0);
+  const arIptu=l.reduce((t,s)=>t+(Number(s.areaIptu)||0),0);
+  const vgTot=l.reduce((t,s)=>t+ocuVagasSala(s),0);
+  const dpTot=l.filter(s=>ocuDepSala(s)).length;
+  const kpis=[
+    {val:l.length,lbl:'Unidades Listadas'},
+    {val:r.taxa+'%',lbl:'Taxa de Ocupação'},
+    {val:arPriv.toLocaleString('pt-BR',{maximumFractionDigits:0})+' m²',lbl:'Área Privativa'},
+    {val:arIptu.toLocaleString('pt-BR',{maximumFractionDigits:0})+' m²',lbl:'Área no IPTU'},
+    {val:vgTot,lbl:'Vagas Garagem'},
+    {val:dpTot,lbl:'Com Depósito'}
+  ];
+  const corpo=`<div class="faixa">
+      <span>RELAÇÃO DE UNIDADES DO PRÉDIO (${l.length} UNIDADES)</span>
+      <span>${esc(condoName(cid))}</span>
+    </div>
+    <table><thead><tr>
+      <th style="width:10%">Unidade</th><th style="width:8%">Andar</th>
+      <th style="width:11%" class="num">Área Priv.</th><th style="width:11%" class="num">Área IPTU</th>
+      <th style="width:11%" class="cnt">Vagas / Dep.</th><th style="width:9%" class="num">Fração</th>
+      <th style="width:12%" class="cnt">Inscrição IPTU</th><th style="width:19%">Empresa / Espaço</th>
+      <th style="width:9%" class="cnt">Situação</th>
+    </tr></thead><tbody>
+      ${l.map(s=>{
+        const st=ocuStatus(s), oc=ocuOcupante(s), vg=ocuVagasSala(s), dp=ocuDepSala(s);
+        return `<tr>
+          <td><b>${esc(s.numero)}</b></td>
+          <td>${esc(s.andar||'—')}</td>
+          <td class="num">${s.area!=null?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}</td>
+          <td class="num">${s.areaIptu!=null?Number(s.areaIptu).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}</td>
+          <td class="cnt"><b>${vg}v</b>${dp?' · Dep.'+esc(dp):''}</td>
+          <td class="num">${s.fi!=null?Number(s.fi).toLocaleString('pt-BR',{minimumFractionDigits:4})+'%':'—'}</td>
+          <td class="cnt"><b>${esc(s.iptu||'—')}</b></td>
+          <td>${st==='Vaga'?'<span class="tag t-ven">Vazia</span>':`<b>${esc(oc||'—')}</b>`}</td>
+          <td class="cnt"><span class="tag ${st==='Ocupada'?'t-amb':(st==='Vaga'?'t-ven':'t-loc')}">${st==='Vaga'?'Vazia':esc(st)}</span></td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>`;
+  abrirRelatorioPadraoPdf(
+    'Relação Oficial de Unidades do Prédio',
+    condoName(cid)+' · Emitido em '+fmt(today())+' · Áreas, IPTU e Vagas conforme Convenção e GDF',
+    kpis, corpo,
+    'Condomínio E-Business Águas Claras · 261 unidades autônomas · 285 vagas de garagem · 24 depósitos.'
+  );
 }
 
 /* ============ PADRÕES DE E-MAILS E SOLICITAÇÃO DE BOLETO CRM ============
@@ -5626,6 +5773,7 @@ function viewNotas(){
       <div class="spacer"></div>
       <button class="btn ghost" onclick="prestPanel=!prestPanel;render()">Prestadores de Serviço ${prestPanel?'':''}</button>
       <button class="btn ghost" onclick="csvNotas()">${ic('download')}Exportar Excel</button>
+      <button class="btn ghost" onclick="nfImprimirPdf()">${ic('print')}Imprimir / PDF</button>
       <button class="btn ghost sm" onclick="modalGerarComp()">Gerar Competência</button>
       <button class="btn ghost sm" style="color:#c2384a" onclick="modalExcluirComp()">Excluir Competência</button>
       <button class="btn green" onclick="nfConcluirMes()">Concluir Mês</button>
@@ -6365,6 +6513,8 @@ function viewCessoes(){
         ${ic('checkCircle')} ${vendoConc?`Voltar às pendentes (${abertas.length})`:`Concluídas (${cnt('Concluída')})`}
       </button>
       <div class="spacer"></div>
+      <button class="btn ghost" onclick="csExportar()">${ic('download')} Excel</button>
+      <button class="btn ghost" onclick="csImprimirPdf()">${ic('print')} Imprimir / PDF</button>
       ${P().create?`<button class="btn" onclick="editCess()">+ Nova Cessão</button>`:''}
     </div>
     ${vendoConc?`<div class="feed-item green" style="margin-bottom:12px"><div class="fi-ic">${ic('checkCircle')}</div>
@@ -6393,6 +6543,46 @@ function viewCessoes(){
       }).join('')}</tbody></table></div>`
       :`<div class="card empty">${vendoConc?'Nenhuma cessão concluída encontrada.':'Nenhuma cessão pendente no momento.'}</div>`}
     <div class="legend"><span><b>Regra de fechamento:</b> cadastros realizados até o dia 15 entram no fechamento do dia 15 do mês corrente; cadastros realizados a partir do dia 16 ficam programados para o dia 15 do próximo mês.</span></div>`;
+}
+function csExportar(){
+  const list=csListaVisivel();
+  if(!list.length) return toast('Nenhuma cessão na lista atual.');
+  const rows=[['Unidade','Tipo','Nome / Razão Social','Nome do Espaço / Empresa','Atividade / Ramo','Telefone','E-mail','Cadastro','Fechamento Previsto','Contrato Físico','Contrato E-mail','Status']]
+    .concat(list.map(c=>[c.unidade||'',c.tipo||'',c.nome||'',c.nomeEspaco||'',c.atividade||'',c.contato||'',c.email||'',fmt(c.cadastro),fmt(c.vencimento),c.contratoFisico?'Sim':'Não',c.contratoEmail?'Sim':'Não',cessStatusAuto(c)]));
+  baixarCsv(`cessoes_direito_${today()}.xlsx`,rows,'Cessão de Direitos — Condomínio E-Business');
+}
+function csImprimirPdf(){
+  const list=csListaVisivel();
+  const all=visibleCess(), cnt=st=>all.filter(c=>cessStatusAuto(c)===st).length;
+  const kpis=[
+    {v:list.length,l:'Na Lista Atual'},
+    {v:cnt('Pendente'),l:'Pendentes'},
+    {v:cnt('Atrasada'),l:'Atrasadas'},
+    {v:cnt('Concluída'),l:'Concluídas'}
+  ];
+  const corpo=`<div class="faixa"><span>RELAÇÃO DE CESSÕES DE DIREITOS</span><span>${list.length} registro(s)</span></div>
+  <table><thead><tr>
+    <th style="width:10%">Unidade</th><th style="width:12%">Tipo</th><th style="width:22%">Nome / Razão Social</th>
+    <th style="width:18%">Espaço / Empresa</th><th style="width:14%">Atividade</th>
+    <th style="width:10%" class="cnt">Fechamento</th><th style="width:6%" class="cnt">Contrato</th><th style="width:8%" class="cnt">Status</th>
+  </tr></thead><tbody>
+    ${list.map(c=>{
+      const st=cessStatusAuto(c);
+      const cls=st==='Concluída'?'t-amb':(st==='Atrasada'?'t-ven':'t-loc');
+      const ct=[c.contratoFisico?'Fís.':'',c.contratoEmail?'Mail':''].filter(Boolean).join('/')||'—';
+      return `<tr>
+        <td><b>${esc(c.unidade||'—')}</b></td>
+        <td>${esc(c.tipo||'—')}</td>
+        <td><b>${esc(c.nome||'—')}</b>${c.contato?`<div style="font-size:8px;color:#55657a">${esc(c.contato)}</div>`:''}</td>
+        <td>${esc(c.nomeEspaco||'—')}</td>
+        <td>${esc(c.atividade||'—')}</td>
+        <td class="cnt">${fmt(c.vencimento)}</td>
+        <td class="cnt">${esc(ct)}</td>
+        <td class="cnt"><span class="tag ${cls}">${esc(st)}</span></td>
+      </tr>`;
+    }).join('')}
+  </tbody></table>`;
+  abrirRelatorioPadraoPdf('Cessão de Direitos','Condomínio E-Business · Emitido em '+fmt(today()),kpis,corpo);
 }
 function editCess(id){
   if(!(id?P().edit:P().create)) return toast('Sem permissão.');
@@ -8039,9 +8229,9 @@ function vcXlsx(cicloId){
   const L=[];  // cada item: {cells:[{v,t,s}], }  s = índice de estilo
   const txt=(v,s)=>({v:v,t:'s',s:s||0});
   const num=(v,s)=>({v:(v===null||v===undefined||v==='')?'':Number(v),t:'n',s:s||0});
-  // estilos: 0 normal · 1 título azul · 2 rótulo negrito+borda · 3 caixa valor · 4 cabeçalho cinza
-  // 5 célula borda · 6 número 2 casas · 7 moeda · 8 total cinza escuro · 9 negrito
-  L.push([]);
+  // estilos: 0 normal · 1 título azul marinho · 2 rótulo institucional · 3 caixa valor · 4 cabeçalho azul institucional
+  // 5 célula borda · 6 número 2 casas · 7 moeda · 8 total azul marinho · 9 negrito · 10 destaque âmbar
+  L.push([]); L.push([txt(''),txt(''),txt('CONDOMÍNIO E-BUSINESS · ABL GESTÃO CONDOMINIAL',1)]); L.push([]);
   // ---- bloco VENDAS (faturamento do mês) ----
   const vend=vcLinhasVenda(c.competencia,c.condoId);
   if(vend.length){
@@ -8052,7 +8242,7 @@ function vcXlsx(cicloId){
       L.push([txt(v.unidade,5),txt(v.cnpj,5),txt(v.motivo,5),txt(fmt(v.venc),3),
               num(v.valor,v.origem==='fixo'?7:10),txt(v.tipo,5)]);
     });
-    const tv=[];tv[3]=txt('',8);tv[4]=num(vcTotalVendas(c.competencia,c.condoId),8);
+    const tv=[];tv[3]=txt('TOTAL VENDAS',8);tv[4]=num(vcTotalVendas(c.competencia,c.condoId),8);
     L.push([]); L.push(tv); L.push([]); L.push([]);
   }
   L.push([txt(''),txt(''),txt(`${serv.tit} - FATURAMENTO ${vcMesExt(c.competencia)}`,1)]);
@@ -8074,7 +8264,7 @@ function vcXlsx(cicloId){
             num(vcConsumoLinha(l),6),num(t.unit,7),num(vcValorLinha(c,l),7),txt(l.tipo,5)]);
   });
   L.push([]);
-  const lt=[];lt[5]=txt('',8);lt[6]=num(t.total,8);
+  const lt=[];lt[5]=txt('TOTAL',8);lt[6]=num(t.total,8);
   L.push(lt);
   // linhas extras de conferência
   L.push([]);
@@ -8086,7 +8276,8 @@ function vcXlsx(cicloId){
   let linhasXml='';
   L.forEach((row,i)=>{
     const r=i+1;
-    if(!row||!row.length){linhasXml+=`<row r="${r}"/>`;return}
+    const alt=(r<=3)?' ht="17" customHeight="1"':'';
+    if(!row||!row.length){linhasXml+=`<row r="${r}"${alt}/>`;return}
     let cs='';
     row.forEach((cel,j)=>{
       if(!cel) return;
@@ -8095,27 +8286,42 @@ function vcXlsx(cicloId){
       else if(cel.t==='n') cs+=`<c r="${ref}" s="${cel.s}"><v>${cel.v}</v></c>`;
       else cs+=`<c r="${ref}" s="${cel.s}" t="inlineStr"><is><t xml:space="preserve">${_xe(cel.v)}</t></is></c>`;
     });
-    linhasXml+=`<row r="${r}">${cs}</row>`;
+    linhasXml+=`<row r="${r}"${alt}>${cs}</row>`;
   });
   const larg=[34,34,46,20,18,14,18,12].map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
+  const EMU=9525;
+  const fig=(id,nome,col,linha,dx,cx,cy)=>`<xdr:oneCellAnchor>
+    <xdr:from><xdr:col>${col}</xdr:col><xdr:colOff>${dx*EMU}</xdr:colOff><xdr:row>${linha}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    <xdr:ext cx="${cx*EMU}" cy="${cy*EMU}"/>
+    <xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${id}" name="${nome}"/><xdr:cNvPicPr/></xdr:nvPicPr>
+    <xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId${id}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>
+    <xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx*EMU}" cy="${cy*EMU}"/></a:xfrm>
+    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
+  const drawing=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+${fig(1,'ABL',0,0,4,202,36)}${fig(2,'E-Business',5,0,10,141,44)}</xdr:wsDr>`;
+  const drawRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image2.png"/></Relationships>`;
+  const sheetRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>`;
   const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${larg}</cols><sheetData>${linhasXml}</sheetData></worksheet>`;
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><cols>${larg}</cols><sheetData>${linhasXml}</sheetData><drawing r:id="rId1"/></worksheet>`;
   const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <numFmts count="2"><numFmt numFmtId="164" formatCode="&quot;R$&quot;\\ #,##0.00"/><numFmt numFmtId="165" formatCode="#,##0.00"/></numFmts>
 <fonts count="5">
 <font><sz val="11"/><name val="Calibri"/></font>
-<font><b/><sz val="12"/><color rgb="FF1F3864"/><name val="Calibri"/></font>
-<font><b/><sz val="11"/><name val="Calibri"/></font>
-<font><b/><sz val="11"/><color rgb="FF000000"/><name val="Calibri"/></font>
+<font><b/><sz val="12"/><color rgb="FF0D1B2E"/><name val="Calibri"/></font>
+<font><b/><sz val="11"/><color rgb="FF0D1B2E"/><name val="Calibri"/></font>
+<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
 <font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>
-<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/><bgColor indexed="64"/></patternFill></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FFBFBFBF"/><bgColor indexed="64"/></patternFill></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FFA6A6A6"/><bgColor indexed="64"/></patternFill></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FFFFFF00"/><bgColor indexed="64"/></patternFill></fill></fills>
+<fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFEEF3FA"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF184A8C"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF0D1B2E"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFFEF1DC"/><bgColor indexed="64"/></patternFill></fill></fills>
 <borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>
-<border><left style="thin"><color indexed="64"/></left><right style="thin"><color indexed="64"/></right><top style="thin"><color indexed="64"/></top><bottom style="thin"><color indexed="64"/></bottom><diagonal/></border></borders>
+<border><left style="thin"><color rgb="FFCBD5E3"/></left><right style="thin"><color rgb="FFCBD5E3"/></right><top style="thin"><color rgb="FFCBD5E3"/></top><bottom style="thin"><color rgb="FFCBD5E3"/></bottom><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
 <cellXfs count="11">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
@@ -8126,18 +8332,23 @@ function vcXlsx(cicloId){
 <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
 <xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
 <xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
-<xf numFmtId="164" fontId="2" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="164" fontId="4" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
 <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="164" fontId="0" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/>
 </cellXfs></styleSheet>`;
   const enc=new TextEncoder();
   const arqs=[
     {nome:'[Content_Types].xml',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`)},
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>`)},
     {nome:'_rels/.rels',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`)},
     {nome:'xl/workbook.xml',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${_xe(serv.nome+' '+c.competencia.replace('/','-'))}" sheetId="1" r:id="rId1"/></sheets></workbook>`)},
+    {nome:'xl/drawings/drawing1.xml',dados:enc.encode(drawing)},
+    {nome:'xl/drawings/_rels/drawing1.xml.rels',dados:enc.encode(drawRels)},
+    {nome:'xl/worksheets/_rels/sheet1.xml.rels',dados:enc.encode(sheetRels)},
+    {nome:'xl/media/image1.png',dados:_b64bytes(LOGO_ABL)},
+    {nome:'xl/media/image2.png',dados:_b64bytes(LOGO_EBIZ)},
     {nome:'xl/_rels/workbook.xml.rels',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`)},
     {nome:'xl/styles.xml',dados:enc.encode(styles)},
@@ -8531,6 +8742,7 @@ function viewVendasCustas(){
       ${P().create?`<button class="btn" onclick="vcFormCiclo()">${ic('plus')}Novo ciclo</button>`:''}
       ${c&&P().edit?`<button class="btn ghost" id="btnVcEditarFatura" onclick="vcFormEditarCiclo('${c.id}')">${ic('bolt')}Conta retida / Editar fatura</button>`:''}
       ${c?`<button class="btn ghost" onclick="vcXlsx('${c.id}')">${ic('download')}Gerar planilha (Excel)</button>`:''}
+      ${c?`<button class="btn ghost" onclick="vcImprimirPdf('${c.id}')">${ic('print')}Imprimir / PDF</button>`:''}
     </div>`;
   if(!c){
     html+=`<div class="card empty">Nenhum ciclo de ${VC_SERV[vcTab].nome.toLowerCase()} cadastrado.
@@ -9341,6 +9553,7 @@ function viewManutObrig(){
       ${moFiltro||moBusca?`<button class="btn ghost sm" onclick="moFiltro='';moBusca='';render()">${ic('close')}Limpar</button>`:''}
       <div class="spacer"></div>
       <button class="btn ghost" onclick="csvManutObrig()">${ic('download')}Exportar Excel</button>
+      <button class="btn ghost" onclick="moImprimirPdf()">${ic('print')}Imprimir / PDF</button>
       ${P().create&&!all.length?`<button class="btn ghost" onclick="aplicarPlanoPadrao()">${ic('list')}Usar plano padrão</button>`:''}
       ${P().create?`<button class="btn" onclick="formMO()">+ Nova Manutenção</button>`:''}
     </div>
@@ -9532,6 +9745,7 @@ function viewPublicidade(){
       ${pubFStatus||pubBusca?`<button class="btn ghost sm" onclick="pubFStatus='';pubBusca='';render()">${ic('close')}Limpar filtro</button>`:''}
       <div class="spacer"></div>
       <button class="btn ghost" onclick="csvPublicidade()">${ic('download')}Exportar Excel</button>
+      <button class="btn ghost" onclick="pubImprimirPdf()">${ic('print')}Imprimir / PDF</button>
       <button class="btn ghost" onclick="pubMsgOferta()">${ic('megaphone')} Mensagem de oferta</button>
       <button class="btn ghost" onclick="pubMsgFim('')">${ic('clock')} Aviso de fim de prazo</button>
       <button class="btn ghost" onclick="pubConfig()">${ic('settings')} Dados do Contrato</button>
@@ -10596,8 +10810,8 @@ function viewLeituras(){
     ${graficoLeituras()}
     <div class="section-title"><h3>Histórico de leituras — ${leitTab==='agua'?'Água':'Energia'}</h3>
       <div class="spacer no-print"><button class="btn ghost sm" onclick="csvLeituras()">${ic('download')}Exportar Excel</button>
-        <button class="btn ghost sm" onclick="window.print()">Imprimir</button>
-        <button class="btn ghost sm" onclick="exportLeituras()">CSV</button></div></div>
+        <button class="btn ghost sm" onclick="leitImprimirPdf()">${ic('print')}Imprimir / PDF</button>
+        <button class="btn ghost sm" onclick="exportLeituras()">Planilha aba atual</button></div></div>
     ${l.length?`<div class="tablewrap"><table><thead><tr>
       <th>Data</th><th>Condomínio</th><th>Medidor</th>${leitTab==='energia'?'<th>Fator</th>':''}
       <th>Leitura (${unid(leitTab)})</th><th>Anterior</th><th>Consumo</th><th>Média (${mediaJanela})</th>
@@ -10962,14 +11176,11 @@ function doDelLeitura(id,escopo){
   closeModal(); render(); toast(`${n} leitura(s) excluída(s).`);
 }
 function exportLeituras(){
-  const rows=[['Tipo','Condominio','Data','Medidor','Fator','Leitura','Anterior','Consumo','Media','Farol','Status','Responsavel']];
+  const rows=[['Tipo','Condomínio','Data','Medidor','Fator','Leitura','Anterior','Consumo','Média','Farol','Status','Responsável']];
   leitScope().forEach(l=>{const f=farol(l);
-    rows.push([l.tipo,condoName(l.condoId),l.data,l.medidor??'',l.fator,l.leitura??'',l.anterior??'',l.consumo??'',
+    rows.push([l.tipo==='agua'?'Água':'Energia',condoName(l.condoId),fmt(l.data),l.medidor??'',l.fator,l.leitura??'',l.anterior??'',l.consumo??'',
       f&&f.media!=null?Math.round(f.media):'',f?f.cor:'',leitStatusAuto(l),l.responsavel||''])});
-  const csv='\ufeff'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  a.download=`leituras_${leitTab}_${today()}.csv`; a.click(); toast('CSV exportado.');
+  baixarCsv(`leituras_${leitTab}`,rows,`Histórico de Leituras — ${leitTab==='agua'?'Água':'Energia'}`);
 }
 
 
@@ -12779,16 +12990,14 @@ function relatorioMensal(){
 
   const html=`
   <div class="rel-doc">
-    <div class="rel-head">
-      <div class="rel-brand">
-        ${CFG.logo?`<img src="${CFG.logo}" alt="Logo do condomínio" class="rel-logo">`:`<div class="rel-logo ph">${ic('building','ico-lg')}</div>`}
-        <div><div class="rel-emp">${esc(CFG.nomeEmpresa)}</div>
-          <div class="rel-sub">${esc(CFG.slogan)}</div></div></div>
-      <div class="rel-meta">
-        <div class="rel-tit">Relatório Mensal de Gestão</div>
-        <div class="rel-per">${nomeMes(relMes)}</div>
-        <div class="rel-sub">${condos.map(c=>esc(c.nome)).join(' · ')}</div>
-        <div class="rel-sub">Emitido em ${fmt(today())} por ${esc(session.nome)}</div></div>
+    <div class="rel-head" style="display:grid;grid-template-columns:130px 1fr 120px;align-items:center;gap:14px;border-bottom:2px solid #0d1b2e;padding-bottom:12px;margin-bottom:14px">
+      <div>${typeof LOGO_EBIZ!=='undefined'&&LOGO_EBIZ?`<img src="${LOGO_EBIZ}" alt="Condomínio E-Business" style="max-height:42px;max-width:130px;object-fit:contain">`:`<div class="rel-logo ph">${ic('building','ico-lg')}</div>`}</div>
+      <div style="text-align:center">
+        <div class="rel-tit" style="font-size:16px;font-weight:800;color:#0d1b2e;text-transform:uppercase;letter-spacing:.3px">Relatório Mensal de Gestão</div>
+        <div class="rel-per" style="font-size:12px;font-weight:700;color:#184a8c;margin-top:2px">${nomeMes(relMes)} · ${condos.map(c=>esc(c.nome)).join(' · ')}</div>
+        <div class="rel-sub" style="font-size:10.5px;color:#526075;margin-top:2px">${esc(CFG.nomeEmpresa)} · Emitido em ${fmt(today())} por ${esc(session.nome)}</div>
+      </div>
+      <div style="text-align:right">${typeof LOGO_ABL!=='undefined'&&LOGO_ABL?`<img src="${LOGO_ABL}" alt="ABL Gestão Condominial" style="max-height:40px;max-width:120px;object-fit:contain">`:''}</div>
     </div>
 
     <div class="rel-sec">1. Panorama de Rotinas</div>
@@ -12911,8 +13120,40 @@ function moverRelMes(n){
   if(m>12){m=1;y++} if(m<1){m=12;y--}
   relMes=`${y}-${pad(m)}`; render();
 }
-function imprimirRelatorio(){ document.body.classList.add('print-rel'); setTimeout(()=>{window.print();
-  setTimeout(()=>document.body.classList.remove('print-rel'),300)},60) }
+function imprimirRelatorio(){
+  const w=(typeof window!=='undefined'&&window.open)?window.open('','_blank'):null;
+  if(w&&w.document){
+    const cssExtra=`
+      .rel-doc{max-width:210mm;margin:10px auto;background:#fff;padding:8mm 9mm;border:1px solid #cfd6e2}
+      .rel-sec{background:#0d1b2e;color:#fff;font-weight:700;font-size:10.5px;letter-spacing:.4px;padding:5px 9px;border-radius:4px;margin:12px 0 6px;text-transform:uppercase}
+      .rel-sub2{font-weight:700;color:#184a8c;font-size:10px;margin:8px 0 4px;text-transform:uppercase}
+      .rel-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+      .rk{border:1px solid #cfd6e2;border-radius:5px;padding:5px 7px;background:#f8fafd;text-align:center}
+      .rk-v{font-size:15px;font-weight:800;line-height:1.15}
+      .rk-l{font-size:9px;font-weight:700;color:#0d1b2e;text-transform:uppercase;margin-top:2px}
+      .rk-s{font-size:8px;color:#5a677a}
+      .rel-tb{width:100%;border-collapse:collapse;margin-bottom:8px;font-size:9.5px}
+      .rel-tb th{background:#eef3fa;color:#0d1b2e;font-weight:700;text-align:left;padding:4px 6px;border:1px solid #cbd5e3;font-size:8.5px;text-transform:uppercase}
+      .rel-tb td{padding:3.5px 6px;border:1px solid #d7e0ec}
+      .rbar{display:flex;align-items:center;gap:8px;font-size:9.5px;margin:3px 0}
+      .rbar-l{width:170px} .rbar-t{flex:1;height:8px;background:#eef2f7;border-radius:99px;overflow:hidden} .rbar-t div{height:100%}
+      .rel-txt{font-size:10px;line-height:1.5;color:#1f2d40;padding:6px 0}
+      .rel-assina{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:22px;text-align:center;font-size:10px}
+      .rel-linha{border-top:1px solid #0d1b2e;margin-bottom:4px}
+      .rel-rodape{font-size:8.5px;color:#66758a;border-top:1px solid #cfd6e2;padding-top:4px;margin-top:12px;text-align:center}
+      @media print{.rel-doc{margin:0;max-width:none;border:0;padding:0}}
+    `;
+    w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+      <title>Relatório Mensal de Gestão — ${esc(nomeMes(relMes))}</title>
+      <style>${LOC_PDF_CSS}${cssExtra}</style></head>
+      <body>${relatorioMensal()}
+      <script>window.onload=function(){setTimeout(function(){window.print()},350)}<\/script></body></html>`);
+    w.document.close();
+    return;
+  }
+  document.body.classList.add('print-rel');
+  setTimeout(()=>{window.print();setTimeout(()=>document.body.classList.remove('print-rel'),300)},60);
+}
 
 /* ============ RELATÓRIOS ============ */
 
@@ -13032,8 +13273,8 @@ function viewReports(){
   $('#content').innerHTML=`
     <div class="toolbar no-print"><b style="color:var(--navy)">Escopo: ${condoFilter==='all'?'Todos os condomínios':condoName(condoFilter)}</b>
       <div class="spacer"></div>
-      <button class="btn ghost" onclick="window.print()">Impressão amigável</button>
-      <button class="btn" onclick="exportCsv()">Exportar tabela (CSV)</button></div>
+      <button class="btn ghost" onclick="relGeralImprimirPdf()">${ic('print')}Imprimir / PDF</button>
+      <button class="btn" onclick="exportCsv()">${ic('download')}Exportar Excel</button></div>
     ${(()=>{const cs=CONDOS.filter(c=>P().condos.includes(c.id)&&(condoFilter==='all'||condoFilter===c.id)&&condoNoModulo(c.id,'leituras'));
       if(!cs.length) return '';
       return `<div class="section-title" style="margin-top:0"><h3>${ic('water')}Consumo de Água — últimos 10 dias</h3></div>
@@ -13096,38 +13337,50 @@ function donutSvg(data){
   return `<svg width="140" height="140" viewBox="0 0 140 140"><circle r="${R}" cx="70" cy="70" fill="none" stroke="#eef1f6" stroke-width="24"></circle>
     ${segs}<text x="70" y="76" text-anchor="middle" font-size="20" font-weight="800" fill="#0f2a4a">${tot}</text></svg>`;
 }
-/* ---------- Exportação para Excel (CSV com BOM e ; — abre direto no Excel BR) ---------- */
-function baixarCsv(nome,rows){
-  const csv='\ufeff'+rows.map(r=>r.map(c=>`"${String(c==null?'':c).replace(/"/g,'""')}"`).join(';')).join('\n');
+/* ---------- Exportação padronizada para Excel (.xlsx com as duas logos e cores institucionais) ---------- */
+function baixarCsv(nome,rows,titulo){
+  const base=String(nome||'planilha').replace(/\.(csv|xlsx)$/i,'');
+  const arq=base.endsWith(today())?(base+'.xlsx'):(base+'_'+today()+'.xlsx');
+  const colunas=(rows&&rows.length)?rows[0].map(c=>String(c==null?'':c)):['Coluna'];
+  const linhas=(rows&&rows.length>1)?rows.slice(1):[];
+  const tit=titulo||base.replace(/_/g,' ').toUpperCase();
+  const abaNome=base.replace(/_/g,' ').slice(0,28)||'Planilha';
+  const bin=typeof xlsxAbas==='function'?xlsxAbas([{nome:abaNome,titulo:tit,colunas,linhas}]):null;
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  a.download=nome+'_'+today()+'.csv'; a.click();
-  audit('Exportação',nome,'','',''); toast('Planilha gerada.');
+  if(bin){
+    a.href=URL.createObjectURL(new Blob([bin],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  }else{
+    const csv='\ufeff'+rows.map(r=>r.map(c=>`"${String(c==null?'':c).replace(/"/g,'""')}"`).join(';')).join('\n');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  }
+  a.download=arq; a.click();
+  audit('Exportação',base,'','',''); toast('Planilha Excel gerada.');
+  return bin;
 }
 function csvNotas(){
   const l=notas.filter(n=>P().condos.includes(n.condoId));
-  const rows=[['Competencia','Condominio','Empresa','Servico','Dia','Book','NF','Status','Observacao']];
+  const rows=[['Competência','Condomínio','Empresa','Serviço','Dia','Book','NF','Status','Observação']];
   l.forEach(n=>{ const pr=prestadores.find(x=>x.id===n.prestadorId)||{};
     rows.push([n.competencia||'',condoName(n.condoId),pr.empresa||n.empresa||'',pr.servico||'',pr.dia||'',
       n.book?'Entregue':'Pendente',n.nf?'Entregue':'Pendente',(typeof nfStatus==='function'?nfStatus(n):''),n.obs||'']);});
-  baixarCsv('notas_fiscais',rows);
+  baixarCsv('notas_fiscais',rows,'Controle de Notas Fiscais e Prestadores');
 }
 function csvLeituras(){
   const l=leituras.filter(x=>P().condos.includes(x.condoId)).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
-  const rows=[['Data','Condominio','Tipo','Medidor','Leitura_anterior','Consumo','Unidade','Status','Responsavel','Observacao']];
+  const rows=[['Data','Condomínio','Tipo','Medidor','Leitura Anterior','Consumo','Unidade','Status','Responsável','Observação']];
   l.forEach(x=>rows.push([fmt(x.data),condoName(x.condoId),x.tipo==='agua'?'Água':'Energia',
     x.medidor==null?'':String(x.medidor).replace('.',','),x.anterior==null?'':String(x.anterior).replace('.',','),
     x.consumo==null?'':String(x.consumo).replace('.',','),unid(x.tipo),x.status||'',x.responsavel||'',x.obs||'']));
-  baixarCsv('leituras',rows);
+  baixarCsv('leituras',rows,'Histórico de Leituras de Água e Energia');
 }
 function csvPublicidade(){
   const l=visPub();
-  const rows=[['Condominio','Empresa','Documento','Contato','Elevador','Status','Inicio','Fim','Valor_mensal','Dias_para_vencer']];
+  const rows=[['Condomínio','Empresa','Documento','Contato','Elevador','Status','Início','Fim','Valor Mensal','Dias p/ Vencer']];
   l.forEach(a=>rows.push([condoName(a.condoId),a.empresa||'',a.doc||'',a.contato||'',a.elevador||'',a.status||'',
     a.inicio?fmt(a.inicio):'',a.fim?fmt(a.fim):'',
     a.valorMensal==null?'':String(a.valorMensal).replace('.',','),
     a.fim&&a.status==='Ativo'?diasAte(a.fim):'']));
-  baixarCsv('publicidade',rows);
+  baixarCsv('publicidade',rows,'Relatório de Contratos de Publicidade nos Elevadores');
 }
 /* ---------- Chave de acesso do site (SITE_TOKEN) ---------- */
 function salvarTokenCfg(){
@@ -13192,12 +13445,285 @@ function confirmarReagendar(novaArg,soArg){
 }
 function exportCsv(){
   const ts=visibleTasks();
-  const rows=[['Titulo','Condominio','Tipo','Responsavel','Periodicidade','Vencimento','Status','Prioridade','ConcluidoEm','ConcluidoPor']];
-  ts.forEach(t=>rows.push([t.titulo,condoName(t.condoId),t.tipo,t.responsavel||'',t.periodicidade,t.vencimento||'',t.status,t.prioridade,t.concluidoEm||'',t.concluidoPor||'']));
-  const csv='\ufeff'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  a.download='relatorio_rotinas_'+today()+'.csv'; a.click(); toast('CSV exportado.');
+  const rows=[['Título','Condomínio','Tipo','Responsável','Periodicidade','Vencimento','Status','Prioridade','Concluído em','Concluído por']];
+  ts.forEach(t=>rows.push([t.titulo,condoName(t.condoId),t.tipo,t.responsavel||'',t.periodicidade,t.vencimento?fmt(t.vencimento):'',t.status,t.prioridade,t.concluidoEm?fmt(t.concluidoEm):'',t.concluidoPor||'']));
+  return baixarCsv('relatorio_rotinas',rows,'Relatório Consolidado de Tarefas e Rotinas');
+}
+function abrirRelatorioPadraoPdf(titulo,subtitulo,kpis,corpoHtml,rodapeEsq){
+  const cab=typeof brigCab==='function'?brigCab(titulo,subtitulo):`<h1>${esc(titulo)}</h1>`;
+  const kpiHtml=(Array.isArray(kpis)&&kpis.length)?`<div class="kpis" style="grid-template-columns:repeat(${Math.min(6,kpis.length)},1fr)">
+    ${kpis.map(k=>`<div class="kpi"><b>${esc(k.val)}</b><span>${esc(k.lbl)}</span></div>`).join('')}
+  </div>`:'';
+  const docHtml=`<div class="folha">
+    ${cab}
+    ${kpiHtml}
+    ${corpoHtml||''}
+    <div class="rod">
+      <span>${esc(rodapeEsq||'Condomínio E-Business Águas Claras · ABL Gestão Condominial')}</span>
+      <span>Emitido em ${fmt(today())}</span>
+    </div>
+  </div>`;
+  const w=(typeof window!=='undefined'&&window.open)?window.open('','_blank'):null;
+  if(!w||!w.document){ if(typeof window!=='undefined'&&window.print) window.print(); return docHtml; }
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+    <title>${esc(titulo)}</title><style>${LOC_PDF_CSS}</style></head>
+    <body>${docHtml}
+    <script>window.onload=function(){setTimeout(function(){window.print()},350)}<\/script></body></html>`);
+  w.document.close();
+  return docHtml;
+}
+function vcImprimirPdf(cicloId){
+  const c=vcCiclo(cicloId||vcCicloAtivo); if(!c) return toast('Ciclo não encontrado.');
+  const t=vcTotais(c), serv=VC_SERV[c.servico], un=c.servico==='agua'?'m³':'kWh';
+  const vend=vcLinhasVenda(c.competencia,c.condoId);
+  const kpis=[
+    {val:c.competencia,lbl:'Competência'},
+    {val:c.valorFatura?brl(c.valorFatura):'Conta Retida',lbl:'Valor da Fatura'},
+    {val:c.consumoFatura?vcFmtM3(c.consumoFatura)+' '+un:'—',lbl:'Consumo Fatura'},
+    {val:brl(t.unit)+'/'+un,lbl:'Valor Unitário'},
+    {val:brl(t.venda),lbl:'Total Venda'},
+    {val:brl(t.total),lbl:'Total Geral Rateio'}
+  ];
+  const secVendas=vend.length?`<div class="faixa azul">
+      <span>VENDAS — FATURAMENTO ${esc(vcMesExt(c.competencia))}</span>
+      <span>Total: ${brl(vcTotalVendas(c.competencia,c.condoId))}</span>
+    </div>
+    <table><thead><tr>
+      <th>Unidade</th><th>CNPJ / CPF</th><th>Motivo</th><th class="cnt">Vencimento</th><th class="num">Valor</th><th class="cnt">Tipo</th>
+    </tr></thead><tbody>
+      ${vend.map(v=>`<tr>
+        <td><b>${esc(v.unidade)}</b></td><td>${esc(v.cnpj||'—')}</td><td>${esc(v.motivo)}</td>
+        <td class="cnt">${fmt(v.venc)}</td><td class="num"><b>${brl(v.valor)}</b></td>
+        <td class="cnt"><span class="tag t-amb">${esc(v.tipo)}</span></td>
+      </tr>`).join('')}
+    </tbody></table>`:'';
+  const ord=(c.linhas||[]).slice().sort((a,b)=>{
+    const ua=vcUnidades.find(x=>x.id===a.unidadeId)||{},ub=vcUnidades.find(x=>x.id===b.unidadeId)||{};
+    return (ua.ordem||0)-(ub.ordem||0)||String(a.unidade).localeCompare(String(b.unidade),'pt-BR')});
+  const secRateio=`<div class="faixa">
+      <span>${esc(serv.tit)} — FATURAMENTO ${esc(vcMesExt(c.competencia))} (${c.inicio?fmt(c.inicio):'—'} A ${c.fim?fmt(c.fim):'—'})</span>
+      <span>Venda: ${brl(t.venda)} · Custa: ${brl(t.custa)} · Total: ${brl(t.total)}</span>
+    </div>
+    <table><thead><tr>
+      <th>Nome UAU</th><th>Unidade</th><th class="num">Anterior (${un})</th><th class="num">Atual (${un})</th>
+      <th class="num">Consumo (${un})</th><th class="num">R$/${un}</th><th class="num">A Pagar</th><th class="cnt">Tipo</th>
+    </tr></thead><tbody>
+      ${ord.map(l=>{
+        const cons=vcConsumoLinha(l), val=vcValorLinha(c,l);
+        return `<tr>
+          <td><b>${esc(l.nome)}</b></td><td>${esc(l.unidade)}</td>
+          <td class="num">${vcFmtM3(l.anterior)}</td>
+          <td class="num">${l.atual==null?'—':'<b>'+vcFmtM3(l.atual)+'</b>'}</td>
+          <td class="num">${cons==null?'—':vcFmtM3(cons)}</td>
+          <td class="num">${brl(t.unit)}</td>
+          <td class="num">${val==null?'—':'<b>'+brl(val)+'</b>'}</td>
+          <td class="cnt"><span class="tag ${l.tipo==='CUSTA'?'t-ven':'t-amb'}">${esc(l.tipo)}</span></td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>`;
+  return abrirRelatorioPadraoPdf(
+    serv.tit+' — Competência '+c.competencia,
+    condoName(c.condoId)+' · Emitido em '+fmt(today()),
+    kpis, secVendas+secRateio,
+    'Demonstrativo oficial de Vendas e Custas — Condomínio E-Business Águas Claras · ABL Gestão Condominial.'
+  );
+}
+function nfImprimirPdf(){
+  const comp=nfComp||compAtual();
+  const cid=nfTab||'c1';
+  const all=notas.filter(n=>n.condoId===cid&&n.competencia===comp)
+    .sort((a,b)=>a.dia-b.dia||a.empresa.localeCompare(b.empresa,'pt-BR'));
+  const conc=all.filter(n=>nfStatus(n)==='Concluído').length;
+  const atr=all.filter(n=>nfStatus(n)==='Atrasado').length;
+  const kpis=[
+    {val:comp,lbl:'Competência'},
+    {val:all.length,lbl:'Total de Notas'},
+    {val:conc,lbl:'Concluídas'},
+    {val:all.length-conc,lbl:'Em Andamento'},
+    {val:atr,lbl:'Atrasadas'},
+    {val:(all.length?Math.round(conc*100/all.length):0)+'%',lbl:'Progresso'}
+  ];
+  const corpo=`<div class="faixa">
+      <span>CONTROLE DE NOTAS FISCAIS — COMPETÊNCIA ${esc(comp)}</span>
+      <span>${esc(condoName(cid))}</span>
+    </div>
+    <table><thead><tr>
+      <th>Empresa / Prestador</th><th>Serviço</th><th class="cnt">Dia Venc.</th>
+      <th class="cnt">Book</th><th class="cnt">NF</th><th class="cnt">Lançada</th><th class="cnt">Status</th><th>Observação</th>
+    </tr></thead><tbody>
+      ${all.map(n=>{
+        const st=nfStatus(n);
+        const cls=st==='Concluído'?'t-amb':(st==='Atrasado'?'t-ven':'t-loc');
+        return `<tr>
+          <td><b>${esc(n.empresa)}</b></td><td>${esc(n.servico||'—')}</td>
+          <td class="cnt"><b>Dia ${n.dia}</b></td>
+          <td class="cnt">${n.book?'✓':'—'}</td><td class="cnt">${n.nf?'✓':'—'}</td><td class="cnt">${n.lancada?'✓':'—'}</td>
+          <td class="cnt"><span class="tag ${cls}">${esc(st)}</span></td>
+          <td>${esc(n.obs||'—')}</td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>`;
+  return abrirRelatorioPadraoPdf(
+    'Controle de Notas Fiscais — '+comp,
+    condoName(cid)+' · Emitido em '+fmt(today()),
+    kpis, corpo
+  );
+}
+function moImprimirPdf(){
+  const all=visMO();
+  const cnt=s=>all.filter(m=>moStatus(m)===s).length;
+  const kpis=[
+    {val:all.length,lbl:'Total no Plano'},
+    {val:cnt('Em dia'),lbl:'Em Dia'},
+    {val:cnt('Próxima'),lbl:'Próximas (30d)'},
+    {val:cnt('Vencida'),lbl:'Vencidas'},
+    {val:all.filter(m=>m.obrigLegal).length,lbl:'Obrigação Legal'},
+    {val:all.reduce((t,m)=>t+((m.execucoes||[]).length),0),lbl:'Execuções Reg.'}
+  ];
+  const corpo=`<div class="faixa">
+      <span>PLANO DE MANUTENÇÕES OBRIGATÓRIAS E LEGAIS</span>
+      <span>${all.length} serviço(s) monitorado(s)</span>
+    </div>
+    <table><thead><tr>
+      <th>Categoria</th><th>Serviço / Norma</th><th>Prestador</th><th class="cnt">Periodicidade</th>
+      <th class="cnt">Última Exec.</th><th class="cnt">Próxima Prev.</th><th class="cnt">Situação</th>
+    </tr></thead><tbody>
+      ${all.map(m=>{
+        const st=moStatus(m), pr=moProxima(m);
+        const cls=st==='Em dia'?'t-amb':(st==='Vencida'?'t-ven':'t-loc');
+        return `<tr>
+          <td>${esc(m.base||'—')}</td>
+          <td><b>${esc(m.servico)}</b>${m.norma?`<div style="font-size:8px;color:#55657a">${esc(m.norma)}</div>`:''}</td>
+          <td>${esc(m.prestador||'—')}</td>
+          <td class="cnt">${esc(m.periodicidade||'—')}</td>
+          <td class="cnt">${m.ultima?fmt(m.ultima):'—'}</td>
+          <td class="cnt"><b>${pr?fmt(pr):'—'}</b></td>
+          <td class="cnt"><span class="tag ${cls}">${esc(st)}</span></td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>`;
+  return abrirRelatorioPadraoPdf(
+    'Plano de Manutenções Obrigatórias',
+    'Condomínio E-Business · Emitido em '+fmt(today()),
+    kpis, corpo
+  );
+}
+function pubImprimirPdf(){
+  const all=visPub();
+  const atv=all.filter(a=>a.status==='Ativo');
+  const rec=atv.reduce((s,a)=>s+(Number(a.valorMensal)||0),0);
+  const kpis=[
+    {val:all.length,lbl:'Total Cadastros'},
+    {val:atv.length,lbl:'Contratos Ativos'},
+    {val:all.filter(a=>a.status==='Interessado').length,lbl:'Fila / Interessados'},
+    {val:all.filter(a=>a.status==='Encerrado').length,lbl:'Encerrados'},
+    {val:brl(rec),lbl:'Receita Mensal'}
+  ];
+  const corpo=`<div class="faixa">
+      <span>CONTRATOS E INTERESSADOS EM PUBLICIDADE NOS ELEVADORES</span>
+      <span>Receita mensal ativa: ${brl(rec)}</span>
+    </div>
+    <table><thead><tr>
+      <th>Empresa / Interessado</th><th>Contato / Telefone</th><th>Condomínio</th>
+      <th class="cnt">Espaço / Elevador</th><th class="cnt">Período</th><th class="num">Valor Mensal</th><th class="cnt">Status</th>
+    </tr></thead><tbody>
+      ${all.map(a=>`<tr>
+        <td><b>${esc(a.empresa||'—')}</b></td>
+        <td>${esc([a.contato,a.telefone].filter(Boolean).join(' · ')||'—')}</td>
+        <td>${esc(condoName(a.condoId))}</td>
+        <td class="cnt"><b>${esc(a.elevador||'Na fila')}</b></td>
+        <td class="cnt">${a.inicio||a.fim?`${a.inicio?fmt(a.inicio):'—'} a ${a.fim?fmt(a.fim):'—'}`:'—'}</td>
+        <td class="num">${a.valorMensal?brl(Number(a.valorMensal)):'—'}</td>
+        <td class="cnt"><span class="tag ${a.status==='Ativo'?'t-amb':(a.status==='Interessado'?'t-loc':'t-imo')}">${esc(a.status)}</span></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  return abrirRelatorioPadraoPdf(
+    'Relatório de Publicidade nos Elevadores',
+    'Condomínio E-Business · Emitido em '+fmt(today()),
+    kpis, corpo
+  );
+}
+function leitImprimirPdf(){
+  const l=leitScope().slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const tp=leitTab==='agua'?'Água':'Energia';
+  const kpis=[
+    {val:tp,lbl:'Utilidade'},
+    {val:l.length,lbl:'Leituras Listadas'},
+    {val:l[0]&&l[0].leitura!=null?fmtLeit(l[0].leitura,leitTab)+' '+unid(leitTab):'—',lbl:'Última Leitura'},
+    {val:l[0]&&l[0].consumo!=null?fmtLeit(l[0].consumo,leitTab)+' '+unid(leitTab):'—',lbl:'Último Consumo'}
+  ];
+  const corpo=`<div class="faixa">
+      <span>HISTÓRICO DE LEITURAS DE ${tp.toUpperCase()}</span>
+      <span>${l.length} registro(s)</span>
+    </div>
+    <table><thead><tr>
+      <th>Data</th><th>Condomínio</th><th class="num">Medidor</th><th class="num">Leitura (${unid(leitTab)})</th>
+      <th class="num">Anterior</th><th class="num">Consumo</th><th class="cnt">Status</th><th>Responsável</th>
+    </tr></thead><tbody>
+      ${l.map(x=>{
+        const st=leitStatusAuto(x);
+        return `<tr>
+          <td><b>${fmt(x.data)}</b></td><td>${esc(condoName(x.condoId))}</td>
+          <td class="num">${x.medidor!=null?fmtLeit(x.medidor,x.tipo):'—'}</td>
+          <td class="num"><b>${x.leitura!=null?fmtLeit(x.leitura,x.tipo):'—'}</b></td>
+          <td class="num">${x.anterior!=null?fmtLeit(x.anterior,x.tipo):'—'}</td>
+          <td class="num"><b>${x.consumo!=null?fmtLeit(x.consumo,x.tipo):'—'}</b></td>
+          <td class="cnt"><span class="tag ${st==='Registrada'?'t-amb':'t-ven'}">${esc(st)}</span></td>
+          <td>${esc(x.responsavel||'—')}</td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>`;
+  return abrirRelatorioPadraoPdf(
+    'Relatório de Leituras e Consumo — '+tp,
+    'Condomínio E-Business · Emitido em '+fmt(today()),
+    kpis, corpo
+  );
+}
+function relGeralImprimirPdf(){
+  const ts=visibleTasks().slice().sort((a,b)=>(a.vencimento||'').localeCompare(b.vencimento||''));
+  const pendBrig=typeof brigNCAbertas==='function'?brigNCAbertas('c1'):[];
+  const kpis=[
+    {val:ts.length,lbl:'Total de Tarefas'},
+    {val:ts.filter(t=>t.status==='Concluída').length,lbl:'Concluídas'},
+    {val:ts.filter(t=>t.status==='Pendente').length,lbl:'Pendentes'},
+    {val:ts.filter(t=>t.status==='Em Andamento').length,lbl:'Em Andamento'},
+    {val:ts.filter(t=>t.status==='Atrasada').length,lbl:'Atrasadas'},
+    {val:pendBrig.length,lbl:'Pendências Brigada'}
+  ];
+  const secBrig=pendBrig.length?`<div class="faixa azul">
+      <span>PENDÊNCIAS DO CHECK-LIST DA BRIGADA EM ABERTO (${pendBrig.length})</span>
+      <span>Permanecem até resolução</span>
+    </div>
+    <table><thead><tr>
+      <th>Data</th><th>Local</th><th>Sistema</th><th>Ponto / Constatação</th><th>Responsável</th><th class="cnt">Situação</th>
+    </tr></thead><tbody>
+      ${pendBrig.map(x=>`<tr>
+        <td>${fmt(x.insp.data)}</td><td><b>${esc(brigAndarNome(x.insp.andar))}</b></td>
+        <td>${esc(brigSis(x.insp.sistema).nome)}</td>
+        <td><b>${esc(x.ponto.desc)}</b>${x.falhas.length?' · '+esc(x.falhas.join('; ')):''}${x.ponto.obs?' · '+esc(x.ponto.obs):''}</td>
+        <td>${esc(x.insp.responsavel||'—')}</td>
+        <td class="cnt"><span class="tag t-ven">Pendente</span></td>
+      </tr>`).join('')}
+    </tbody></table>`:'';
+  const secTasks=`<div class="faixa">
+      <span>TABELA CONSOLIDADA DE TAREFAS E ROTINAS (${ts.length})</span>
+      <span>${condoFilter==='all'?'Todos os condomínios':esc(condoName(condoFilter))}</span>
+    </div>
+    <table><thead><tr>
+      <th>Tarefa</th><th>Condomínio</th><th>Tipo</th><th>Responsável</th><th>Periodicidade</th><th class="cnt">Vencimento</th><th class="cnt">Status</th>
+    </tr></thead><tbody>
+      ${ts.map(t=>`<tr>
+        <td><b>${esc(t.titulo)}</b></td><td>${esc(condoName(t.condoId))}</td><td>${esc(t.tipo||'—')}</td>
+        <td>${esc(t.responsavel||'—')}</td><td>${esc(t.periodicidade||'—')}</td>
+        <td class="cnt">${t.vencimento?fmt(t.vencimento):'—'}</td>
+        <td class="cnt"><span class="tag ${t.status==='Concluída'?'t-amb':(t.status==='Atrasada'?'t-ven':'t-loc')}">${esc(t.status)}</span></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  return abrirRelatorioPadraoPdf(
+    'Relatório Consolidado de Rotinas e Tarefas',
+    'Condomínio E-Business · Emitido em '+fmt(today()),
+    kpis, secBrig+secTasks
+  );
 }
 
 
@@ -15965,53 +16491,109 @@ function backupVencido(){ const d=diasDesdeBackup(); return d===null||d>=BACKUP_
    abas: [{nome, colunas:['A','B'], linhas:[[v,v],...]}] */
 function xlsxAbas(abas){
   const enc=new TextEncoder();
+  const EMU=9525;
+  const fig=(id,nome,col,linha,dx,cx,cy)=>`<xdr:oneCellAnchor>
+    <xdr:from><xdr:col>${col}</xdr:col><xdr:colOff>${dx*EMU}</xdr:colOff><xdr:row>${linha}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    <xdr:ext cx="${cx*EMU}" cy="${cy*EMU}"/>
+    <xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${id}" name="${nome}"/><xdr:cNvPicPr/></xdr:nvPicPr>
+    <xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId${id}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>
+    <xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx*EMU}" cy="${cy*EMU}"/></a:xfrm>
+    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
+  const drawRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image2.png"/></Relationships>`;
+  const statusEstilo=(val,par)=>{
+    const t=String(val==null?'':val).trim().toUpperCase();
+    if(['CONCLUÍDA','CONCLUÍDO','OCUPADA','EM DIA','ENTREGUE','ATIVO','CONFORME','OK','REGISTRADA'].includes(t)) return 6;
+    if(['ATRASADA','ATRASADO','VENCIDA','NÃO CONFORME','PENDENTE'].includes(t)) return 7;
+    if(['VAGA','VAZIA','EM OBRA','A VENCER','PRÓXIMA','EM ANDAMENTO','EM ANÁLISE','SIM'].includes(t)) return 8;
+    return par?4:5;
+  };
   const folhas=abas.map((ab,i)=>{
+    const ncols=Math.max(1,(ab.colunas||[]).length);
+    const ultCol=_col(Math.max(2,ncols-1));
     const larg=ab.colunas.map((c,j)=>{
       const maior=Math.max(String(c).length,
         ...ab.linhas.slice(0,400).map(l=>String(l[j]==null?'':l[j]).length));
-      return `<col min="${j+1}" max="${j+1}" width="${Math.min(60,Math.max(10,maior+3))}" customWidth="1"/>`;
+      const minW=(j===0||j===ncols-1)?18:12;
+      return `<col min="${j+1}" max="${j+1}" width="${Math.min(60,Math.max(minW,maior+4))}" customWidth="1"/>`;
     }).join('');
-    const cab=`<row r="1" ht="22" customHeight="1">${ab.colunas.map((c,j)=>
-      `<c r="${_col(j)}1" t="inlineStr" s="1"><is><t>${_xe(c)}</t></is></c>`).join('')}</row>`;
-    const corpo=ab.linhas.map((l,li)=>`<row r="${li+2}">${l.map((v,j)=>{
-      const num=typeof v==='number'&&isFinite(v);
-      return num?`<c r="${_col(j)}${li+2}" s="3"><v>${v}</v></c>`
-                :`<c r="${_col(j)}${li+2}" t="inlineStr" s="5"><is><t>${_xe(v)}</t></is></c>`;
-    }).join('')}</row>`).join('');
-    return {i,nome:ab.nome,xml:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+    const titBanner=`CONDOMÍNIO E-BUSINESS · ABL GESTÃO CONDOMINIAL — ${String(ab.titulo||ab.nome||'RELATÓRIO').toUpperCase()} (${fmt(today())})`;
+    const r1=`<row r="1" ht="17" customHeight="1"/>`;
+    const r2=`<row r="2" ht="18" customHeight="1"><c r="A2" t="inlineStr" s="9"><is><t>${_xe('CONDOMÍNIO E-BUSINESS ÁGUAS CLARAS · ABL GESTÃO CONDOMINIAL')}</t></is></c></row>`;
+    const r3=`<row r="3" ht="17" customHeight="1"/>`;
+    const r4=`<row r="4" ht="23" customHeight="1">${Array.from({length:Math.max(3,ncols)},(_,j)=>
+      `<c r="${_col(j)}4" t="inlineStr" s="1"><is><t>${j===0?_xe(titBanner):''}</t></is></c>`).join('')}</row>`;
+    const cab=`<row r="5" ht="22" customHeight="1">${ab.colunas.map((c,j)=>
+      `<c r="${_col(j)}5" t="inlineStr" s="2"><is><t>${_xe(c)}</t></is></c>`).join('')}</row>`;
+    const corpo=ab.linhas.map((l,li)=>{
+      const r=li+6, par=(li%2===1);
+      return `<row r="${r}">${l.map((v,j)=>{
+        const num=typeof v==='number'&&isFinite(v);
+        if(num) return `<c r="${_col(j)}${r}" s="${par?10:3}"><v>${v}</v></c>`;
+        const st=statusEstilo(v,par);
+        return `<c r="${_col(j)}${r}" t="inlineStr" s="${st}"><is><t>${_xe(v)}</t></is></c>`;
+      }).join('')}</row>`;
+    }).join('');
+    const colDir=Math.max(1,ncols-1);
+    const drawing=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+${fig(1,'ABL',0,0,4,195,35)}${fig(2,'E-Business',colDir,0,4,136,42)}</xdr:wsDr>`;
+    const sheetRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing${i+1}.xml"/></Relationships>`;
+    return {i,nome:ab.nome,drawing,sheetRels,xml:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 <sheetViews><sheetView ${i===0?'tabSelected="1" ':''}workbookViewId="0">
-<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
-<cols>${larg}</cols><sheetData>${cab}${corpo}</sheetData>
-<autoFilter ref="A1:${_col(ab.colunas.length-1)}${ab.linhas.length+1}"/></worksheet>`};
+<pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+<cols>${larg}</cols><sheetData>${r1}${r2}${r3}${r4}${cab}${corpo}</sheetData>
+<autoFilter ref="A5:${_col(ncols-1)}${ab.linhas.length+5}"/>
+<mergeCells count="2"><mergeCell ref="A2:${ultCol}2"/><mergeCell ref="A4:${ultCol}4"/></mergeCells>
+<drawing r:id="rId1"/></worksheet>`};
   });
 
   const estilos=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font>
-<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>
-<fills count="3"><fill><patternFill patternType="none"/></fill>
+<fonts count="6">
+<font><sz val="11"/><color rgb="FF142033"/><name val="Calibri"/></font>
+<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
+<font><b/><sz val="11"/><color rgb="FF0D1B2E"/><name val="Calibri"/></font>
+<font><b/><sz val="10"/><color rgb="FF15693F"/><name val="Calibri"/></font>
+<font><b/><sz val="10"/><color rgb="FFB4232C"/><name val="Calibri"/></font>
+<font><b/><sz val="10"/><color rgb="FF945905"/><name val="Calibri"/></font>
+</fonts>
+<fills count="8">
+<fill><patternFill patternType="none"/></fill>
 <fill><patternFill patternType="gray125"/></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FF0D1B2E"/><bgColor indexed="64"/></patternFill></fill></fills>
+<fill><patternFill patternType="solid"><fgColor rgb="FF0D1B2E"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF184A8C"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFF4F7FB"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFDFF5E8"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFFDE8EA"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFFEF1DC"/><bgColor indexed="64"/></patternFill></fill>
+</fills>
 <borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>
-<border><left style="thin"><color rgb="FFD9DEE7"/></left><right style="thin"><color rgb="FFD9DEE7"/></right>
-<top style="thin"><color rgb="FFD9DEE7"/></top><bottom style="thin"><color rgb="FFD9DEE7"/></bottom><diagonal/></border></borders>
+<border><left style="thin"><color rgb="FFCBD5E3"/></left><right style="thin"><color rgb="FFCBD5E3"/></right>
+<top style="thin"><color rgb="FFCBD5E3"/></top><bottom style="thin"><color rgb="FFCBD5E3"/></bottom><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="6">
+<cellXfs count="11">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
-<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="3" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="4" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="5" fillId="7" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
 
   const arqs=[
     {nome:'[Content_Types].xml',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${
-      folhas.map(f=>`<Override PartName="/xl/worksheets/sheet${f.i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${
+      folhas.map(f=>`<Override PartName="/xl/worksheets/sheet${f.i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/drawings/drawing${f.i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>`).join('')
     }<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`)},
     {nome:'_rels/.rels',dados:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`)},
@@ -16023,6 +16605,11 @@ function xlsxAbas(abas){
       folhas.map(f=>`<Relationship Id="rId${f.i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${f.i+1}.xml"/>`).join('')
     }<Relationship Id="rId${folhas.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`)},
     {nome:'xl/styles.xml',dados:enc.encode(estilos)},
+    {nome:'xl/media/image1.png',dados:_b64bytes(LOGO_ABL)},
+    {nome:'xl/media/image2.png',dados:_b64bytes(LOGO_EBIZ)},
+    ...folhas.map(f=>({nome:`xl/drawings/drawing${f.i+1}.xml`,dados:enc.encode(f.drawing)})),
+    ...folhas.map(f=>({nome:`xl/drawings/_rels/drawing${f.i+1}.xml.rels`,dados:enc.encode(drawRels)})),
+    ...folhas.map(f=>({nome:`xl/worksheets/_rels/sheet${f.i+1}.xml.rels`,dados:enc.encode(f.sheetRels)})),
     ...folhas.map(f=>({nome:`xl/worksheets/sheet${f.i+1}.xml`,dados:enc.encode(f.xml)}))
   ];
   return _zip(arqs);
@@ -17497,8 +18084,8 @@ function ocuStatus(s){
     .sort((a,b)=>String(b.cadastro).localeCompare(String(a.cadastro)))[0];
   if(saiu&&(!entrou||String(entrou.cadastro)<String(saiu.cadastro))) return 'Vaga';
   if(entrou) return 'Ocupada';
-  /* Se tem nome de ocupante preenchido manualmente na sala, considera Ocupada automaticamente */
-  if((!s.status||s.status==='Vaga')&&String(s.ocupante||'').trim()) return 'Ocupada';
+  /* Se tem nome de ocupante preenchido manualmente na sala (e não está cadastrada em locação), considera Ocupada automaticamente */
+  if(s.manual&&(!s.status||s.status==='Vaga')&&String(s.ocupante||'').trim()&&!locTemResponsavel(s)&&!locSalaFechada(s)) return 'Ocupada';
   return s.status||'Vaga';
 }
 /* "3º" vira "3º andar"; Térreo e Mezanino não levam sufixo */
@@ -17510,7 +18097,7 @@ function ocuMesmaSala(a,b){
   const n=x=>String(x||'').trim().toLowerCase().replace(/^sala\s*/,'').replace(/\s+/g,'');
   return n(a)&&n(a)===n(b);
 }
-/* quem ocupa hoje, preferindo o Nome do Espaço da cessão mais recente (respeitando ajuste manual recente) */
+/* quem ocupa hoje, preferindo o Nome do Espaço/Empresa (respeitando ajuste manual recente) */
 function ocuOcupante(s){
   if(!s||ocuStatus(s)==='Vaga') return '';
   const dtManual=s.manualEm?String(s.manualEm):'';
@@ -17522,9 +18109,9 @@ function ocuOcupante(s){
   }
   return String(s.nomeEspaco||'').trim()||s.ocupante||'';
 }
-/* atividade / ramo da sala (manual na sala ou vinda da cessão mais recente) */
+/* atividade / ramo da sala (manual na sala ou vinda da cessão mais recente; sala vazia não exibe atividade) */
 function ocuAtividade(s){
-  if(!s) return '';
+  if(!s||ocuStatus(s)==='Vaga') return '';
   if(String(s.atividade||'').trim()) return String(s.atividade).trim();
   const cesAtiv=cessoes.filter(c=>c.condoId===s.condoId&&ocuMesmaSala(c.unidade,s.numero)&&String(c.atividade||'').trim())
     .sort((a,b)=>String(b.cadastro).localeCompare(String(a.cadastro)))[0];
@@ -17576,12 +18163,19 @@ function ocuSalvarSala(id){
   if(ocTxt && stVal==='Vaga') stVal='Ocupada';
   if(ocTxt && tpVal==='Vago') tpVal='Locatário';
   if(!ocTxt && stVal==='Vaga') tpVal='Vago';
-  const o={condoId:($('#slCondo')&&$('#slCondo').value)||'c1',
-    numero:($('#slNum')&&$('#slNum').value.trim())||'',
+  const cidForm=($('#slCondo')&&$('#slCondo').value)||'c1';
+  const numForm=($('#slNum')&&$('#slNum').value.trim())||'';
+  let vagasForm=parseInt(($('#slVagas')&&$('#slVagas').value)||'',10);
+  if((isNaN(vagasForm)||vagasForm<=0)&&cidForm==='c1') vagasForm=salaSeedVagas(numForm);
+  if(isNaN(vagasForm)||vagasForm<0) vagasForm=0;
+  let depForm=(($('#slDep')&&$('#slDep').value)||'').trim();
+  if(!depForm&&cidForm==='c1') depForm=salaSeedDep(numForm);
+  const o={condoId:cidForm,
+    numero:numForm,
     andar:($('#slAndar')&&$('#slAndar').value.trim())||'',
-    area:parseFloat(($('#slArea')&&$('#slArea').value)||'')||null,
-    vagas:parseInt(($('#slVagas')&&$('#slVagas').value)||'0',10)||0,
-    deposito:(($('#slDep')&&$('#slDep').value)||'').trim(),
+    area:parseFloat(($('#slArea')&&$('#slArea').value)||'')||salaSeedArea(numForm)||null,
+    vagas:vagasForm,
+    deposito:depForm,
     ocupante:stVal==='Vaga'?'':ocTxt,
     nomeEspaco:stVal==='Vaga'?'':ocTxt,
     atividade:atTxt,
@@ -17622,8 +18216,8 @@ function ocuFormSala(id){
       <div class="field"><label>Sala / Unidade</label><input id="slNum" value="${esc(s?.numero||'')}" placeholder="ex.: 305" autocomplete="off"></div>
       <div class="field"><label>Andar</label><input id="slAndar" value="${esc(s?.andar||'')}" placeholder="ex.: 3"></div>
       <div class="field"><label>Área privativa (m²)</label><input type="number" step="0.01" id="slArea" value="${s?.area??''}" placeholder="ex.: 38,55"></div>
-      <div class="field"><label>Vagas de garagem</label><input type="number" min="0" id="slVagas" value="${s?.vagas??0}"></div>
-      <div class="field"><label>Depósito (nº)</label><input id="slDep" value="${esc(s?.deposito||'')}" placeholder="deixe vazio se não tem"></div>
+      <div class="field"><label>Vagas de garagem (Convenção)</label><input type="number" min="0" id="slVagas" value="${s?ocuVagasSala(s):0}"></div>
+      <div class="field"><label>Depósito (nº)</label><input id="slDep" value="${esc(s?ocuDepSala(s):'')}" placeholder="deixe vazio se não tem"></div>
       <div class="field"><label>Nome do Espaço / Ocupante (ao preencher, muda p/ Ocupada)</label><input id="slOcup" value="${esc(ocReal)}" placeholder="nome do espaço, empresa ou pessoa" oninput="ocuAutoStatusForm()"></div>
       <div class="field"><label>Atividade / Ramo da Sala</label><input id="slAtiv" value="${esc(atReal)}" placeholder="Ex.: Odontologia, Advocacia, Contabilidade..."></div>
       <div class="field"><label>Vínculo</label><select id="slTipo">
@@ -17669,8 +18263,8 @@ function ocuFormSala(id){
     if($('#slNum')) $('#slNum').value=s.numero||'';
     if($('#slAndar')) $('#slAndar').value=s.andar||'';
     if($('#slArea')) $('#slArea').value=s.area??'';
-    if($('#slVagas')) $('#slVagas').value=s.vagas??0;
-    if($('#slDep')) $('#slDep').value=s.deposito||'';
+    if($('#slVagas')) $('#slVagas').value=ocuVagasSala(s);
+    if($('#slDep')) $('#slDep').value=ocuDepSala(s);
     if($('#slObs')) $('#slObs').value=s.obs||'';
     if($('#slOcup')) $('#slOcup').value=ocReal;
     if($('#slAtiv')) $('#slAtiv').value=atReal;
@@ -18016,24 +18610,84 @@ function ocuAlternar(id){
     ocuPreencher(id);
   }
 }
-/* pede o nome ao ocupar — sem nome não faz sentido marcar como ocupada */
-function ocuPreencher(id){
+/* pede o nome ao ocupar — permite também juntar 2 ou mais salas quando a pessoa alugar mais de uma */
+let _ocuExtrasSel={};
+function ocuToggleSalaExtra(idBase,idExtra,checked){
+  if(checked) _ocuExtrasSel[idExtra]=true;
+  else delete _ocuExtrasSel[idExtra];
+  ocuAtualizarResumoJuntas(idBase);
+}
+function ocuMarcarMesmoGrupo(idBase,modo){
+  const sBase=salas.find(x=>x.id===idBase); if(!sBase) return;
+  const vagas=ocuSalas(sBase.condoId||'c1').filter(x=>x.id!==idBase&&ocuStatus(x)==='Vaga');
+  vagas.forEach(x=>{
+    const mesmoAndar=x.andar&&x.andar===sBase.andar;
+    const mesmoResp=String(sBase.locNome||'').trim()&&String(x.locNome||'').trim().toLowerCase()===String(sBase.locNome||'').trim().toLowerCase();
+    if((modo==='andar'&&mesmoAndar)||(modo==='resp'&&mesmoResp)){
+      _ocuExtrasSel[x.id]=true;
+    }
+  });
+  ocuPreencher(idBase,true);
+}
+function ocuAtualizarResumoJuntas(idBase){
+  const box=$('#ocuResumoJuntas'); if(!box) return;
+  const ids=[idBase].concat(Object.keys(_ocuExtrasSel).filter(k=>_ocuExtrasSel[k]&&k!==idBase));
+  const sel=ids.map(k=>salas.find(x=>x.id===k)).filter(Boolean);
+  const totArea=sel.reduce((t,x)=>t+(Number(x.area)||0),0);
+  const totVagas=sel.reduce((t,x)=>t+ocuVagasSala(x),0);
+  box.innerHTML=`<b>${sel.length} ${sel.length>1?'salas juntas':'sala'}:</b> ${sel.map(x=>esc(x.numero)).join(', ')} · Área total: <b>${totArea.toLocaleString('pt-BR',{minimumFractionDigits:2})} m²</b> · Garagem (Convenção): <b>${totVagas} ${totVagas===1?'vaga':'vagas'}</b>`;
+}
+function ocuPreencher(id,manterSel){
   const s=salas.find(x=>x.id===id); if(!s) return;
-  openModal('Ocupar a sala '+s.numero,
+  const oldNome=manterSel&&$('#ocuNome')?$('#ocuNome').value:(s.ocupante||'');
+  const oldAtiv=manterSel&&$('#ocuAtiv')?$('#ocuAtiv').value:(ocuAtividade(s)||'');
+  const oldTipo=manterSel&&$('#ocuTipo')?$('#ocuTipo').value:(s.tipo==='Proprietário'?'Proprietário':'Locatário');
+  if(!manterSel) _ocuExtrasSel={};
+  const outrasVagas=ocuSalas(s.condoId||'c1').filter(x=>x.id!==s.id&&ocuStatus(x)==='Vaga');
+  const temMesmoAndar=outrasVagas.some(x=>x.andar&&x.andar===s.andar);
+  const temMesmoResp=String(s.locNome||'').trim()&&outrasVagas.some(x=>String(x.locNome||'').trim().toLowerCase()===String(s.locNome||'').trim().toLowerCase());
+  const ordenadas=outrasVagas.slice().sort((a,b)=>{
+    const pa=(a.andar===s.andar?2:0)+(String(s.locNome||'').trim()&&String(a.locNome||'').trim().toLowerCase()===String(s.locNome||'').trim().toLowerCase()?1:0);
+    const pb=(b.andar===s.andar?2:0)+(String(s.locNome||'').trim()&&String(b.locNome||'').trim().toLowerCase()===String(s.locNome||'').trim().toLowerCase()?1:0);
+    if(pb!==pa) return pb-pa;
+    return String(a.numero).localeCompare(String(b.numero),'pt-BR',{numeric:true});
+  });
+  openModal('Ocupar sala '+s.numero+(Object.keys(_ocuExtrasSel).length?' e outras':''),
     `<div class="field"><label>Nome do Espaço / Empresa na Sala (vai para a Taxa de Ocupação)</label>
-       <input id="ocuNome" value="${esc(s.ocupante||'')}" placeholder="nome do espaço, empresa ou razão social"
+       <input id="ocuNome" value="${esc(oldNome)}" placeholder="nome do espaço, empresa ou razão social"
          onkeydown="if(event.key==='Enter')ocuPreencherConf('${id}')"></div>
      <div class="field"><label>Atividade / Ramo da Sala</label>
-       <input id="ocuAtiv" value="${esc(ocuAtividade(s)||'')}" placeholder="Ex.: Odontologia, Advocacia, Contabilidade..."
+       <input id="ocuAtiv" value="${esc(oldAtiv)}" placeholder="Ex.: Odontologia, Advocacia, Contabilidade..."
          onkeydown="if(event.key==='Enter')ocuPreencherConf('${id}')"></div>
      <div class="field"><label>Vínculo</label><select id="ocuTipo">
-       ${['Locatário','Proprietário'].map(t=>`<option ${s.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
-     <div class="t-sub">Ao confirmar, a sala muda automaticamente para <b>Ocupada</b> na Taxa de Ocupação (sem precisar criar Cessão de Direitos).</div>`,
+       ${['Locatário','Proprietário'].map(t=>`<option ${oldTipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+     ${ordenadas.length?`<div class="card" style="box-shadow:none;background:#f4f8ff;border:1px solid #c8dbf8;padding:10px 12px;margin:10px 0">
+       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+         <b style="font-size:12.5px;color:var(--navy)">${ic('building')} Alugou / ocupou mais de uma sala? Juntar salas na mesma ocupação:</b>
+         <div class="rowact" style="gap:4px">
+           ${temMesmoAndar?`<button type="button" class="btn ghost sm" style="padding:2px 8px;font-size:11px" onclick="ocuMarcarMesmoGrupo('${id}','andar')">+ Mesmo andar (${esc(s.andar)})</button>`:''}
+           ${temMesmoResp?`<button type="button" class="btn ghost sm" style="padding:2px 8px;font-size:11px" onclick="ocuMarcarMesmoGrupo('${id}','resp')">+ Mesmo responsável</button>`:''}
+         </div>
+       </div>
+       <div style="display:flex;flex-wrap:wrap;gap:6px;max-height:125px;overflow-y:auto;padding:2px 0">
+         ${ordenadas.map(x=>{
+           const ck=!!_ocuExtrasSel[x.id];
+           const dest=(x.andar===s.andar)||(String(s.locNome||'').trim()&&String(x.locNome||'').trim().toLowerCase()===String(s.locNome||'').trim().toLowerCase());
+           return `<label style="display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px;border:1px solid ${ck?'#1d5bbf':(dest?'#9ec0f5':'#d5deec')};background:${ck?'#e7f0ff':'#fff'};font-size:12px;cursor:pointer">
+             <input type="checkbox" ${ck?'checked':''} onchange="ocuToggleSalaExtra('${id}','${x.id}',this.checked)">
+             <b>${esc(x.numero)}</b> <span class="t-sub">(${x.area?Number(x.area).toLocaleString('pt-BR',{minimumFractionDigits:0})+'m²':'—'} · ${ocuVagasSala(x)}v)</span>
+           </label>`;
+         }).join('')}
+       </div>
+       <div id="ocuResumoJuntas" class="t-sub" style="margin-top:8px;padding-top:6px;border-top:1px dashed #c8dbf8;color:var(--navy)"></div>
+     </div>`:''}
+     <div class="t-sub">Ao confirmar, a(s) sala(s) selecionada(s) muda(m) automaticamente para <b>Ocupada</b> na Taxa de Ocupação (sem precisar criar Cessão de Direitos).</div>`,
     `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
      <button class="btn" onclick="ocuPreencherConf('${id}')">${ic('check')}Ocupar</button>`);
-  if($('#ocuNome')) $('#ocuNome').value=s.ocupante||'';
-  if($('#ocuAtiv')) $('#ocuAtiv').value=ocuAtividade(s)||'';
-  if($('#ocuTipo')) $('#ocuTipo').value=s.tipo==='Proprietário'?'Proprietário':'Locatário';
+  if($('#ocuNome')) $('#ocuNome').value=oldNome;
+  if($('#ocuAtiv')) $('#ocuAtiv').value=oldAtiv;
+  if($('#ocuTipo')) $('#ocuTipo').value=oldTipo;
+  ocuAtualizarResumoJuntas(id);
   setTimeout(()=>{const i=$('#ocuNome'); if(i&&i.focus)i.focus()},80);
 }
 function ocuPreencherConf(id){
@@ -18041,13 +18695,22 @@ function ocuPreencherConf(id){
   const n=($('#ocuNome')&&$('#ocuNome').value.trim())||'';
   const at=($('#ocuAtiv')&&$('#ocuAtiv').value.trim())||'';
   if(!n) return toast('Informe quem vai ocupar a sala.');
-  s.ocupante=n; s.nomeEspaco=n;
-  if(at) s.atividade=at;
-  s.tipo=($('#ocuTipo')&&$('#ocuTipo').value)||'Locatário'; s.status='Ocupada';
-  s.manual=true; s.manualEm=today();
-  (s.historico=s.historico||[]).push({q:session.nome,w:nowStamp(),t:'Ocupada por '+n+(at?' ('+at+')':'')});
-  audit('Sala ocupada',s.numero,n+(at?' · '+at:''),s.condoId);
-  save(); closeModal(); render(); toast('Sala '+s.numero+' ocupada por '+n+'.');
+  const tp=($('#ocuTipo')&&$('#ocuTipo').value)||'Locatário';
+  const ids=[id].concat(Object.keys(_ocuExtrasSel||{}).filter(k=>_ocuExtrasSel[k]&&k!==id));
+  const alvos=ids.map(k=>salas.find(x=>x.id===k)).filter(Boolean);
+  const nums=alvos.map(x=>x.numero);
+  alvos.forEach(alvo=>{
+    alvo.ocupante=n; alvo.nomeEspaco=n;
+    if(at) alvo.atividade=at;
+    alvo.tipo=tp; alvo.status='Ocupada';
+    alvo.manual=true; alvo.manualEm=today();
+    const msgJuntas=nums.length>1?` (junto com: ${nums.join(', ')})`:'';
+    (alvo.historico=alvo.historico||[]).push({q:session.nome,w:nowStamp(),t:'Ocupada por '+n+(at?' ('+at+')':'')+msgJuntas});
+  });
+  _ocuExtrasSel={};
+  audit('Sala ocupada',nums.join(', '),n+(at?' · '+at:''),s.condoId);
+  save(); closeModal(); render();
+  toast((nums.length>1?`Salas ${nums.join(', ')} ocupadas`:`Sala ${s.numero} ocupada`)+' por '+n+'.');
 }
 /* ---- gráfico de ocupação por andar ---- */
 function ocuGrafico(cid){
@@ -18182,8 +18845,43 @@ function ocuPizza(cid){
     </div></div>`;
 }
 function ocuArea(cid){ return ocuSalas(cid).reduce((t,s)=>t+(Number(s.area)||0),0) }
-function ocuVagas(cid){ return ocuSalas(cid).reduce((t,s)=>t+(Number(s.vagas)||0),0) }
-function ocuComDeposito(cid){ return ocuSalas(cid).filter(s=>String(s.deposito||'').trim()).length }
+function ocuVagas(cid){ return ocuSalas(cid).reduce((t,s)=>t+ocuVagasSala(s),0) }
+function ocuComDeposito(cid){ return ocuSalas(cid).filter(s=>ocuDepSala(s)).length }
+let ocuModoAgrupado=false;
+/* Junta numa linha única quando a mesma empresa/pessoa aluga ou ocupa 1 ou mais salas */
+function ocuAgruparSalas(lista){
+  const grupos=[];
+  const mapa={};
+  (lista||[]).forEach(s=>{
+    const st=ocuStatus(s);
+    const oc=String(ocuOcupante(s)||'').trim();
+    if(st==='Ocupada'&&oc){
+      const ch='oc_'+oc.toLowerCase().replace(/\s+/g,' ');
+      if(!mapa[ch]){
+        mapa[ch]={chave:ch,ocupante:oc,status:st,tipo:s.tipo||'Locatário',salas:[],andares:[],atividades:[],depositos:[],areaTotal:0,vagasTotal:0};
+        grupos.push(mapa[ch]);
+      }
+      const g=mapa[ch];
+      g.salas.push(s);
+      const an=s.andar||'—';
+      if(an&&!g.andares.includes(an)) g.andares.push(an);
+      const at=ocuAtividade(s);
+      if(at&&!g.atividades.includes(at)) g.atividades.push(at);
+      const dp=ocuDepSala(s);
+      if(dp&&!g.depositos.includes(dp)) g.depositos.push(dp);
+      g.areaTotal+=(Number(s.area)||0);
+      g.vagasTotal+=ocuVagasSala(s);
+    }else{
+      const dp=ocuDepSala(s);
+      grupos.push({
+        chave:'sl_'+s.id,ocupante:oc,status:st,tipo:s.tipo||'',salas:[s],
+        andares:s.andar?[s.andar]:[],atividades:ocuAtividade(s)?[ocuAtividade(s)]:[],
+        depositos:dp?[dp]:[],areaTotal:Number(s.area)||0,vagasTotal:ocuVagasSala(s)
+      });
+    }
+  });
+  return grupos;
+}
 /* exporta o gráfico como imagem, para colar em ata ou apresentação */
 function ocuBaixarPizza(cid){
   const r=ocuResumo(cid);
@@ -18257,7 +18955,7 @@ function viewOcupacao(){
     <div class="card metric ${r.taxa>=85?'green':(r.taxa>=60?'amber':'red')}">
       <div class="lbl">${ic('building')}Taxa de ocupação</div>
       <div class="val">${r.taxa}%</div>
-      <div class="sub">${r.Ocupada+r['Em obra']+r.Reservada} de ${r.total} salas</div></div>
+      <div class="sub">${r.Ocupada+r['Em obra']+r.Reservada} de ${r.total} salas · ${ocuVagas(cid)} vagas</div></div>
     <div class="card metric green" onclick="ocuFiltro='Ocupada';render()">
       <div class="lbl">${ic('checkCircle')}Ocupadas</div>
       <div class="val">${r.Ocupada}</div><div class="sub">com ocupante ativo</div></div>
@@ -18271,20 +18969,45 @@ function viewOcupacao(){
 
   const ia=iaCard('Leitura da ocupação',iaOcupacao(cid),false)+ocuPizza(cid)+ocuGrafico(cid);
 
-  const linhas=l.map(s=>{
+  const gruposOcup=ocuAgruparSalas(l);
+  const qtdMultiplas=gruposOcup.filter(g=>g.salas.length>1).length;
+
+  const linhas=ocuModoAgrupado?gruposOcup.map(g=>{
+    const s=g.salas[0];
+    const st=g.status, oc=g.ocupante, at=st==='Vaga'?'':g.atividades.join(' / ');
+    const cls={'Ocupada':'ocu-ok','Vaga':'ocu-vaga','Em obra':'ocu-obra','Reservada':'ocu-res'}[st]||'';
+    const bd={'Ocupada':'b-conc','Vaga':'b-atr','Em obra':'b-and','Reservada':'b-pend'}[st]||'b-tag';
+    const mult=g.salas.length>1;
+    const nums=g.salas.map(x=>x.numero).join(', ');
+    const andTxt=g.andares.map(ocuAndarRot).join(', ');
+    return `<tr class="${cls}">
+      <td><b>${esc(nums)}</b>${mult?` <span class="badge b-and">${g.salas.length} salas juntas</span>`:''}
+        ${andTxt?`<div class="t-sub">${esc(andTxt)}</div>`:''}</td>
+      <td>${st==='Vaga'?'<span class="badge b-atr">Vazia</span>':`<b>${esc(oc||'—')}</b>`}</td>
+      <td>${st==='Vaga'?'<span class="t-sub">Vazia</span>':(at?esc(at):'<span class="t-sub">—</span>')}</td>
+      <td>${g.areaTotal?g.areaTotal.toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}${mult?`<div class="t-sub">soma das ${g.salas.length} salas</div>`:''}</td>
+      <td>${g.vagasTotal?g.vagasTotal+(g.vagasTotal>1?' vagas':' vaga'):'—'}</td>
+      <td>${g.depositos.length?`<span class="badge b-condo">nº ${esc(g.depositos.join(', '))}</span>`:'<span class="t-sub">—</span>'}</td>
+      <td><span class="badge ${bd}">${st==='Vaga'?'Vazia':st}</span></td>
+      <td class="t-sub">${esc(g.salas.map(x=>x.obs).filter(Boolean).join(' · ')||'')}</td>
+      <td style="text-align:right;white-space:nowrap">
+        ${!mult&&P().edit?`<button class="btn ${st==='Ocupada'?'ghost':''} sm" onclick="ocuAlternar('${s.id}')">${st==='Ocupada'?'Liberar':'Ocupar'}</button>`:''}
+        ${P().edit?`<button class="btn ghost sm" onclick="ocuFormSala('${s.id}')" title="Editar sala ${esc(s.numero)}">${ic('settings')}</button>`:''}
+      </td></tr>`;
+  }).join(''):l.map(s=>{
     const st=ocuStatus(s), oc=ocuOcupante(s), at=ocuAtividade(s);
+    const vg=ocuVagasSala(s), dp=ocuDepSala(s);
     const cls={'Ocupada':'ocu-ok','Vaga':'ocu-vaga','Em obra':'ocu-obra','Reservada':'ocu-res'}[st]||'';
     const bd={'Ocupada':'b-conc','Vaga':'b-atr','Em obra':'b-and','Reservada':'b-pend'}[st]||'b-tag';
     const auto=st!==(s.status||'Vaga');
-    const modVaga=s.locModalidade||'Locação';
     return `<tr class="${cls}">
       <td><b>${esc(s.numero)}</b>${s.andar?`<div class="t-sub">${esc(ocuAndarRot(s.andar))}</div>`:''}</td>
-      <td>${oc?`<b>${esc(oc)}</b>`:(st==='Vaga'?(modVaga==='Fechada'?`<span class="badge b-pend">Fechada s/ interesse</span>`:`<span class="t-sub">${esc(modVaga)}: <b>${esc(s.locTipo?s.locTipo+' — ':'')}${esc(s.locNome||'Sem contato')}</b>${s.locTel?' · '+esc(s.locTel):''}</span>`):'—')}${oc?`<div class="t-sub">${esc(s.tipo||'')}</div>`:''}</td>
-      <td>${P().edit?`<input value="${esc(at)}" placeholder="Ex.: Odontologia, Advocacia..." onchange="ocuSetAtividade('${s.id}',this.value)" style="width:100%;min-width:145px;padding:5px 8px;font-size:12.5px;border:1px solid #d5deec;border-radius:6px;background:#fff">`:(at?esc(at):'<span class="t-sub">—</span>')}</td>
+      <td>${st==='Vaga'?'<span class="badge b-atr">Vazia</span>':`<b>${esc(oc||'—')}</b>`}</td>
+      <td>${st==='Vaga'?'<span class="t-sub">Vazia</span>':(P().edit?`<input value="${esc(at)}" placeholder="Ex.: Odontologia, Advocacia..." onchange="ocuSetAtividade('${s.id}',this.value)" style="width:100%;min-width:145px;padding:5px 8px;font-size:12.5px;border:1px solid #d5deec;border-radius:6px;background:#fff">`:(at?esc(at):'<span class="t-sub">—</span>'))}</td>
       <td>${s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}</td>
-      <td>${s.vagas?s.vagas+(s.vagas>1?' vagas':' vaga'):'—'}</td>
-      <td>${String(s.deposito||'').trim()?`<span class="badge b-condo">nº ${esc(s.deposito)}</span>`:'<span class="t-sub">—</span>'}</td>
-      <td><span class="badge ${bd}">${st}</span>
+      <td>${vg?vg+(vg>1?' vagas':' vaga'):'—'}</td>
+      <td>${dp?`<span class="badge b-condo">nº ${esc(dp)}</span>`:'<span class="t-sub">—</span>'}</td>
+      <td><span class="badge ${bd}">${st==='Vaga'?'Vazia':st}</span>
         ${auto?`<div class="t-sub" title="Situação vinda de outro módulo">automático</div>`:''}</td>
       <td class="t-sub">${esc(s.obs||'')}</td>
       <td style="text-align:right;white-space:nowrap">
@@ -18304,24 +19027,28 @@ function viewOcupacao(){
         ${opt([''].concat(OCU_STATUS),ocuFiltro,'Situação')}</select>
       <select onchange="ocuAndar=this.value;render()">
         ${opt([''].concat([...new Set(ocuSalas(cid).map(x=>x.andar||'—'))]),ocuAndar,'Andar')}</select>
+      <button class="btn ${ocuModoAgrupado?'':'ghost'} sm" onclick="ocuModoAgrupado=!ocuModoAgrupado;render()" title="Juntar numa única linha quando a mesma empresa/pessoa alugar ou ocupar mais de uma sala">
+        ${ic('building')} ${ocuModoAgrupado?'Ver salas separadas':`Juntar quem ocupa 2+ salas (${qtdMultiplas})`}
+      </button>
       ${ocuFiltro||ocuBusca||ocuAndar?`<button class="btn ghost sm" onclick="ocuFiltro='';ocuBusca='';ocuAndar='';render()">${ic('close')}Limpar</button>`:''}
       <div class="spacer"></div>
       <button class="btn ghost" onclick="go('locacao')">${ic('door')}Salas p/ Locação e Venda (${locSalasVagas(cid).length})</button>
       <button class="btn ghost" onclick="ocuExportar()">${ic('download')}Exportar Excel</button>
+      <button class="btn ghost" onclick="ocuImprimirPdf()">${ic('print')}PDF Compacto</button>
       ${P().create?`<button class="btn ghost" onclick="ocuImportar()">${ic('upload')}Importar lista</button>`:''}
       ${session.role==='Gestor'?`<button class="btn ghost" onclick="ocuRestaurar()" title="Recarregar a relação original do prédio">${ic('refresh')}Restaurar relação</button>`:''}
       ${P().create?`<button class="btn" onclick="ocuFormSala()">+ Nova sala</button>`:''}
     </div>
     <div class="card" style="padding:0;overflow:hidden">
       <div class="tablewrap"><table><thead><tr>
-        <th>Sala</th><th>Espaço / Ocupante</th><th>Atividade / Ramo</th><th>Área</th><th>Vagas</th><th>Depósito</th>
+        <th>${ocuModoAgrupado?'Sala(s)':'Sala'}</th><th>Espaço / Ocupante</th><th>Atividade / Ramo</th><th>Área</th><th>Vagas (Convenção)</th><th>Depósito</th>
         <th>Situação</th><th>Observação</th>
         <th style="text-align:right">Ações</th></tr></thead>
       <tbody>${linhas||'<tr><td colspan="9" class="t-sub">Nenhuma sala nesse filtro.</td></tr>'}</tbody>
       </table></div></div>
     <div class="legend">
       <span><b>Automático:</b> a sala entra em obra pela Análise de Projetos e muda de espaço/ocupante e atividade pela Cessão de Direitos.</span>
-      <span><b>Atividade:</b> digite diretamente na coluna Atividade / Ramo para atualizar na hora.</span>
+      <span><b>Vagas pela Convenção:</b> todas as 261 unidades exibem suas vagas de garagem (285 no total) e depósitos vinculados (24) conforme a Convenção do Condomínio.</span>
     </div>`;
 }
 /* análise da ocupação para o painel de IA */
@@ -18348,11 +19075,82 @@ function ocuExportar(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const l=ocuSalas(cid);
   if(!l.length) return toast('Nada para exportar.');
-  const linhas=[['Sala','Andar','Área (m²)','Vagas','Depósito','Espaço / Ocupante','Atividade / Ramo','Vínculo','Situação','Observação']]
-    .concat(l.map(s=>[s.numero,s.andar||'',s.area||'',s.vagas||0,s.deposito||'',
-      ocuOcupante(s)||'',ocuAtividade(s)||'',s.tipo||'',ocuStatus(s),s.obs||'']));
-  baixarCsv('ocupacao_'+cid+'_'+today()+'.csv',linhas);
+  const linhas=[['Sala','Nome da Sala / Empresa','Atividade / Ramo da Sala']]
+    .concat(l.map(s=>{
+      const st=ocuStatus(s);
+      return [s.numero,st==='Vaga'?'Vazia':(ocuOcupante(s)||'—'),st==='Vaga'?'':(ocuAtividade(s)||'')];
+    }));
+  baixarCsv('ocupacao_'+cid+'_'+today()+'.xlsx',linhas,'Taxa de Ocupação e Guia de Salas — '+condoName(cid));
   audit('Exportou o mapa de ocupação',condoName(cid),l.length+' sala(s)',cid);
+}
+function ocuHtmlRelatorioCompacto(cid,listaFiltrada){
+  const c=cid&&cid!=='all'?cid:'c1';
+  const r=ocuResumo(c);
+  let l=Array.isArray(listaFiltrada)?listaFiltrada:ocuSalas(c);
+  if(!Array.isArray(listaFiltrada)){
+    if(ocuFiltro) l=l.filter(s=>ocuStatus(s)===ocuFiltro);
+    if(ocuAndar) l=l.filter(s=>(s.andar||'—')===ocuAndar);
+    if(ocuBusca){ const q=ocuBusca.toLowerCase();
+      l=l.filter(s=>(String(s.numero)+' '+(ocuOcupante(s)||'')+' '+(ocuAtividade(s)||'')+' '+(s.andar||'')).toLowerCase().includes(q)); }
+  }
+  const grupos=ocuAgruparSalas(l);
+  const mult=grupos.filter(g=>g.salas.length>1&&g.status!=='Vaga');
+  return `<div class="folha">
+    ${typeof brigCab==='function'?brigCab('Relação de Salas, Empresas e Atividades — Taxa de Ocupação',condoName(c)+' · Emitido em '+fmt(today())+' · Informativo aos Condôminos'):''}
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi"><b>${r.taxa}%</b><span>Taxa de Ocupação</span></div>
+      <div class="kpi"><b>${r.total}</b><span>Total de Salas</span></div>
+      <div class="kpi"><b>${r.Ocupada+r['Em obra']+r.Reservada}</b><span>Salas Ocupadas</span></div>
+      <div class="kpi"><b>${r.Vaga}</b><span>Salas Vazias</span></div>
+    </div>
+    ${mult.length?`<div class="faixa azul"><span>1. EMPRESAS / ESPAÇOS QUE OCUPAM 2 OU MAIS SALAS JUNTAS</span><span>${mult.length} empresa(s) · ${mult.reduce((t,g)=>t+g.salas.length,0)} salas</span></div>
+    <table><thead><tr>
+      <th style="width:22%">Salas</th>
+      <th style="width:43%">Nome da Sala / Empresa</th>
+      <th style="width:35%">Atividade / Ramo da Sala</th>
+    </tr></thead><tbody>
+      ${mult.map(g=>`<tr>
+        <td><b>${esc(g.salas.map(x=>x.numero).join(', '))}</b></td>
+        <td><b>${esc(g.ocupante||'—')}</b></td>
+        <td>${esc(g.atividades.join(' / ')||'—')}</td>
+      </tr>`).join('')}
+    </tbody></table>`:''}
+    <div class="faixa"><span>${mult.length?'2. ':''}RELAÇÃO DE SALAS DO EDIFÍCIO (${l.length} UNIDADES)</span><span>Ocupadas: ${r.Ocupada+r['Em obra']+r.Reservada} · Vazias: ${r.Vaga}</span></div>
+    <table><thead><tr>
+      <th style="width:16%">Sala</th>
+      <th style="width:46%">Nome da Sala / Empresa</th>
+      <th style="width:38%">Atividade / Ramo da Sala</th>
+    </tr></thead><tbody>
+      ${l.map(s=>{
+        const st=ocuStatus(s);
+        const vaga=(st==='Vaga');
+        const oc=vaga?'':ocuOcupante(s);
+        const at=vaga?'':ocuAtividade(s);
+        return `<tr>
+          <td><b>${esc(s.numero)}</b></td>
+          <td>${vaga?'<span class="tag t-ven">Vazia</span>':`<b>${esc(oc||'—')}</b>`}</td>
+          <td>${vaga?'—':esc(at||'—')}</td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>
+    <div class="rod">
+      <span>${esc(condoName(c))} · ABL Gestão Condominial · Relação de salas, empresas e ramos de atividade para os condôminos</span>
+      <span>Emitido em ${fmt(today())}</span>
+    </div>
+  </div>`;
+}
+function ocuImprimirPdf(listaFiltrada){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const body=ocuHtmlRelatorioCompacto(cid,listaFiltrada);
+  const w=window.open('','_blank');
+  if(!w){ window.print(); return; }
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+    <title>Taxa de Ocupação — ${esc(condoName(cid))}</title>
+    <style>${LOC_PDF_CSS}</style></head>
+    <body>${body}
+    <script>window.onload=function(){setTimeout(function(){window.print()},350)}<\/script></body></html>`);
+  w.document.close();
+  audit('Gerou PDF da Taxa de Ocupação',condoName(cid),ocuSalas(cid).length+' unidade(s)',cid);
 }
 function ocuImportar(){
   openModal('Importar lista de salas',
@@ -18378,11 +19176,14 @@ function ocuImportarConf(){
     const ja=ocuSalaPorNumero(cid,num);
     const st=ocup?'Ocupada':'Vaga';
     if(ja){ ja.ocupante=ocup; if(andar)ja.andar=andar; if(area)ja.area=area;
+      if(!ja.vagas&&cid==='c1') ja.vagas=salaSeedVagas(num);
+      if(!ja.deposito&&cid==='c1') ja.deposito=salaSeedDep(num);
       ja.status=st; ja.tipo=ocup?(ja.tipo||'Locatário'):'Vago';
       (ja.historico=ja.historico||[]).push({q:session.nome,w:nowStamp(),t:'Atualizada pela importação'});
       atu++; }
-    else { salas.push({id:uid('sl'),condoId:cid,numero:num,andar,area,ocupante:ocup,
-      tipo:ocup?'Locatário':'Vago',status:st,obs:'',manual:true,
+    else { salas.push({id:uid('sl'),condoId:cid,numero:num,andar,area:area||salaSeedArea(num),
+      vagas:cid==='c1'?salaSeedVagas(num):0,deposito:cid==='c1'?salaSeedDep(num):'',
+      ocupante:ocup,tipo:ocup?'Locatário':'Vago',status:st,obs:'',manual:true,
       historico:[{q:session.nome,w:nowStamp(),t:'Cadastrada pela importação'}]}); novas++; }
   });
   audit('Importou salas',condoName(cid),novas+' nova(s), '+atu+' atualizada(s)',cid);
@@ -18398,7 +19199,7 @@ function ocuImportarConf(){
    (locModalidade === 'Fechada' ou semInteresse === true) saem da lista
    de disponíveis e podem ser consultadas/reativadas no filtro "Fechadas".
    ============================================================ */
-let locFiltroResp='', locFiltroMod='', locBusca='', locAndar='';
+let locFiltroResp='', locFiltroMod='', locBusca='', locAndar='', locModoAgrupado=false;
 const LOC_MODALIDADES=['Locação','Venda','Locação e Venda','Fechada'];
 function locSalaFechada(s){
   return !!(s&&(s.locModalidade==='Fechada'||s.semInteresse===true));
@@ -18420,6 +19221,59 @@ function locSalasFechadas(cid){
 function locTemResponsavel(s){
   return !!(s&&(String(s.locNome||'').trim()||String(s.locTel||'').trim()||String(s.locTipo||'').trim()));
 }
+/* Agrupa salas vagas pelo mesmo responsável (Imobiliária / Proprietário / Telefone)
+   ou mesmo andar quando uma pessoa quiser alugar/comprar 1 ou mais salas juntas */
+function locChaveGrupo(s){
+  const nm=String(s.locNome||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const tl=String(s.locTel||'').replace(/\D/g,'');
+  if(nm) return 'resp_'+nm;
+  if(tl) return 'tel_'+tl;
+  return 'unit_'+s.id;
+}
+function locAgruparSalas(lista){
+  const grupos=[];
+  const mapa={};
+  (lista||[]).forEach(s=>{
+    const ch=locChaveGrupo(s);
+    if(!mapa[ch]){
+      mapa[ch]={
+        chave:ch,
+        locTipo:s.locTipo||'',
+        locNome:String(s.locNome||'').trim(),
+        locTel:String(s.locTel||'').trim(),
+        salas:[],
+        andares:[],
+        modalidades:[],
+        depositos:[],
+        obs:[],
+        areaTotal:0,
+        vagasTotal:0
+      };
+      grupos.push(mapa[ch]);
+    }
+    const g=mapa[ch];
+    g.salas.push(s);
+    if(!g.locTipo&&s.locTipo) g.locTipo=s.locTipo;
+    if(!g.locNome&&s.locNome) g.locNome=String(s.locNome).trim();
+    if(!g.locTel&&s.locTel) g.locTel=String(s.locTel).trim();
+    const an=s.andar||'—';
+    if(an&&!g.andares.includes(an)) g.andares.push(an);
+    const mod=locModalidadeSala(s);
+    if(mod&&!g.modalidades.includes(mod)) g.modalidades.push(mod);
+    const dp=ocuDepSala(s);
+    if(dp&&!g.depositos.includes(dp)) g.depositos.push(dp);
+    const ob=String(s.locObs||s.obs||'').trim();
+    if(ob&&!g.obs.includes(ob)) g.obs.push(ob);
+    g.areaTotal+=(Number(s.area)||0);
+    g.vagasTotal+=ocuVagasSala(s);
+  });
+  return grupos;
+}
+/* Retorna especificamente os grupos/conjuntos com 2 ou mais salas (mesmo responsável ou mesmo andar)
+   para quando o cliente quiser alugar/comprar mais de uma sala junta */
+function locGruposMultiplas(lista){
+  return locAgruparSalas(lista).filter(g=>g.salas.length>1);
+}
 function locResumo(cid){
   const vagas=locSalasVagas(cid);
   const fechadas=locSalasFechadas(cid);
@@ -18431,8 +19285,11 @@ function locResumo(cid){
   const soVenda=vagas.filter(s=>locModalidadeSala(s)==='Venda');
   const locEVenda=vagas.filter(s=>locModalidadeSala(s)==='Locação e Venda');
   const areaVaga=vagas.reduce((t,s)=>t+(Number(s.area)||0),0);
+  const vagasGaragem=vagas.reduce((t,s)=>t+ocuVagasSala(s),0);
+  const gruposMult=locGruposMultiplas(vagas);
   return {total:vagas.length,fechadas:fechadas.length,comResp:comResp.length,semResp:semResp.length,
-    imob:imob.length,prop:prop.length,soLoc:soLoc.length,soVenda:soVenda.length,locEVenda:locEVenda.length,areaVaga};
+    imob:imob.length,prop:prop.length,soLoc:soLoc.length,soVenda:soVenda.length,locEVenda:locEVenda.length,
+    areaVaga,vagasGaragem,gruposMult:gruposMult.length};
 }
 function locSetModalidade(id,mod){
   if(!P().edit) return toast('Sem permissão.');
@@ -18464,12 +19321,13 @@ function locFormSala(id){
   const nmIni=s.locNome||(cesProp&&!s.locNome?cesProp.nome:'')||'';
   const tlIni=s.locTel||(cesProp&&!s.locTel?cesProp.contato:'')||'';
   const obIni=s.locObs||s.obs||'';
+  const vg=ocuVagasSala(s), dp=ocuDepSala(s);
   openModal('Locação e Venda — Sala '+s.numero,
     `<div class="feed-item blue" style="margin-bottom:12px">
        <div class="fi-ic">${ic('door')}</div>
        <div style="flex:1">
          <div class="ft">Sala ${esc(s.numero)} ${s.andar?'· '+esc(ocuAndarRot(s.andar)):''}</div>
-         <div class="fd">${s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m² privativos':'Área não informada'}${s.vagas?' · '+s.vagas+' vaga(s)':''}${s.deposito?' · Depósito nº '+esc(s.deposito):''}</div>
+         <div class="fd">${s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m² privativos':'Área não informada'}${vg?' · '+vg+(vg>1?' vagas de garagem (Convenção)':' vaga de garagem (Convenção)'):''}${dp?' · Depósito nº '+esc(dp):''}</div>
        </div>
      </div>
      <div class="f2">
@@ -18555,27 +19413,195 @@ function locExportar(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const vagas=locSalasVagas(cid);
   if(!vagas.length) return toast('Nenhuma sala disponível para exportar.');
-  const linhas=[['Sala','Andar','Área Privativa (m²)','Vagas Garagem','Depósito','Modalidade','Responsável (Tipo)','Nome (Imobiliária / Proprietário)','Telefone / Contato','Observação']]
-    .concat(vagas.map(s=>[s.numero,s.andar||'',s.area||'',s.vagas||0,s.deposito||'',
+  const linhas=[['Sala','Andar','Área Privativa (m²)','Vagas Garagem (Convenção)','Depósito','Modalidade','Responsável (Tipo)','Nome (Imobiliária / Proprietário)','Telefone / Contato','Observação']]
+    .concat(vagas.map(s=>[s.numero,s.andar||'',s.area||'',ocuVagasSala(s),ocuDepSala(s),
       locModalidadeSala(s),s.locTipo||'Não informado',s.locNome||'',s.locTel||'',s.locObs||s.obs||'']));
-  baixarCsv('salas_locacao_venda_'+cid+'_'+today()+'.csv',linhas);
+  baixarCsv('salas_locacao_venda_'+cid+'_'+today()+'.xlsx',linhas,'Salas Disponíveis p/ Locação e Venda — '+condoName(cid));
   audit('Exportou estoque de salas para locação e venda',condoName(cid),vagas.length+' sala(s)',cid);
 }
 function locCopiarWhats(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const vagas=locSalasVagas(cid);
   if(!vagas.length) return toast('Nenhuma sala disponível no momento.');
+  const grupos=locGruposMultiplas(vagas);
+  const linhasGrupo=grupos.length?['*OPÇÕES PARA ALUGAR / COMPRAR 2 OU MAIS SALAS JUNTAS:*']
+    .concat(grupos.map(g=>{
+      const nums=g.salas.map(x=>x.numero).join(', ');
+      const ar=g.areaTotal.toLocaleString('pt-BR',{minimumFractionDigits:2})+' m² no total';
+      const vg=g.vagasTotal+(g.vagasTotal>1?' vagas':' vaga');
+      const resp=`${g.locTipo?g.locTipo+': ':''}${g.locNome||'—'}${g.locTel?' ('+g.locTel+')':''}`;
+      return `• *${nums}* (${g.salas.length} unidades · ${ar} · ${vg}) — ${resp}`;
+    })).concat(['','*RELAÇÃO INDIVIDUAL POR UNIDADE:*']):[];
   const txt=['*SALAS DISPONÍVEIS PARA LOCAÇÃO E VENDA — '+condoName(cid).toUpperCase()+'* ('+fmt(today())+')','']
+    .concat(linhasGrupo)
     .concat(vagas.map(s=>{
       const ar=s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'';
+      const vg=ocuVagasSala(s);
+      const vgTxt=vg?vg+(vg>1?' vagas':' vaga'):'';
+      const dp=ocuDepSala(s);
       const mod=locModalidadeSala(s);
       const resp=locTemResponsavel(s)?`${s.locTipo?s.locTipo+': ':''}${s.locNome||'—'}${s.locTel?' ('+s.locTel+')':''}`:'Contato ainda não informado';
-      return `• *${s.numero}* (${s.andar?ocuAndarRot(s.andar):'—'}${ar?' · '+ar:''}) [${mod}] — ${resp}`;
+      return `• *${s.numero}* (${s.andar?ocuAndarRot(s.andar):'—'}${ar?' · '+ar:''}${vgTxt?' · '+vgTxt:''}${dp?' · Dep. '+dp:''}) [${mod}] — ${resp}`;
     })).join('\n');
   if(navigator.clipboard&&navigator.clipboard.writeText)
     navigator.clipboard.writeText(txt).then(()=>toast('Lista de salas para locação e venda copiada!'),()=>toast('Copiado.'));
   else toast('Lista gerada.');
   return txt;
+}
+/* Gera o HTML super compacto (1 folha A4) de Salas p/ Locação e Venda,
+   juntando quem disponibiliza/aluga 2 ou mais salas e trazendo a tabela individual enxuta */
+const LOC_PDF_CSS=`
+  *{box-sizing:border-box}
+  body{font:10px/1.32 "Segoe UI",Arial,sans-serif;color:#142033;background:#ebeff5;margin:0}
+  .folha{max-width:210mm;margin:10px auto;background:#fff;padding:8mm 9mm;border:1px solid #cfd6e2}
+  .cab{display:grid;grid-template-columns:125px 1fr 110px;align-items:center;gap:10px;padding-bottom:6px;border-bottom:2px solid #0d1b2e;margin-bottom:7px}
+  .cab img{max-height:38px;max-width:125px;object-fit:contain}
+  .cab img:last-child{justify-self:end}
+  .cab .t{text-align:center}
+  .cab h1{font-size:13px;margin:0;color:#0d1b2e;letter-spacing:.3px;text-transform:uppercase}
+  .cab .sub{font-size:9.5px;color:#526075;margin-top:2px}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:7px}
+  .kpi{border:1px solid #cfd6e2;border-radius:5px;padding:4px 6px;background:#f8fafd;text-align:center}
+  .kpi b{display:block;font-size:13px;color:#0d1b2e;line-height:1.15}
+  .kpi span{font-size:8px;color:#5a677a;text-transform:uppercase;letter-spacing:.3px}
+  .faixa{background:#0d1b2e;color:#fff;font-weight:700;font-size:9.5px;letter-spacing:.4px;padding:4px 8px;border-radius:4px 4px 0 0;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase}
+  .faixa.azul{background:#184a8c}
+  table{width:100%;border-collapse:collapse;margin-bottom:7px;font-size:9.2px}
+  th{background:#eef3fa;color:#0d1b2e;font-weight:700;text-align:left;padding:3.5px 5px;border:1px solid #cbd5e3;font-size:8.5px;text-transform:uppercase;letter-spacing:.2px}
+  td{padding:3px 5px;border:1px solid #d7e0ec;vertical-align:middle}
+  tr:nth-child(even) td{background:#fafbfd}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cnt{text-align:center;white-space:nowrap}
+  .tag{display:inline-block;padding:1px 5px;border-radius:3px;font-size:8px;font-weight:700;text-transform:uppercase}
+  .t-loc{background:#e3effd;color:#154c91}
+  .t-ven{background:#fef1dc;color:#945905}
+  .t-amb{background:#dff5e8;color:#15693f}
+  .t-imo{background:#eef2f7;color:#2c3c54}
+  .t-prp{background:#e7f6ed;color:#17663c}
+  .rod{display:flex;justify-content:space-between;font-size:8.5px;color:#66758a;border-top:1px solid #cfd6e2;padding-top:4px;margin-top:4px}
+  @media print{
+    body{background:#fff}
+    .folha{margin:0;max-width:none;border:0;padding:0}
+    @page{size:A4 portrait;margin:7mm}
+    .faixa,th,.kpi,.tag{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    tr{page-break-inside:avoid}
+    thead{display:table-header-group}
+  }
+`;
+function locHtmlRelatorioCompacto(cid,listaFiltrada){
+  const c=cid&&cid!=='all'?cid:'c1';
+  const vagas=Array.isArray(listaFiltrada)?listaFiltrada:locSalasVagas(c);
+  const res=locResumo(c);
+  const areaTot=vagas.reduce((t,s)=>t+(Number(s.area)||0),0);
+  const vagasGar=vagas.reduce((t,s)=>t+ocuVagasSala(s),0);
+  const gruposMult=locGruposMultiplas(vagas);
+  const tagMod=m=>{
+    const cls=m==='Venda'?'t-ven':(m==='Locação e Venda'?'t-amb':'t-loc');
+    return `<span class="tag ${cls}">${esc(m)}</span>`;
+  };
+  const secMult=gruposMult.length?`
+    <div class="faixa azul">
+      <span>1. OPÇÕES PARA ALUGAR / COMPRAR 2 OU MAIS SALAS JUNTAS (MESMO RESPONSÁVEL / ANDAR)</span>
+      <span>${gruposMult.length} grupo(s) · ${gruposMult.reduce((t,g)=>t+g.salas.length,0)} unidades</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:28%">Salas / Unidades Juntas</th>
+        <th style="width:12%">Andar(es)</th>
+        <th style="width:9%" class="cnt">Qtd.</th>
+        <th style="width:13%" class="num">Área Somada</th>
+        <th style="width:11%" class="cnt">Vagas (Conv.)</th>
+        <th style="width:11%" class="cnt">Modalidade</th>
+        <th style="width:16%">Responsável e Contato</th>
+      </tr></thead>
+      <tbody>
+        ${gruposMult.map(g=>{
+          const porAndar={};
+          g.salas.forEach(x=>{ const a=x.andar||'—'; (porAndar[a]=porAndar[a]||[]).push(x); });
+          const detAndar=Object.keys(porAndar).map(a=>{
+            const xs=porAndar[a];
+            const arA=xs.reduce((t,x)=>t+(Number(x.area)||0),0);
+            return `${xs.map(x=>x.numero).join(', ')} (${arA.toLocaleString('pt-BR',{minimumFractionDigits:2})} m²)`;
+          }).join(' · ');
+          const dpTxt=g.depositos.length?' · Dep. '+g.depositos.join(','):'';
+          return `<tr>
+            <td><b>${esc(g.salas.map(x=>x.numero).join(', '))}</b><div style="font-size:8px;color:#55657a">${esc(detAndar)}</div></td>
+            <td>${esc(g.andares.join(', '))}</td>
+            <td class="cnt"><b>${g.salas.length} salas</b></td>
+            <td class="num"><b>${g.areaTotal.toLocaleString('pt-BR',{minimumFractionDigits:2})} m²</b></td>
+            <td class="cnt"><b>${g.vagasTotal} ${g.vagasTotal>1?'vagas':'vaga'}</b>${esc(dpTxt)}</td>
+            <td class="cnt">${g.modalidades.map(tagMod).join(' ')}</td>
+            <td><b>${esc(g.locNome||'—')}</b> <span style="color:#55657a">(${esc(g.locTipo||'—')})</span><br><span style="font-variant-numeric:tabular-nums"><b>${esc(g.locTel||'—')}</b></span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`:'';
+
+  const secInd=`
+    <div class="faixa">
+      <span>${gruposMult.length?'2. ':''}RELAÇÃO COMPLETA DE UNIDADES DISPONÍVEIS PARA LOCAÇÃO E VENDA</span>
+      <span>${vagas.length} unidade(s) · ${areaTot.toLocaleString('pt-BR',{minimumFractionDigits:2})} m² · ${vagasGar} vagas</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:10%">Unidade</th>
+        <th style="width:9%">Andar</th>
+        <th style="width:10%" class="num">Área Priv.</th>
+        <th style="width:10%" class="cnt">Vagas (Conv.)</th>
+        <th style="width:7%" class="cnt">Depósito</th>
+        <th style="width:12%" class="cnt">Disponível p/</th>
+        <th style="width:10%" class="cnt">Vínculo</th>
+        <th style="width:18%">Responsável (Imobiliária / Prop.)</th>
+        <th style="width:14%">Telefone / Contato</th>
+      </tr></thead>
+      <tbody>
+        ${vagas.map(s=>{
+          const vg=ocuVagasSala(s), dp=ocuDepSala(s), mod=locModalidadeSala(s);
+          return `<tr>
+            <td><b>${esc(s.numero)}</b></td>
+            <td>${esc(s.andar?ocuAndarRot(s.andar):'—')}</td>
+            <td class="num">${s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}</td>
+            <td class="cnt"><b>${vg} ${vg>1?'vagas':'vaga'}</b></td>
+            <td class="cnt">${dp?'nº '+esc(dp):'—'}</td>
+            <td class="cnt">${tagMod(mod)}</td>
+            <td class="cnt"><span class="tag ${s.locTipo==='Proprietário'?'t-prp':'t-imo'}">${esc(s.locTipo||'Não inf.')}</span></td>
+            <td><b>${esc(s.locNome||'—')}</b>${(s.locObs||s.obs)?`<div style="font-size:8px;color:#55657a">${esc(s.locObs||s.obs)}</div>`:''}</td>
+            <td style="font-variant-numeric:tabular-nums"><b>${esc(s.locTel||'—')}</b></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+  return `<div class="folha">
+    ${typeof brigCab==='function'?brigCab('Salas Disponíveis para Locação e Venda',condoName(c)+' · Emitido em '+fmt(today())+' · Vagas de garagem conforme Convenção do Condomínio'):''}
+    <div class="kpis">
+      <div class="kpi"><b>${vagas.length}</b><span>Unidades Disponíveis</span></div>
+      <div class="kpi"><b>${areaTot.toLocaleString('pt-BR',{maximumFractionDigits:0})} m²</b><span>Área Privativa Total</span></div>
+      <div class="kpi"><b>${vagasGar}</b><span>Vagas Garagem (Conv.)</span></div>
+      <div class="kpi"><b>${res.soLoc}</b><span>Só Locação</span></div>
+      <div class="kpi"><b>${res.soVenda}</b><span>Só Venda</span></div>
+      <div class="kpi"><b>${res.locEVenda}</b><span>Locação e Venda</span></div>
+    </div>
+    ${secMult}
+    ${secInd}
+    <div class="rod">
+      <span>Condomínio E-Business Águas Claras · Direito de uso de vagas de garagem e depósitos conforme Cláusulas 2.3 e 2.4.1 da Convenção (285 vagas totais no edifício).</span>
+      <span>Página 1 de 1</span>
+    </div>
+  </div>`;
+}
+function locImprimirPdf(listaFiltrada){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  const htmlDoc=locHtmlRelatorioCompacto(cid,listaFiltrada);
+  const w=window.open('','_blank');
+  if(!w){ window.print(); return; }
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+    <title>Salas Disponíveis p/ Locação e Venda — ${esc(condoName(cid))}</title>
+    <style>${LOC_PDF_CSS}</style></head>
+    <body>${htmlDoc}
+    <script>window.onload=function(){setTimeout(function(){window.print()},350)}<\/script></body></html>`);
+  w.document.close();
+  audit('Gerou PDF compacto de Salas p/ Locação e Venda',condoName(cid),(Array.isArray(listaFiltrada)?listaFiltrada.length:locSalasVagas(cid).length)+' unidade(s)',cid);
 }
 function viewSalasLocacao(){
   const cid=condoFilter==='all'?'c1':condoFilter;
@@ -18595,16 +19621,50 @@ function viewSalasLocacao(){
   }
   const baseAndar=vendoFechadas?locSalasFechadas(cid):locSalasVagas(cid);
   const andares=[...new Set(baseAndar.map(x=>x.andar||'—'))];
-  const linhas=l.map(s=>{
+  const gruposLista=locAgruparSalas(l);
+  const gruposMult=locGruposMultiplas(l);
+
+  const linhas=locModoAgrupado?gruposLista.map(g=>{
+    const s=g.salas[0];
+    const mult=g.salas.length>1;
+    const nums=g.salas.map(x=>x.numero).join(', ');
+    const andTxt=g.andares.map(ocuAndarRot).join(', ');
+    const mod=g.modalidades.join(' / ');
+    const wLink=locWhatsLink(g.locTel,nums,g.modalidades[0]||'Locação');
+    const bdTipo=g.locTipo==='Imobiliária'?'b-and':(g.locTipo==='Proprietário'?'b-conc':'b-pend');
+    const bdMod=mod==='Venda'?'b-avencer':(mod==='Locação e Venda'?'b-conc':'b-and');
+    const detSalas=mult?g.salas.map(x=>`${x.numero} (${x.area?Number(x.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+'m²':'—'})`).join(' · '):'';
+    return `<tr>
+      <td><b>${esc(nums)}</b>${mult?` <span class="badge b-and">${g.salas.length} salas juntas</span>`:''}
+        ${andTxt?`<div class="t-sub">${esc(andTxt)}</div>`:''}
+        ${detSalas?`<div class="t-sub" style="font-size:11px">${esc(detSalas)}</div>`:''}</td>
+      <td><b>${g.areaTotal?g.areaTotal.toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}</b>${mult?` <span class="t-sub">(total)</span>`:''}
+        <div class="t-sub"><b>${g.vagasTotal} ${g.vagasTotal>1?'vagas':'vaga'}</b> (Convenção)${g.depositos.length?' · Dep. nº '+esc(g.depositos.join(', ')):''}</div></td>
+      <td><span class="badge ${bdMod}">${esc(mod)}</span></td>
+      <td><span class="badge ${bdTipo}">${esc(g.locTipo||(g.locNome||g.locTel?'Informado':'Não informado'))}</span></td>
+      <td>${g.locNome?`<b>${esc(g.locNome)}</b>`:'<span class="t-sub">—</span>'}</td>
+      <td>${g.locTel?`<span style="font-variant-numeric:tabular-nums"><b>${esc(g.locTel)}</b></span>
+        <div class="rowact no-print" style="margin-top:4px;gap:4px">
+          ${wLink?`<a class="btn ghost sm" href="${wLink}" target="_blank" rel="noopener" style="padding:2px 8px;font-size:11px">WhatsApp</a>`:''}
+          <button class="btn ghost sm" style="padding:2px 8px;font-size:11px" onclick="locCopiarTel('${esc(g.locTel)}')">${ic('copy')} Copiar</button>
+        </div>`:'<span class="t-sub">—</span>'}</td>
+      <td class="t-sub">${esc(g.obs.join(' · ')||'—')}</td>
+      <td style="text-align:right;white-space:nowrap" class="no-print">
+        ${P().edit?`<button class="btn ghost sm" onclick="locFormSala('${s.id}')" title="Configurar">${ic('edit')} Editar</button>`:''}
+        ${P().edit?`<button class="btn green sm" onclick="ocuPreencher('${s.id}')" title="Ocupar 1 ou mais salas deste grupo">${ic('check')} Ocupar${mult?' salas':''}</button>`:''}
+      </td>
+    </tr>`;
+  }).join(''):l.map(s=>{
     const tem=locTemResponsavel(s);
     const mod=locModalidadeSala(s);
+    const vg=ocuVagasSala(s), dp=ocuDepSala(s);
     const wLink=locWhatsLink(s.locTel,s.numero,mod);
     const bdTipo=s.locTipo==='Imobiliária'?'b-and':(s.locTipo==='Proprietário'?'b-conc':'b-pend');
     const bdMod=mod==='Venda'?'b-avencer':(mod==='Locação e Venda'?'b-conc':(mod==='Fechada'?'b-pend':'b-and'));
     return `<tr>
       <td><b>${esc(s.numero)}</b>${s.andar?`<div class="t-sub">${esc(ocuAndarRot(s.andar))}</div>`:''}</td>
       <td>${s.area?Number(s.area).toLocaleString('pt-BR',{minimumFractionDigits:2})+' m²':'—'}
-        <div class="t-sub">${s.vagas?s.vagas+(s.vagas>1?' vagas':' vaga'):'sem vaga'}${String(s.deposito||'').trim()?' · Dep. nº '+esc(s.deposito):''}</div></td>
+        <div class="t-sub"><b>${vg?vg+(vg>1?' vagas':' vaga'):'sem vaga'}</b>${dp?' · Dep. nº '+esc(dp):''}</div></td>
       <td>${P().edit?`<select onchange="locSetModalidade('${s.id}',this.value)" style="padding:4px 8px;font-size:12px;border-radius:6px;border:1px solid #cdd7e6;font-weight:600">
           <option value="Locação" ${mod==='Locação'?'selected':''}>Somente Locação</option>
           <option value="Venda" ${mod==='Venda'?'selected':''}>Somente Venda</option>
@@ -18623,17 +19683,48 @@ function viewSalasLocacao(){
         ${P().edit?`<button class="btn ${tem?'ghost':''} sm" onclick="locFormSala('${s.id}')">${ic('edit')} ${tem?'Editar':'Configurar'}</button>`:''}
         ${P().edit&&!vendoFechadas?`<button class="btn ghost sm" onclick="locMarcarFechada('${s.id}')" title="Proprietário sem interesse em vender nem alugar — retirar das disponíveis">Fechada s/ interesse</button>`:''}
         ${P().edit&&vendoFechadas?`<button class="btn sm" onclick="locReativarSala('${s.id}','Locação')" title="Voltar para a lista de disponíveis">${ic('refresh')} Reativar</button>`:''}
-        ${P().edit?`<button class="btn green sm" onclick="ocuPreencher('${s.id}')" title="Marcar sala como ocupada e informar o espaço que entrou">${ic('check')} Ocupar</button>`:''}
+        ${P().edit?`<button class="btn green sm" onclick="ocuPreencher('${s.id}')" title="Marcar 1 ou mais salas como ocupadas">${ic('check')} Ocupar</button>`:''}
       </td>
     </tr>`;
   }).join('');
+
+  const cardConjuntos=(!vendoFechadas&&gruposMult.length)?`
+    <div class="card" style="margin-bottom:14px;padding:12px 14px;border-left:4px solid var(--navy)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <div>
+          <b style="color:var(--navy);font-size:13.5px">${ic('building')} Opções para Alugar / Comprar 2 ou Mais Salas Juntas (${gruposMult.length} grupos)</b>
+          <div class="t-sub">Mesmo proprietário ou imobiliária com múltiplas unidades disponíveis — área privativa e vagas de garagem somadas pela Convenção:</div>
+        </div>
+        <button class="btn ${locModoAgrupado?'':'ghost'} sm no-print" onclick="locModoAgrupado=!locModoAgrupado;render()">
+          ${locModoAgrupado?'Ver salas separadas na tabela':'Juntar todas na tabela abaixo'}
+        </button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:8px">
+        ${gruposMult.map(g=>{
+          const nums=g.salas.map(x=>x.numero).join(', ');
+          const dpTxt=g.depositos.length?' · Dep. nº '+g.depositos.join(', '):'';
+          return `<div style="border:1px solid #d5deec;border-radius:8px;padding:8px 10px;background:#f8fafd">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
+              <b>Salas ${esc(nums)}</b>
+              <span class="badge b-and">${g.salas.length} unidades</span>
+            </div>
+            <div class="t-sub" style="margin-top:3px;color:var(--navy)">
+              Área total: <b>${g.areaTotal.toLocaleString('pt-BR',{minimumFractionDigits:2})} m²</b> · Garagem: <b>${g.vagasTotal} ${g.vagasTotal>1?'vagas':'vaga'}</b>${esc(dpTxt)}
+            </div>
+            <div class="t-sub" style="margin-top:3px">
+              ${esc(g.locTipo||'Responsável')}: <b>${esc(g.locNome||'—')}</b>${g.locTel?' · <b>'+esc(g.locTel)+'</b>':''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`:'';
 
   $('#content').innerHTML=`
     <div class="grid metrics" style="margin-bottom:14px">
       <div class="card metric ${res.total?'amber':'green'}" onclick="locFiltroMod='';locFiltroResp='';render()">
         <div class="lbl">${ic('door')}Salas Disponíveis</div>
         <div class="val">${res.total}</div>
-        <div class="sub">${res.areaVaga.toLocaleString('pt-BR',{maximumFractionDigits:0})} m² p/ locação ou venda</div>
+        <div class="sub">${res.areaVaga.toLocaleString('pt-BR',{maximumFractionDigits:0})} m² · ${res.vagasGaragem} vagas (Conv.)</div>
       </div>
       <div class="card metric" onclick="locFiltroMod='Locação';render()">
         <div class="lbl">${ic('building')}Só Locação</div>
@@ -18657,7 +19748,7 @@ function viewSalasLocacao(){
       </div>
     </div>
 
-    <div class="card" style="margin-bottom:14px;background:var(--slate-soft);box-shadow:none;padding:12px 14px">
+    <div class="card no-print" style="margin-bottom:14px;background:var(--slate-soft);box-shadow:none;padding:12px 14px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div class="t-sub" style="line-height:1.5;flex:1;min-width:240px">
           <b>Estoque disponível p/ Locação e Venda:</b> escolha em cada sala se está para <b>Somente Locação</b>, <b>Somente Venda</b> ou <b>Locação e Venda</b>.
@@ -18670,9 +19761,11 @@ function viewSalasLocacao(){
       </div>
     </div>
 
+    ${cardConjuntos}
+
     <div class="toolbar no-print">
       <input placeholder="Buscar sala, imobiliária, proprietário, telefone..." value="${esc(locBusca)}"
-        oninput="locBusca=this.value;render()" style="min-width:220px">
+        oninput="locBusca=this.value;render()" style="min-width:200px">
       <select onchange="locFiltroMod=this.value;render()">
         <option value="" ${locFiltroMod===''?'selected':''}>Todas disponíveis (${res.total})</option>
         <option value="Locação" ${locFiltroMod==='Locação'?'selected':''}>Somente Locação (${res.soLoc})</option>
@@ -18690,16 +19783,19 @@ function viewSalasLocacao(){
       <select onchange="locAndar=this.value;render()">
         ${opt([''].concat(andares),locAndar,'Andar')}
       </select>
+      <button class="btn ${locModoAgrupado?'':'ghost'} sm" onclick="locModoAgrupado=!locModoAgrupado;render()" title="Juntar quando a mesma imobiliária/proprietário tiver 2 ou mais salas">
+        ${ic('building')} ${locModoAgrupado?'Separar salas':'Juntar 2+ salas'}
+      </button>
       ${locFiltroMod||locFiltroResp||locBusca||locAndar?`<button class="btn ghost sm" onclick="locFiltroMod='';locFiltroResp='';locBusca='';locAndar='';render()">${ic('close')}Limpar</button>`:''}
       <div class="spacer"></div>
       <button class="btn ghost" onclick="locCopiarWhats()">${ic('copy')}Copiar p/ WhatsApp</button>
       <button class="btn ghost" onclick="locExportar()">${ic('download')}Exportar Planilha</button>
-      <button class="btn ghost" onclick="window.print()">${ic('print')}Imprimir</button>
+      <button class="btn primary" onclick="locImprimirPdf()">${ic('print')}PDF Compacto (1 folha)</button>
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
       <div class="tablewrap"><table><thead><tr>
-        <th>Sala</th><th>Área / Vagas</th><th>Disponível para</th><th>Responsável</th><th>Nome (Empresa ou Pessoa)</th>
+        <th>${locModoAgrupado?'Salas / Unidades':'Sala'}</th><th>Área / Vagas (Convenção)</th><th>Disponível para</th><th>Responsável</th><th>Nome (Empresa ou Pessoa)</th>
         <th>Telefone / Contato</th><th>Observação</th>
         <th style="text-align:right" class="no-print">Ações</th>
       </tr></thead>
@@ -18709,16 +19805,30 @@ function viewSalasLocacao(){
 }
 function migrarSalasLocacao(){
   let mudou=false;
-  /* 1. Se alguma sala foi editada manualmente com ocupante preenchido mas ficou com status='Vaga', corrige p/ 'Ocupada' */
+  /* 0. Garante que TODAS as 261 unidades do E-Business (inclusive as vazias!) tenham vagas de garagem, depósito e área privativa conforme a Convenção do Condomínio */
   (salas||[]).forEach(s=>{
-    if(s&&s.manual&&String(s.ocupante||'').trim()&&(!s.status||s.status==='Vaga')){
+    if(!s) return;
+    if(s.condoId==='c1'||!s.condoId){
+      const vg=salaSeedVagas(s.numero);
+      if(vg&&(!s.vagas||Number(s.vagas)<=0)){ s.vagas=vg; mudou=true; }
+      const dp=salaSeedDep(s.numero);
+      if(dp&&!String(s.deposito||'').trim()){ s.deposito=dp; mudou=true; }
+      const priv=salaSeedArea(s.numero);
+      if(priv&&(!s.area||Number(s.area)<=0)){ s.area=priv; mudou=true; }
+    }
+    /* 1. Se a sala está Vaga e tem responsável de locação/venda (sem ter sido ocupada manualmente), limpa ocupante residual */
+    if(!s.manual&&s.status==='Vaga'&&String(s.ocupante||'').trim()&&(locTemResponsavel(s)||locSalaFechada(s))){
+      s.ocupante=''; s.tipo='Vago'; mudou=true;
+    }
+    /* 1b. Se alguma sala foi editada manualmente com ocupante preenchido mas ficou com status='Vaga', corrige p/ 'Ocupada' */
+    if(s.manual&&String(s.ocupante||'').trim()&&(!s.status||s.status==='Vaga')&&!locTemResponsavel(s)&&!locSalaFechada(s)){
       s.status='Ocupada';
       if(!s.tipo||s.tipo==='Vago') s.tipo='Locatário';
       if(!s.manualEm) s.manualEm=today();
       mudou=true;
     }
     /* 2. Se a última ação manual no histórico foi 'Marcada como vaga' ou 'Ocupada por ...', garante manualEm para respeitar a escolha manual */
-    const ult=(s&&s.historico&&s.historico.length)?s.historico[s.historico.length-1]:null;
+    const ult=(s.historico&&s.historico.length)?s.historico[s.historico.length-1]:null;
     if(ult&&ult.q!=='Sistema'&&!s.manualEm){
       if(/Marcada como vaga/i.test(ult.t||'')){
         s.status='Vaga'; s.ocupante=''; s.tipo='Vago'; s.manual=true; s.manualEm=today(); mudou=true;
@@ -19157,5 +20267,5 @@ window.addEventListener('keydown',e=>{
 });
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8fd145cde2fff',t:'MTc5MjUwOTQzOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4da380f398b64e1',t:'MTc5MjUyMjMzOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
