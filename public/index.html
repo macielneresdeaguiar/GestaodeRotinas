@@ -966,6 +966,17 @@ input[type=month],input[type=date]{font-family:inherit;color:var(--navy);font-we
 .login-sel:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
 .login-sel optgroup{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px}
 .login-sel option{font-size:14px;color:var(--text);padding:6px}
+.login-funcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin-bottom:10px}
+.login-func-btn{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--line);
+  border-radius:9px;background:#f8fafc;color:var(--text-2);font-size:12px;font-weight:600;cursor:pointer;
+  transition:all .15s;text-align:left}
+.login-func-btn svg{width:15px;height:15px;flex:none;opacity:.8}
+.login-func-btn.on{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 2px 6px rgba(13,27,46,.15)}
+.login-func-btn.on svg{opacity:1}
+.login-users{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.login-user-btn{padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;
+  color:var(--text);font-size:12.5px;font-weight:500;cursor:pointer;transition:all .15s}
+.login-user-btn.on{background:#eef4ff;border-color:var(--accent);color:var(--accent);font-weight:700}
 
 .ap-obra{margin-top:12px;padding:12px 13px;background:#f6f8fc;border:1px solid var(--line);border-radius:9px}
 .ap-obra-t{font-weight:700;font-size:12.5px;display:flex;align-items:center;gap:7px;margin-bottom:5px}
@@ -1268,6 +1279,7 @@ body.crit-open{overflow:hidden}
         <p class="sub">Gestão Predial · acesso restrito</p>
       </div>
     </div>
+    <div class="field" id="loginPorFuncao"></div>
     <div class="field"><label>Selecione seu perfil de acesso</label>
       <select id="loginSel" class="login-sel" onchange="pickUser(this.value)"></select></div>
     <div class="field">
@@ -1793,27 +1805,113 @@ function visibleTasks(){
 }
 function visibleMaints(){ return []; }
 
-/* ============ LOGIN ============ */
-let pickedUser='u1';
+/* ============ LOGIN E SESSÃO AUTOMÁTICA ============ */
+let pickedUser='u1', pickedFunc='adm';
+const SESSION_KEY='grc.session.v1', CREDS_KEY='grc.creds.v1', SAVED_PASS_KEY='grc.savedpass.v1';
 const PROFILE_UI={u1:{icon:'briefcase'},u2:{icon:'clipboardCheck'},u3:{icon:'helmet'},u4:{icon:'sparkles'},
   b1:{icon:'flame'},b2:{icon:'flame'},b3:{icon:'flame'},b4:{icon:'flame'},
   p1:{icon:'water'},p2:{icon:'water'},p3:{icon:'water'},p4:{icon:'water'},p5:{icon:'water'},p6:{icon:'water'}};
-/* Lista suspensa de acesso, agrupada por função — cresce bem conforme a
-   equipe aumenta, sem ocupar a tela toda com cartões. */
+const LOGIN_GRUPOS=[
+  {id:'adm',rot:'Administração',ic:'briefcase',fn:u=>u.perms.tipos&&u.perms.tipos.length},
+  {id:'brigada',rot:'Brigada de Incêndio',ic:'flame',fn:u=>u.role==='Brigadista'},
+  {id:'manut',rot:'Manutenção',ic:'helmet',fn:u=>u.perms.manutencao&&!(u.perms.tipos||[]).length},
+  {id:'limpeza',rot:'Limpeza e Portaria',ic:'sparkles',fn:u=>(u.perms.leituras||u.perms.ronda)&&!u.perms.brigada&&u.role!=='Portaria'&&!(u.perms.tipos||[]).length},
+  {id:'portaria',rot:'Portaria',ic:'water',fn:u=>u.role==='Portaria'}
+];
+function grupoDoUsuario(u){
+  if(!u) return 'adm';
+  for(const g of LOGIN_GRUPOS){ if(g.fn(u)) return g.id }
+  return 'adm';
+}
+function salvarCredsLocal(){
+  try{ const st=store(); if(st&&creds&&Object.keys(creds).length) st.setItem(CREDS_KEY,JSON.stringify(creds)) }catch(e){}
+}
+function lerCredsLocal(){
+  try{ const st=store(); const r=st&&st.getItem(CREDS_KEY); return r?JSON.parse(r):{} }catch(e){ return {} }
+}
+function salvarSenhaDispositivo(uid,senha){
+  if(!uid||!senha) return;
+  try{
+    const st=store(); if(!st) return;
+    const m=JSON.parse(st.getItem(SAVED_PASS_KEY)||'{}');
+    m[uid]=String(senha);
+    st.setItem(SAVED_PASS_KEY,JSON.stringify(m));
+  }catch(e){}
+}
+function lerSenhaDispositivo(uid){
+  if(!uid) return '';
+  try{
+    const st=store(); if(!st) return '';
+    const m=JSON.parse(st.getItem(SAVED_PASS_KEY)||'{}');
+    return m[uid]||'';
+  }catch(e){ return '' }
+}
+function salvarSessaoAtiva(){
+  if(!session) return;
+  try{
+    const st=store(); if(!st) return;
+    st.setItem(SESSION_KEY,JSON.stringify({
+      userId:session.id,
+      login:session.login,
+      nome:session.nome,
+      page:typeof page!=='undefined'?page:'',
+      brigAtual:typeof brigAtual!=='undefined'?brigAtual:null,
+      brigSisSel:typeof brigSisSel!=='undefined'?brigSisSel:'extintores',
+      condoFilter:typeof condoFilter!=='undefined'?condoFilter:'all',
+      savedAt:new Date().toISOString()
+    }));
+  }catch(e){}
+}
+function limparSessaoAtiva(){
+  try{ const st=store(); if(st) st.removeItem(SESSION_KEY) }catch(e){}
+}
+function restaurarSessaoSalva(){
+  try{
+    const st=store(); if(!st) return false;
+    const raw=st.getItem(SESSION_KEY); if(!raw) return false;
+    const s=JSON.parse(raw);
+    if(!s||!s.userId) return false;
+    const u=USERS.find(x=>x.id===s.userId);
+    if(!u) return false;
+    pickedUser=u.id;
+    pickedFunc=grupoDoUsuario(u);
+    entrar(u,{auto:true,page:s.page,brigAtual:s.brigAtual,brigSisSel:s.brigSisSel,condoFilter:s.condoFilter});
+    return true;
+  }catch(e){ return false }
+}
+/* Acesso separado por função + lista suspensa sincronizada */
 function buildProfiles(){
-  const box=document.querySelector('#loginSel'); if(!box)return;
-  const grupos=[['Administração',u=>u.perms.tipos&&u.perms.tipos.length],
-                ['Manutenção',u=>u.perms.manutencao&&!(u.perms.tipos||[]).length],
-                ['Portaria',u=>u.role==='Portaria'],
-                ['Limpeza e Portaria',u=>u.perms.leituras||u.perms.ronda&&!u.perms.brigada],
-                ['Brigada de Incêndio',u=>u.role==='Brigadista']];
+  const box=document.querySelector('#loginSel');
+  const uAtual=USERS.find(x=>x.id===pickedUser)||USERS[0];
+  if(uAtual) pickedFunc=grupoDoUsuario(uAtual);
+  const fbox=document.querySelector('#loginPorFuncao');
+  if(fbox){
+    const gAtual=LOGIN_GRUPOS.find(g=>g.id===pickedFunc)||LOGIN_GRUPOS[0];
+    const usuariosDaFunc=USERS.filter(u=>gAtual.fn(u));
+    fbox.innerHTML=`
+      <label style="display:block;margin-bottom:6px">1. Selecione sua função</label>
+      <div class="login-funcs">
+        ${LOGIN_GRUPOS.map(g=>{
+          const qtd=USERS.filter(u=>g.fn(u)).length;
+          if(!qtd) return '';
+          return `<button type="button" class="login-func-btn ${g.id===pickedFunc?'on':''}" onclick="pickFunc('${g.id}')">
+            ${ic(g.ic)}<span>${esc(g.rot)}</span></button>`;
+        }).join('')}
+      </div>
+      <label style="display:block;margin-bottom:6px">2. Usuários de ${esc(gAtual.rot)}</label>
+      <div class="login-users">
+        ${usuariosDaFunc.map(u=>`<button type="button" class="login-user-btn ${u.id===pickedUser?'on':''}" onclick="pickUser('${u.id}')">
+          ${esc(u.nome)}</button>`).join('')}
+      </div>`;
+  }
+  if(!box)return;
   const usados=new Set();
   let h='';
-  grupos.forEach(([rot,fn])=>{
-    const l=USERS.filter(u=>!usados.has(u.id)&&fn(u));
+  LOGIN_GRUPOS.forEach(g=>{
+    const l=USERS.filter(u=>!usados.has(u.id)&&g.fn(u));
     if(!l.length) return;
     l.forEach(u=>usados.add(u.id));
-    h+=`<optgroup label="${esc(rot)}">`+l.map(u=>
+    h+=`<optgroup label="${esc(g.rot)}">`+l.map(u=>
       `<option value="${u.id}" ${pickedUser===u.id?'selected':''}>${esc(u.nome)} — ${esc(u.role)}</option>`).join('')+`</optgroup>`;
   });
   const resto=USERS.filter(u=>!usados.has(u.id));
@@ -1822,16 +1920,29 @@ function buildProfiles(){
   box.innerHTML=h;
   box.value=pickedUser;
 }
+function pickFunc(gid){
+  const g=LOGIN_GRUPOS.find(x=>x.id===gid); if(!g) return;
+  pickedFunc=gid;
+  const lista=USERS.filter(u=>g.fn(u));
+  if(lista.length && !lista.some(u=>u.id===pickedUser)){
+    pickedUser=lista[0].id;
+  }
+  buildProfiles();
+  pickUser(pickedUser);
+}
 function pickUser(id){
   pickedUser=id;
   const u=USERS.find(x=>x.id===id); if(!u)return;
+  pickedFunc=grupoDoUsuario(u);
+  buildProfiles();
   { const sel=document.querySelector('#loginSel'); if(sel&&sel.value!==id) sel.value=id; }
   const set=(sel,v)=>{const el=document.querySelector(sel); if(el){if('value' in el&&el.tagName==='INPUT')el.value=v; else el.textContent=v}};
   set('#loginUser',u.login); set('#loginNome',u.nome); set('#loginRole',u.role); set('#loginAvatar',u.nome[0]);
-  const p=document.querySelector('#loginPass'); if(p){p.value=''; if(p.focus)p.focus()}
+  const novo=!temSenha(id);
+  const senhaSalva=!novo?lerSenhaDispositivo(id):'';
+  const p=document.querySelector('#loginPass'); if(p){p.value=senhaSalva||''; if(p.focus)p.focus()}
   const p2=document.querySelector('#loginPass2'); if(p2)p2.value='';
   const e=document.querySelector('#loginErr'); if(e&&e.classList)e.classList.add('hidden');
-  const novo=!temSenha(id);
   const hint=document.querySelector('#firstHint'), f2=document.querySelector('#fieldPass2'),
         lbl=document.querySelector('#lblPass'), btn=document.querySelector('#btnEntrar');
   if(hint&&hint.classList) novo?hint.classList.remove('hidden'):hint.classList.add('hidden');
@@ -1852,39 +1963,59 @@ function doLogin(){
     if(senha.length<6){ mostra('A nova senha precisa ter ao menos 6 caracteres.'); return }
     if(senha!==c){ mostra('As senhas não conferem.'); return }
     definirSenha(u.id,senha);
+    salvarSenhaDispositivo(u.id,senha);
     audit('Senha definida (1º acesso)','Usuário: '+u.nome,'',null,'');
     entrar(u); toast('Senha criada. Bem-vindo, '+u.nome+'!');
     return;
   }
   if(!conferirSenha(u.id,senha)){ mostra('Senha incorreta.'); return }
+  salvarSenhaDispositivo(u.id,senha);
   entrar(u);
   toast('Bem-vindo, '+u.nome+'!');
 }
-function entrar(u){
-  session=u; condoFilter='all';
+function entrar(u,opts){
+  opts=opts||{};
+  session=u; condoFilter=opts.condoFilter||'all';
   $('#login').style.display='none'; $('#app').style.display='block';
   $('#uName').textContent=u.nome; $('#uRole').textContent=u.role; $('#uAvatar').textContent=u.nome[0];
   aplicarMarca();
   { const b=$('#iaBtn'); if(b) b.classList.toggle('hidden',!P().ia); }
+  if(typeof brigLerEstado==='function') brigLerEstado('c1');
+  if(opts.brigSisSel) brigSisSel=opts.brigSisSel;
   gerarNotificacoes();
-  buildNav(); buildCondoFilter(); go(paginaInicial()); buildTabbar();
-  setTimeout(()=>{
-    _filaAlerta=[];
-    if(nfCriticas().length) _filaAlerta.push(alertaNF);   // NF entra na fila
-    if(alertaCritico()) return;               // manutenção que não pode vencer vem primeiro
-    if(avisarTriagem()) return;               // chamados que aguardam meu direcionamento
-    if(avisarChamadosRonda()) return;         // chamados que a brigada abriu na ronda
-    if(_filaAlerta.length){ _filaAlerta.shift()(); return; }
-    if(avisarDelegacoes()) return;            // depois, delegação nova
-    if(avisarResumoSemanal()) return;          // resumo da semana, às segundas
-    if(CFG.notif&&CFG.notif.resumoDiario) abrirResumoDiario();
-  },400);
+  buildNav(); buildCondoFilter();
+  const pgInicial=opts.page||paginaInicial();
+  if(opts.brigAtual && pgInicial==='brigada-form' && brigInsp.some(x=>x.id===opts.brigAtual)){
+    brigAtual=opts.brigAtual;
+    page='brigada-form';
+    buildNav(); buildTabbar(); buildCondoFilter(); render();
+  }else{
+    go(pgInicial);
+  }
+  buildTabbar();
+  salvarSessaoAtiva();
+  if(!opts.auto){
+    setTimeout(()=>{
+      _filaAlerta=[];
+      if(nfCriticas().length) _filaAlerta.push(alertaNF);   // NF entra na fila
+      if(alertaCritico()) return;               // manutenção que não pode vencer vem primeiro
+      if(avisarTriagem()) return;               // chamados que aguardam meu direcionamento
+      if(avisarChamadosRonda()) return;         // chamados que a brigada abriu na ronda
+      if(_filaAlerta.length){ _filaAlerta.shift()(); return; }
+      if(avisarDelegacoes()) return;            // depois, delegação nova
+      if(avisarResumoSemanal()) return;          // resumo da semana, às segundas
+      if(CFG.notif&&CFG.notif.resumoDiario) abrirResumoDiario();
+    },400);
+  }
 }
-function logout(){session=null;document.body.classList.remove('has-tabbar');$('#app').style.display='none';$('#login').style.display='flex';
+function logout(){
+  limparSessaoAtiva();
+  session=null;document.body.classList.remove('has-tabbar');$('#app').style.display='none';$('#login').style.display='flex';
   buildProfiles();
   const p=$('#loginPass'); if(p){p.value='';if(p.focus)p.focus()}
   const p2=$('#loginPass2'); if(p2)p2.value='';
-  if(typeof pickedUser!=='undefined'&&pickedUser)pickUser(pickedUser);}
+  if(typeof pickedUser!=='undefined'&&pickedUser)pickUser(pickedUser);
+}
 
 
 /* ============ PERSISTÊNCIA (localStorage) ============ */
@@ -1893,7 +2024,8 @@ function logout(){session=null;document.body.classList.remove('has-tabbar');$('#
    automaticamente: o app recria o mês corrente limpo. */
 const DB_KEY='grc.db.v1', DB_VER=2;
 let _saveTimer=null, _booting=true;
-function store(){ try{ return window.localStorage }catch(e){ return null } }
+const _memStore=(()=>{const m={};return {getItem:k=>k in m?m[k]:null,setItem:(k,v)=>{m[k]=String(v)},removeItem:k=>{delete m[k]}}})();
+function store(){ try{ return (typeof window!=='undefined'&&window.localStorage)||_memStore }catch(e){ return _memStore } }
 function dbSnapshot(){
   return {v:DB_VER, savedAt:new Date().toISOString(),
     tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,brigInsp,brigRondas,salas,unidSind,
@@ -2208,7 +2340,9 @@ function load(d){
     if(!prestadores.length) seedPrestadores();
     migrarPrestadoresEB();
     if(d.CFG) CFG=Object.assign(CFG,d.CFG);
-    creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
+    creds=Object.assign({},lerCredsLocal(),d.creds||{});
+    salvarCredsLocal();
+    notifs=d.notifs||[]; notifState=d.notifState||{};
     aplicarNomesUsuarios(); aplicarPermsUsuarios();
     let mig=migrarLeiturasAgua(); if(migrarTarifaCaesb()) mig=true; migrarManutObrig(); migrarVendasCustas();
     if(migrarFilaPub()) mig=true; if(migrarRevisoesAp()) mig=true; if(migrarMarcaEbiz()) mig=true; if(migrarSalas()) mig=true;
@@ -2279,7 +2413,7 @@ function temSenha(uid){ return !!(creds[uid]&&creds[uid].hash) }
 function definirSenha(uid,senha){
   const salt=novoSalt();
   creds[uid]={hash:hashSenha(senha,salt),salt,trocadaEm:nowStamp()};
-  save();
+  salvarCredsLocal(); salvarLocal(); save();
 }
 /* O Gestor pode zerar a senha de um usuário — ele define uma nova no próximo acesso. */
 /* O Gestor nomeia cada conta de brigadista; o nome fica salvo em CFG
@@ -2438,7 +2572,7 @@ function resetarSenha(uid){
   const u=USERS.find(x=>x.id===uid); if(!u) return;
   if(uid===session.id) return toast('Para trocar a sua própria senha use o campo acima.');
   if(!confirm('Redefinir a senha de '+u.nome+'?\n\nA senha atual será apagada e '+u.nome+' criará uma nova no próximo acesso.')) return;
-  delete creds[uid]; save();
+  delete creds[uid]; salvarCredsLocal(); save();
   audit('Senha redefinida',u.nome,'','','Configurações');
   toast(u.nome+' criará uma nova senha no próximo acesso.');
   render();
@@ -2631,13 +2765,24 @@ function paginaInicial(){ if(P().tipos.length||P().manutencao) return 'dashboard
   if(P().leituras) return 'leituras';
   if(P().ronda) return 'brigada-ronda';
   return 'estoque'; }
-function go(p,filter){ apEditId=null; apAtual=null; if(p!=='brigada-form') brigAtual=null;
+function go(p,filter){
+  apEditId=null; apAtual=null;
+  if(p!=='brigada-form' && brigAtual && typeof _bi==='function'){
+    const _i=_bi(brigAtual);
+    if(_i && typeof brigSalvarEstado==='function'){
+      brigSisSel=_i.sistema;
+      brigSalvarEstado({cid:_i.condoId||'c1',andar:_i.andar,sistema:_i.sistema,inspId:_i.id,aberto:true});
+    }
+    brigAtual=null;
+  }
   page=p;pageFilter=filter||null;document.body.classList.remove('mobile-open');
   /* Se o condomínio selecionado não participa do módulo da nova página,
      volta para "Todos" — senão a tela ficaria vazia sem explicação. */
   const disp=condosDo(moduloDaPagina());
   if(condoFilter!=='all'&&!disp.some(c=>c.id===condoFilter)) condoFilter='all';
-  buildNav();buildTabbar();buildCondoFilter();render()}
+  buildNav();buildTabbar();buildCondoFilter();render();
+  salvarSessaoAtiva();
+}
 function render(){
   { const _sb=document.querySelector('#syncBadge'); if(_sb) _sb.outerHTML=badgeSync(); }
   /* as imagens referenciadas chegam logo depois que a tela aparece */
@@ -10832,26 +10977,28 @@ function exportLeituras(){
 
 /* ============ DASHBOARD DA MANUTENÇÃO (Cleiton) ============ */
 /* ============ DASHBOARD DO BRIGADISTA ============
-   Só o que é da função dele: check-list do mês, ronda do dia e o que
-   ele mesmo apontou. Sem estoque, pedidos ou apontamentos de manutenção. */
+   Tela inicial enxuta: apenas Check-list (indo direto p/ Check-list por Andar
+   ou retomando de onde parou) e Ronda Diária. Sem não conformidades no painel. */
 function dashBrigada(){
   const cid=P().condos[0]||'c1';
   const mes=brigMesAtual();
   const prog=brigProgresso(cid,mes);
-  const nc=brigResumoNC(cid,mes);
-  const totNC=nc.reduce((s,x)=>s+x.qtd,0);
   const hoje=today();
   const minhaRonda=brigRondas.filter(r=>r.condoId===cid&&r.data===hoje);
   const meusAndares=new Set(minhaRonda.map(r=>r.andar)).size;
-  const ocor=minhaRonda.filter(r=>!r.ok).length;
-  const meusCham=tasks.filter(t=>t.origem==='ronda'&&t.criadoPor===session.nome&&
-    t.status!=='Concluída'&&!t.arquivada);
-  /* próxima parada pendente do mês */
+  const parada=typeof brigOndeParou==='function'?brigOndeParou(cid):null;
+  /* próxima parada pendente do mês (prioriza onde o brigadista parou) */
   let prox=null;
-  for(const s of BRIG_SISTEMAS){
-    const a=brigAndaresDo(s.id).find(a=>!brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&
-      i.sistema===s.id&&String(i.data).slice(0,7)===mes&&i.status==='Concluído'));
-    if(a){ prox={sistema:s,andar:a}; break }
+  if(parada){
+    const sObj=brigSis(parada.sistema);
+    const aObj=BRIG_ANDARES.find(x=>x.id===parada.andar)||{id:parada.andar,nome:brigAndarNome(parada.andar)};
+    prox={sistema:sObj,andar:aObj,retomar:true};
+  }else{
+    for(const s of BRIG_SISTEMAS){
+      const a=brigAndaresDo(s.id).find(a=>!brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&
+        i.sistema===s.id&&String(i.data).slice(0,7)===mes&&i.status==='Concluído'));
+      if(a){ prox={sistema:s,andar:a,retomar:false}; break }
+    }
   }
   $('#content').innerHTML=`
     <div class="card" style="margin-bottom:14px;background:linear-gradient(115deg,#0d1b2e 0%,#1d3557 65%,#c2384a 190%);color:#fff;border:0">
@@ -10861,58 +11008,43 @@ function dashBrigada(){
           <div style="font-size:17px;font-weight:650;letter-spacing:-.02em">Olá, ${esc(session.nome)}</div>
           <div style="opacity:.85;font-size:13px">Brigada de Incêndio · ${esc(condoName(cid))} · ${fmt(hoje)}</div></div>
         <div class="rowact no-print">
-          <button class="btn" style="background:#fff;color:var(--navy)" onclick="go('brigada-inicio')">Iniciar Check-list</button>
+          <button class="btn" style="background:#fff;color:var(--navy)" onclick="${parada?`brigRetomar('${cid}')`:`go('brigada')`}">${parada?'Continuar Check-list':'Check-list por Andar'}</button>
+          <button class="btn ghost" style="background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)" onclick="go('brigada-inicio')">Iniciar Check-list</button>
           <button class="btn ghost" style="background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)" onclick="go('brigada-ronda')">Ronda do dia</button>
         </div></div></div>
 
-    <div class="grid metrics" style="margin-bottom:14px">
-      <div class="card metric" onclick="go('brigada')">
+    <div class="grid metrics" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-bottom:14px">
+      <div class="card metric" style="cursor:pointer" onclick="go('brigada')">
         <div class="lbl">${ic('clipboardCheck')}Check-lists do mês</div>
-        <div class="val">${prog.feitos}/${prog.total}</div><div class="sub">${prog.pct}% concluído</div></div>
-      <div class="card metric ${totNC?'red':'green'}" onclick="go('brigada')">
-        <div class="lbl">${ic('alert')}Peças não conformes</div>
-        <div class="val">${totNC}</div><div class="sub">apontadas neste mês</div></div>
-      <div class="card metric" onclick="go('brigada-ronda')">
+        <div class="val">${prog.feitos}/${prog.total}</div>
+        <div class="sub">${prog.pct}% concluído · Toque para abrir o Check-list por Andar</div>
+      </div>
+      <div class="card metric" style="cursor:pointer" onclick="go('brigada-ronda')">
         <div class="lbl">${ic('route')}Ronda de hoje</div>
-        <div class="val">${meusAndares}/${BRIG_ANDARES.length}</div><div class="sub">andares percorridos</div></div>
-      <div class="card metric ${ocor?'amber':''}" onclick="go('brigada-ronda')">
-        <div class="lbl">${ic('bell')}Ocorrências hoje</div>
-        <div class="val">${ocor}</div><div class="sub">${meusCham.length} chamado(s) em aberto</div></div>
+        <div class="val">${meusAndares}/${BRIG_ANDARES.length}</div>
+        <div class="sub">andares percorridos · Toque para abrir a Ronda Diária</div>
+      </div>
     </div>
 
     ${prox?`<div class="card" style="margin-bottom:14px">
-      <div class="ap-faixa">${ic('play')} PRÓXIMA PARADA</div>
+      <div class="ap-faixa">${ic('play')} ${prox.retomar?'CONTINUAR DE ONDE VOCÊ PAROU — PRÓXIMA PARADA':'PRÓXIMA PARADA'}</div>
       <div style="padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div style="flex:1;min-width:180px">
           <div style="font-weight:700;font-size:15px">${esc(prox.sistema.nome)} — ${esc(brigAndarNome(prox.andar.id))}</div>
           <div class="muted" style="font-size:12.5px;margin-top:2px">
             ${brigPontos(prox.andar.id,prox.sistema.id).length} ponto(s) para verificar · inspeção ${prox.sistema.periodicidade.toLowerCase()}</div>
         </div>
-        <button class="btn primary" onclick="brigAbrir('${cid}','${prox.andar.id}','${prox.sistema.id}')">Começar agora</button>
+        <div class="rowact">
+          <button class="btn primary" onclick="brigAbrir('${cid}','${prox.andar.id}','${prox.sistema.id}')">${prox.retomar?'Voltar de onde parei':'Começar agora'}</button>
+          <button class="btn ghost" onclick="brigSisSel='${prox.sistema.id}';go('brigada')">Check-list por Andar</button>
+        </div>
       </div></div>`
     :`<div class="card" style="margin-bottom:14px">
       <div class="ap-faixa">${ic('checkCircle')} CHECK-LIST DO MÊS</div>
-      <div style="padding:14px" class="muted">Tudo concluído neste mês. Bom trabalho.</div></div>`}
-
-    <div class="card" style="margin-bottom:14px">
-      <div class="ap-faixa">${ic('flame')} O QUE EU APONTEI</div>
-      <div style="padding:12px">
-        ${meusCham.length?meusCham.slice(0,6).map(t=>`
-          <div class="feed-item ${t.prioridade==='Alta'?'red':'amber'}">
-            <div class="fi-ic">${ic('route')}</div>
-            <div style="flex:1"><div class="ft">${esc(t.titulo)}</div>
-              <div class="fd">${esc(t.responsavel?('com '+t.responsavel):'aguardando direcionamento')} · ${fmt(t.vencimento)}</div></div>
-          </div>`).join('')
-        :'<div class="muted">Nenhum chamado seu em aberto.</div>'}
-      </div></div>
-
-    ${nc.length?`<div class="card">
-      <div class="ap-faixa">${ic('alert')} NÃO CONFORMIDADES DO MÊS</div>
-      <div class="tablewrap"><table class="ap-tb"><thead><tr>
-        <th>SISTEMA</th><th>PEÇAS</th><th>ANDARES</th></tr></thead><tbody>
-        ${nc.map(r=>`<tr><td><b>${esc(r.nome)}</b></td><td><span class="badge red">${r.qtd}</span></td>
-          <td class="muted">${esc(r.andares.map(brigAndarNome).join(', '))}</td></tr>`).join('')}
-      </tbody></table></div></div>`:''}`;
+      <div style="padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <span class="muted">Tudo concluído neste mês. Bom trabalho.</span>
+        <button class="btn ghost sm" onclick="go('brigada')">Abrir Check-list por Andar</button>
+      </div></div>`}`;
 }
 
 /* ============ DASHBOARD DA LIDERANÇA DE LIMPEZA E PORTARIA ============ */
@@ -12687,6 +12819,20 @@ function relatorioMensal(){
     </div>
     ${K.topLocais.length?`<div class="rel-sub2">Locais com maior recorrência</div>
       ${K.topLocais.map(([l,n])=>barra(l,n,K.topLocais[0][1],'#c2384a')).join('')}`:''}
+    ${(()=>{
+      const pendBrig=brigNCAbertas('c1',relMes);
+      if(!pendBrig.length) return '';
+      return `<div class="rel-sub2" style="margin-top:12px">Pendências do Check-list da Brigada em Aberto (${pendBrig.length} — permanecem até serem resolvidas)</div>
+        <table class="rel-tb"><thead><tr><th>Data</th><th>Local</th><th>Sistema</th><th>Ponto / Constatação</th><th>Situação</th></tr></thead><tbody>
+        ${pendBrig.map(x=>`<tr>
+          <td>${fmt(x.insp.data)}</td>
+          <td><b>${esc(brigAndarNome(x.insp.andar))}</b></td>
+          <td>${esc(brigSis(x.insp.sistema).nome)}</td>
+          <td><b>${esc(x.ponto.desc)}</b>${x.qtd>1?' ('+x.qtd+' peças)':''}${x.falhas.length?' · Falhou: '+esc(x.falhas.join('; ')):''}${x.ponto.obs?' · '+esc(x.ponto.obs):''}</td>
+          <td style="color:#c2384a;font-weight:700">Pendente</td>
+        </tr>`).join('')}
+        </tbody></table>`;
+    })()}
 
     <div class="rel-sec">4. Consumo e Projeção de Contas</div>
     ${condos.filter(c=>condoNoModulo(c.id,'tarefas')).map(c=>{
@@ -12915,6 +13061,26 @@ function viewReports(){
         <div class="t-sub">Total: <b>${ms.length}</b> contratos monitorados</div></div>
       </div>`:''}
     </div>
+    ${(()=>{
+      const pendBrig=brigNCAbertas('c1');
+      if(!pendBrig.length) return '';
+      return `<div class="section-title"><h3>${ic('alert')}Pendências do Check-list da Brigada em Aberto (${pendBrig.length} — até serem resolvidas)</h3></div>
+        <div class="tablewrap" style="margin-bottom:16px"><table><thead><tr>
+          <th>Data</th><th>Local</th><th>Sistema</th><th>Ponto / Constatação</th><th>Responsável</th><th>Situação</th>
+        </tr></thead><tbody>
+        ${pendBrig.map(x=>`<tr>
+          <td>${fmt(x.insp.data)}</td>
+          <td><b>${esc(brigAndarNome(x.insp.andar))}</b></td>
+          <td>${esc(brigSis(x.insp.sistema).nome)}</td>
+          <td><b>${esc(x.ponto.desc)}</b>${x.qtd>1?` <span class="badge b-atr">${x.qtd} peças</span>`:''}
+            ${x.falhas.length?`<div class="t-sub" style="color:#c2384a">Falhou: ${esc(x.falhas.join('; '))}</div>`:''}
+            ${x.ponto.obs?`<div class="t-sub">${esc(x.ponto.obs)}</div>`:''}
+          </td>
+          <td>${esc(x.insp.responsavel||'—')}</td>
+          <td><span class="badge b-atr">Pendente</span></td>
+        </tr>`).join('')}
+        </tbody></table></div>`;
+    })()}
     <div class="section-title"><h3>Tabela consolidada de tarefas</h3></div>
     <div class="tablewrap"><table><thead><tr><th>Tarefa</th><th>Condomínio</th><th>Tipo</th><th>Responsável</th>
       <th>Periodicidade</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>
@@ -13777,12 +13943,95 @@ function brigProgresso(cid,mesRef){
   }));
   return {total,feitos,pct:total?Math.round(feitos*100/total):0};
 }
-/* todas as NCs abertas do condomínio, agrupadas por sistema */
-function brigNCAbertas(cid,mesRef){
+/* Verifica se uma não conformidade (pendência) do check-list já foi resolvida.
+   Uma pendência permanece ATIVA (não resolvida) até que:
+   1) Seja marcada como resolvida diretamente (p.resolvido === true ou insp.resolvido === true), OU
+   2) O chamado vinculado em Tarefas (origem='brigada') seja concluído (status === 'Concluída'), OU
+   3) Sem chamado em aberto, um check-list posterior concluído do mesmo andar+sistema ateste CONFORME no ponto. */
+function brigPendenciaResolvida(insp,ponto){
+  if(!insp||!ponto||ponto.sit!=='NÃO CONFORME') return true;
+  if(ponto.resolvido===true||insp.resolvido===true) return true;
+  const ts=chamadosDaInspecao(insp.id);
+  if(ts.length){
+    return ts.every(t=>t.status==='Concluída'||t.arquivada);
+  }
+  const dtRef=String(insp.data||'')+' '+String(insp.hora||'');
+  const posteriorOk=brigInsp.some(i2=>i2.condoId===insp.condoId&&i2.andar===insp.andar&&
+    i2.sistema===insp.sistema&&i2.status==='Concluído'&&i2.id!==insp.id&&
+    (String(i2.data||'')+' '+String(i2.hora||''))>dtRef&&
+    (i2.pontos||[]).some(p2=>p2.desc===ponto.desc&&p2.sit==='CONFORME'));
+  return posteriorOk;
+}
+function brigPendenciaInfoResolucao(insp,ponto){
+  if(!brigPendenciaResolvida(insp,ponto)) return null;
+  if(ponto&&ponto.resolvido){
+    return {por:ponto.resolvidoPor||'Brigada/Gestão',em:ponto.resolvidoEm||insp.data,obs:ponto.obsResolucao||''};
+  }
+  const ts=chamadosDaInspecao(insp.id).filter(t=>t.status==='Concluída');
+  if(ts.length){
+    const u=ts[ts.length-1];
+    return {por:u.concluidoPor||u.responsavel||'Manutenção/Gestão',em:u.concluidoEm||'',obs:u.obsConclusao||''};
+  }
+  return {por:'Inspeção posterior',em:'',obs:'Ponto verificado como Conforme em check-list seguinte'};
+}
+/* Histórico completo de todas as pendências (não conformidades) de check-lists do condomínio,
+   opcionalmente filtrado por andar, sistema, ponto (desc) ou excInspId. */
+function brigHistoricoPendencias(cid,filtro){
+  const f=filtro||{};
   const out=[];
-  brigInsp.filter(i=>i.condoId===cid&&i.status==='Concluído'&&(!mesRef||String(i.data).slice(0,7)===mesRef))
-   .forEach(i=>brigNC(i).forEach(p=>out.push({insp:i,ponto:p,
-      qtd:p.qtd>0?p.qtd:brigQtdDesc(p.desc)})));
+  brigInsp.filter(i=>i.condoId===(cid||'c1')&&i.status==='Concluído'&&
+    (!f.excInspId||i.id!==f.excInspId)&&
+    (!f.andar||String(i.andar)===String(f.andar))&&
+    (!f.sistema||i.sistema===f.sistema))
+    .sort((a,b)=>String((b.data||'')+(b.hora||'')).localeCompare(String((a.data||'')+(a.hora||''))))
+    .forEach(i=>{
+      (i.pontos||[]).forEach((p,idx)=>{
+        if(p.sit!=='NÃO CONFORME') return;
+        if(f.desc&&p.desc!==f.desc) return;
+        const resolvida=brigPendenciaResolvida(i,p);
+        if(f.apenasAbertas&&resolvida) return;
+        if(f.apenasResolvidas&&!resolvida) return;
+        const ts=chamadosDaInspecao(i.id);
+        const chamado=ts[0]||null;
+        const falhas=Object.keys(p.itens||{}).filter(k=>p.itens[k]===false);
+        out.push({
+          insp:i, ponto:p, idx,
+          qtd:p.qtd>0?p.qtd:brigQtdDesc(p.desc),
+          falhas,
+          resolvida,
+          resolucao:resolvida?brigPendenciaInfoResolucao(i,p):null,
+          chamado,
+          cobrancas:(p.vistoDeNovo||0)||((chamado&&chamado.vistoDeNovo)||0)
+        });
+      });
+    });
+  return out;
+}
+
+/* todas as NCs abertas (não resolvidas) do condomínio até mesRef, sem duplicar o mesmo ponto */
+function brigNCAbertas(cid,mesRef){
+  const lista=brigInsp.filter(i=>i.condoId===cid&&i.status==='Concluído'&&(!mesRef||String(i.data).slice(0,7)<=mesRef))
+    .sort((a,b)=>String((b.data||'')+(b.hora||'')).localeCompare(String((a.data||'')+(a.hora||''))));
+  const visto={};
+  const out=[];
+  lista.forEach(i=>{
+    (i.pontos||[]).forEach((p,idx)=>{
+      if(p.sit!=='NÃO CONFORME') return;
+      if(brigPendenciaResolvida(i,p)) return;
+      const ch=i.andar+'|'+i.sistema+'|'+p.desc;
+      if(visto[ch]) return;
+      visto[ch]=true;
+      const falhas=Object.keys(p.itens||{}).filter(k=>p.itens[k]===false);
+      const ts=chamadosDaInspecao(i.id);
+      out.push({
+        insp:i, ponto:p, idx,
+        qtd:p.qtd>0?p.qtd:brigQtdDesc(p.desc),
+        falhas,
+        chamado:ts[0]||null,
+        cobrancas:(p.vistoDeNovo||0)||((ts[0]&&ts[0].vistoDeNovo)||0)
+      });
+    });
+  });
   return out;
 }
 /* resumo por sistema: peças não conformes somadas */
@@ -13799,7 +14048,9 @@ function brigResumoNC(cid,mesRef){
 
 /* ---- ALERTA AUTOMÁTICO ----
    Ao concluir um check-list com não conformidade, o sistema abre sozinho
-   uma tarefa para o Gestor, já com o resumo do que precisa ser trocado. */
+   uma tarefa para o Gestor, já com o resumo do que precisa ser trocado.
+   Se já existir chamado aberto para o mesmo andar + sistema, atualiza e
+   registra nova cobrança sem duplicar a tarefa. */
 function brigGerarAlerta(insp){
   const ncs=brigNC(insp); if(!ncs.length) return null;
   const qtd=brigQtdNC(insp);
@@ -13812,17 +14063,46 @@ function brigGerarAlerta(insp){
       (falhas.length?'\n     Falhou em: '+falhas.join('; '):'')+
       (p.obs?'\n     Obs.: '+p.obs:'');
   }).join('\n');
+  /* Verifica se já existe chamado aberto deste mesmo andar e sistema (de check-list anterior) */
+  const jaAberta=tasks.find(t=>t.origem==='brigada'&&t.condoId===insp.condoId&&
+    t.status!=='Concluída'&&!t.arquivada&&t.brigInspId!==insp.id&&(
+      (t.brigAndar===insp.andar&&t.brigSistema===insp.sistema)||
+      (() => { const iAnt=brigInsp.find(x=>x.id===t.brigInspId); return !!(iAnt&&iAnt.andar===insp.andar&&iAnt.sistema===insp.sistema); })()
+    ));
+  if(jaAberta){
+    jaAberta.brigInspIds=[...new Set([...(jaAberta.brigInspIds||[jaAberta.brigInspId]),insp.id])];
+    jaAberta.brigInspId=insp.id;
+    jaAberta.brigAndar=insp.andar;
+    jaAberta.brigSistema=insp.sistema;
+    jaAberta.vistoDeNovo=(jaAberta.vistoDeNovo||0)+1;
+    jaAberta.vistoPorUltimo=insp.data||today();
+    jaAberta.titulo=qtd+' '+(qtd>1?'itens':'item')+' não conforme — '+sis+' · '+andar;
+    jaAberta.prioridade=brigPrioridade(insp.sistema,qtd);
+    jaAberta.procedimento='Apontado no check-list da brigada em '+fmt(insp.data)+' às '+(insp.hora||'—')+
+      ' por '+(insp.responsavel||'—')+' (pendência recorrente confirmada '+jaAberta.vistoDeNovo+'x).\n\nNÃO CONFORMIDADES:\n'+linhas+
+      '\n\nProvidência: avaliar reparo ou substituição das peças.';
+    (jaAberta.historico=jaAberta.historico||[]).push({
+      q:insp.responsavel||'Brigada',w:nowStamp(),
+      t:'Continua pendente — confirmado novamente no check-list de '+fmt(insp.data)+' (cobrança '+jaAberta.vistoDeNovo+')'
+    });
+    insp.chamadoId=jaAberta.id;
+    audit('Pendência de check-list reconfirmada',sis+' · '+andar,qtd+' item(ns) — chamado existente atualizado',insp.condoId,'Check-list');
+    return jaAberta;
+  }
   const t=mkTask({
     titulo:qtd+' '+(qtd>1?'itens':'item')+' não conforme — '+sis+' · '+andar,
     condoId:insp.condoId,tipo:'Gestor',periodicidade:'Sob Demanda',repetitiva:false,
     tipoTarefa:'Avulsa do dia',prioridade:brigPrioridade(insp.sistema,qtd),
     vencimento:brigPrazo(insp.sistema),responsavel:'Maciel',
-    origem:'brigada',brigInspId:insp.id,criadoPor:insp.responsavel||'Brigada',
+    origem:'brigada',brigInspId:insp.id,brigInspIds:[insp.id],
+    brigAndar:insp.andar,brigSistema:insp.sistema,
+    criadoPor:insp.responsavel||'Brigada',
     procedimento:'Apontado no check-list da brigada em '+fmt(insp.data)+' às '+(insp.hora||'—')+
       ' por '+(insp.responsavel||'—')+'.\n\nNÃO CONFORMIDADES:\n'+linhas+
       '\n\nProvidência: avaliar reparo ou substituição das peças.'});
   t.historico=[{q:insp.responsavel||'Brigada',w:nowStamp(),t:'Aberta automaticamente pelo check-list da brigada'}];
   tasks.push(t);
+  insp.chamadoId=t.id;
   audit('Alerta automático da brigada',sis+' · '+andar,qtd+' item(ns) não conforme(s)',insp.condoId,'Check-list');
   return t;
 }
@@ -13918,18 +14198,135 @@ function brigReincidentes(cid){
 }
 
 /* ============ TELA — BRIGADA ============ */
-let brigSisSel='extintores', brigMesSel='';
+let brigSisSel='extintores', brigMesSel='', brigHistFiltro='abertas';
+const BRIG_ESTADO_KEY='grc.brig.estado.v1';
+let _brigEstadoMem={};
+
+function _brigUid(){ return (session&&session.id)||'_default' }
+function brigSalvarEstado(patch){
+  const uid=_brigUid();
+  const atual=_brigEstadoMem[uid]||brigLerEstado((patch&&patch.cid)||'c1')||{};
+  const novo=Object.assign({},atual,patch||{},{
+    uid,
+    mes:brigMesAtual(),
+    sessao:brigSessao?JSON.parse(JSON.stringify(brigSessao)):null,
+    atualizadoEm:nowStamp()
+  });
+  _brigEstadoMem[uid]=novo;
+  if(novo.sistema) brigSisSel=novo.sistema;
+  try{
+    const st=store();
+    if(st){
+      const todos=JSON.parse(st.getItem(BRIG_ESTADO_KEY)||'{}');
+      todos[uid]=novo;
+      st.setItem(BRIG_ESTADO_KEY,JSON.stringify(todos));
+    }
+  }catch(e){}
+  if(typeof salvarSessaoAtiva==='function') salvarSessaoAtiva();
+  return novo;
+}
+function brigLimparEstado(){
+  const uid=_brigUid();
+  delete _brigEstadoMem[uid];
+  try{
+    const st=store();
+    if(st){
+      const todos=JSON.parse(st.getItem(BRIG_ESTADO_KEY)||'{}');
+      delete todos[uid];
+      st.setItem(BRIG_ESTADO_KEY,JSON.stringify(todos));
+    }
+  }catch(e){}
+}
+function brigLerEstado(cid){
+  const uid=_brigUid();
+  let e=_brigEstadoMem[uid]||null;
+  if(!e){
+    try{
+      const st=store();
+      if(st){
+        const todos=JSON.parse(st.getItem(BRIG_ESTADO_KEY)||'{}');
+        e=todos[uid]||null;
+        if(e) _brigEstadoMem[uid]=e;
+      }
+    }catch(err){}
+  }
+  if(e && e.sistema) brigSisSel=e.sistema;
+  if(!brigSessao && e && e.sessao && Array.isArray(e.sessao.fila) && e.sessao.pos<e.sessao.fila.length){
+    brigSessao=JSON.parse(JSON.stringify(e.sessao));
+  }
+  return e;
+}
+/* Descobre exatamente onde o usuário parou (andar + sistema) */
+function brigOndeParou(cid){
+  cid=cid||(condoFilter==='all'?'c1':condoFilter);
+  const mes=brigMesAtual();
+  if(brigSessao && Array.isArray(brigSessao.fila) && brigSessao.pos<brigSessao.fila.length){
+    const p=brigSessao.fila[brigSessao.pos];
+    if(p) return {cid:brigSessao.cid||cid,andar:p.andar,sistema:p.sistema,emSessao:true};
+  }
+  const e=brigLerEstado(cid);
+  if(e && e.andar && e.sistema && (!e.mes||e.mes===mes)){
+    /* Se o andar onde estava já foi concluído, aponta para o próximo andar pendente do mesmo sistema */
+    const jaConcl=brigInsp.some(i=>i.condoId===cid&&i.andar===e.andar&&i.sistema===e.sistema&&
+      String(i.data).slice(0,7)===mes&&i.status==='Concluído');
+    if(!jaConcl){
+      return {cid:e.cid||cid,andar:e.andar,sistema:e.sistema,inspId:e.inspId||null,emSessao:false};
+    }
+    const as=brigAndaresDo(e.sistema);
+    const idx=as.findIndex(a=>a.id===e.andar);
+    const resto=idx>=0?as.slice(idx+1).concat(as.slice(0,idx)):as;
+    const proxA=resto.find(a=>!brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&i.sistema===e.sistema&&
+      String(i.data).slice(0,7)===mes&&i.status==='Concluído'));
+    if(proxA){
+      return {cid:e.cid||cid,andar:proxA.id,sistema:e.sistema,inspId:null,emSessao:false};
+    }
+  }
+  /* Fallback: check-list em andamento do usuário logado neste mês */
+  const emAnd=brigInsp.filter(i=>i.condoId===cid&&String(i.data).slice(0,7)===mes&&i.status!=='Concluído'&&
+    (!session||i.userId===session.id||i.responsavel===session.nome))
+    .sort((a,b)=>String(b.data+(b.hora||'')).localeCompare(String(a.data+(a.hora||''))))[0];
+  if(emAnd){
+    return {cid,andar:emAnd.andar,sistema:emAnd.sistema,inspId:emAnd.id,emSessao:false};
+  }
+  return null;
+}
+function brigRetomar(cid){
+  cid=cid||(condoFilter==='all'?'c1':condoFilter);
+  if(brigSessao && Array.isArray(brigSessao.fila) && brigSessao.pos<brigSessao.fila.length){
+    return brigAbrirDaSessao();
+  }
+  const p=brigOndeParou(cid);
+  if(p){
+    brigSisSel=p.sistema;
+    return brigAbrir(p.cid||cid,p.andar,p.sistema);
+  }
+  go('brigada');
+}
+
 function viewBrigada(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const mes=brigMesSel||brigMesAtual();
   const prog=brigProgresso(cid,mes);
   const an=brigAnalise(cid);
+  const parada=brigOndeParou(cid);
   const sis=brigSisSel;
   const andares=brigAndaresDo(sis);
+  const ehBrigadista=!!(session&&!P().tipos.length&&P().brigada);
+
+  const bannerRetomar=parada?`<div class="card" style="margin-bottom:14px;border-left:4px solid var(--accent);background:#f8fbff">
+    <div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:11.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.4px">Onde você parou</div>
+        <div style="font-size:15px;font-weight:700;margin-top:2px">${esc(brigSis(parada.sistema).nome)} — ${esc(brigAndarNome(parada.andar))}</div>
+        <div class="muted" style="font-size:12px">Clique ao lado para voltar exatamente ao andar e sistema onde você parou.</div>
+      </div>
+      <button class="btn primary" onclick="brigRetomar('${cid}')">${ic('play')} Voltar de onde parei</button>
+    </div>
+  </div>`:'';
 
   const cards=`<div class="grid metrics" style="margin-bottom:14px">
     <div class="card metric"><div class="lbl">${ic('clipboardCheck')}Check-lists do mês</div><div class="val">${prog.feitos}/${prog.total}</div><div class="sub">${prog.pct}% concluído</div></div>
-    <div class="card metric ${an.totalNC?'red':'green'}"><div class="lbl">${ic('alert')}Peças não conformes</div><div class="val">${an.totalNC}</div><div class="sub">aguardando providência</div></div>
+    <div class="card metric ${an.totalNC?'red':'green'}"><div class="lbl">${ic('alert')}Peças não conformes</div><div class="val">${an.totalNC}</div><div class="sub">em aberto (até resolver)</div></div>
     <div class="card metric"><div class="lbl">${ic('flame')}Pontos inspecionados</div><div class="val">${BRIG_INV.length}</div><div class="sub">da cobertura ao 4º subsolo</div></div>
     <div class="card metric"><div class="lbl">${ic('shieldCheck')}Sistemas</div><div class="val">${BRIG_SISTEMAS.length}</div><div class="sub">combate a incêndio</div></div>
   </div>`;
@@ -13946,7 +14343,7 @@ function viewBrigada(){
 
   /* resumo do que está não conforme, separado por sistema */
   const resumo=an.resumo.length?`<div class="card" style="margin-bottom:14px">
-    <div class="ap-faixa">${ic('alert')} NÃO CONFORMIDADES POR SISTEMA</div>
+    <div class="ap-faixa">${ic('alert')} NÃO CONFORMIDADES POR SISTEMA (PENDENTES ATÉ RESOLUÇÃO)</div>
     <div class="tablewrap"><table class="ap-tb"><thead><tr>
       <th>SISTEMA</th><th>PEÇAS</th><th>PONTOS</th><th>ANDARES</th><th>AÇÕES</th></tr></thead><tbody>
       ${an.resumo.map(r=>`<tr>
@@ -13961,7 +14358,7 @@ function viewBrigada(){
   /* abas de sistema */
   const abas=BRIG_SISTEMAS.map(s=>{
     const p=brigProgSis(cid,s.id,mes);
-    return `<button class="bg-aba ${s.id===sis?'on':''}" onclick="brigSisSel='${s.id}';render()">
+    return `<button class="bg-aba ${s.id===sis?'on':''}" onclick="brigSisSel='${s.id}';brigSalvarEstado({cid:'${cid}',sistema:'${s.id}'});render()">
       ${ic(s.icone)}<span>${s.nome}</span><em>${p.feitos}/${p.total}</em></button>`;
   }).join('');
 
@@ -13969,21 +14366,67 @@ function viewBrigada(){
   const grade=andares.map(a=>{
     const i=brigInsp.filter(x=>x.condoId===cid&&x.andar===a.id&&x.sistema===sis&&
       String(x.data).slice(0,7)===mes).sort((x,y)=>y.data.localeCompare(x.data))[0];
+    const pendAnt=brigNCAbertas(cid,mes).filter(x=>x.insp.andar===a.id&&x.insp.sistema===sis);
     const n=brigPontos(a.id,sis).length;
+    const ehParada=!!(parada&&parada.andar===a.id&&parada.sistema===sis);
     let cls='pend',txt='Não feito',det=n+' ponto(s)';
     if(i&&i.status==='Concluído'){
-      const nc=brigNC(i).length;
-      cls=nc?'nc':'ok'; txt=nc?nc+' não conforme':'Conforme';
+      const nc=brigNC(i).filter(p=>!brigPendenciaResolvida(i,p)).length;
+      cls=(nc||pendAnt.length)?'nc':'ok';
+      txt=(nc||pendAnt.length)?((nc||pendAnt.length)+' pendente(s)'):'Conforme';
       det=fmt(i.data)+' · '+(i.responsavel||'—');
-    } else if(i){ cls='and'; txt='Em andamento'; det=fmt(i.data); }
-    return `<button class="bg-and ${cls}" onclick="brigAbrir('${cid}','${a.id}','${sis}')">
+    } else if(i||ehParada){
+      cls='and'; txt=ehParada?'Onde parou':'Em andamento'; det=i?fmt(i.data):(n+' ponto(s)');
+    } else if(pendAnt.length){
+      cls='nc'; txt=pendAnt.length+' pendência(s)'; det='Desde '+fmt(pendAnt[0].insp.data);
+    }
+    return `<button class="bg-and ${cls}" style="${ehParada?'outline:2px solid var(--accent);outline-offset:1px':''}" onclick="brigAbrir('${cid}','${a.id}','${sis}')">
       <div class="bg-a">${esc(a.nome)}</div>
       <div class="bg-s">${txt}</div>
       <div class="bg-d">${esc(det)}</div></button>`;
   }).join('');
 
-  $('#content').innerHTML=cards+ia+resumo+
-   `<div class="card" style="margin-bottom:14px">
+  /* Histórico de pendências do check-list (igual ao da ronda) */
+  const todasPend=brigHistoricoPendencias(cid);
+  const pendAbertas=todasPend.filter(x=>!x.resolvida);
+  const pendResolvidas=todasPend.filter(x=>!x.resolvida?false:true);
+  const listaHist=brigHistFiltro==='abertas'?pendAbertas:(brigHistFiltro==='resolvidas'?pendResolvidas:todasPend);
+  const cardHistorico=`<div class="card" style="margin-bottom:14px">
+    <div class="ap-faixa" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <span>${ic('clock')} HISTÓRICO DE PENDÊNCIAS DO CHECK-LIST</span>
+      <span class="rowact no-print" style="gap:4px">
+        <button class="btn ${brigHistFiltro==='abertas'?'':'ghost'} sm" style="padding:2px 9px;font-size:11px" onclick="brigHistFiltro='abertas';render()">Pendentes (${pendAbertas.length})</button>
+        <button class="btn ${brigHistFiltro==='resolvidas'?'':'ghost'} sm" style="padding:2px 9px;font-size:11px" onclick="brigHistFiltro='resolvidas';render()">Resolvidas (${pendResolvidas.length})</button>
+        <button class="btn ${brigHistFiltro==='todas'?'':'ghost'} sm" style="padding:2px 9px;font-size:11px" onclick="brigHistFiltro='todas';render()">Todas (${todasPend.length})</button>
+      </span>
+    </div>
+    <div class="tablewrap"><table class="ap-tb"><thead><tr>
+      <th>DATA</th><th>LOCAL</th><th>SISTEMA</th><th>PONTO / O QUE FOI ENCONTRADO</th>
+      <th>SITUAÇÃO</th><th>RESPONSÁVEL</th><th style="text-align:right">AÇÕES</th>
+    </tr></thead><tbody>
+      ${listaHist.slice(0,50).map(h=>`<tr>
+        <td>${fmt(h.insp.data)}${h.insp.hora?'<div class="muted" style="font-size:11px">'+esc(h.insp.hora)+'</div>':''}</td>
+        <td><b>${esc(brigAndarNome(h.insp.andar))}</b></td>
+        <td>${esc(brigSis(h.insp.sistema).nome)}</td>
+        <td>
+          <b>${esc(h.ponto.desc)}</b> ${h.qtd>1?`<span class="badge red">${h.qtd} peças</span>`:''}
+          ${h.falhas.length?`<div style="color:#c2384a;font-size:11.5px">Falhou: ${esc(h.falhas.join('; '))}</div>`:''}
+          ${h.ponto.obs?`<div class="muted" style="font-size:11.5px">${esc(h.ponto.obs)}</div>`:''}
+          ${h.cobrancas?`<div class="muted" style="font-size:11px">Reconfirmado ${h.cobrancas}x em check-list</div>`:''}
+        </td>
+        <td>${h.resolvida
+          ?`<span class="badge green">Resolvida</span>${h.resolucao&&h.resolucao.em?'<div class="muted" style="font-size:11px">em '+fmt(h.resolucao.em)+'</div>':''}`
+          :`<span class="badge red">Pendente</span><div class="muted" style="font-size:11px">Sai nos relatórios</div>`}</td>
+        <td class="muted">${esc(h.insp.responsavel||'—')}</td>
+        <td style="text-align:right"><div class="rowact" style="justify-content:flex-end">
+          <button class="btn ghost sm" onclick="brigAcompanharInsp('${h.insp.id}')" title="Ver detalhes e andamento">${ic('search')}Como ficou</button>
+          ${!h.resolvida?`<button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})" title="Marcar pendência como resolvida">${ic('check')}Resolver</button>`:''}
+        </div></td>
+      </tr>`).join('')||`<tr><td colspan="7" class="muted">Nenhuma pendência ${brigHistFiltro==='abertas'?'em aberto':(brigHistFiltro==='resolvidas'?'resolvida':'registrada')} no histórico.</td></tr>`}
+    </tbody></table></div>
+  </div>`;
+
+  const cardPorAndar=`<div class="card" style="margin-bottom:14px">
       <div class="ap-faixa">${ic('clipboardCheck')} CHECK-LIST POR ANDAR</div>
       <div style="padding:12px">
         <div class="bg-abas">${abas}</div>
@@ -13992,7 +14435,15 @@ function viewBrigada(){
           toque no andar para preencher</div>
         <div class="bg-grade">${grade}</div>
       </div>
-    </div>
+    </div>`;
+
+  /* Para o Brigadista, a tela de Check-list por Andar é enxuta e direta, sem quadros de não conformidades no topo */
+  if(ehBrigadista){
+    $('#content').innerHTML=bannerRetomar+cardPorAndar;
+    return;
+  }
+
+  $('#content').innerHTML=bannerRetomar+cards+ia+resumo+cardPorAndar+cardHistorico+`
     <div class="card">
       <div class="ap-faixa">${ic('doc')} RELATÓRIOS</div>
       <div style="padding:12px;display:flex;gap:8px;flex-wrap:wrap">
@@ -14015,8 +14466,86 @@ function mesExtenso(m){
   const [a,mm]=String(m).split('-'); return M[parseInt(mm,10)-1]+'/'+a;
 }
 
+/* ---- Aviso e histórico de pendências no Check-list (igual ao da Ronda) ---- */
+function brigCheckAvisoAndar(i){
+  if(!i) return '';
+  const abertas=brigHistoricoPendencias(i.condoId,{andar:i.andar,sistema:i.sistema,excInspId:i.id,apenasAbertas:true});
+  const outrasAndar=brigHistoricoPendencias(i.condoId,{andar:i.andar,excInspId:i.id,apenasAbertas:true})
+    .filter(x=>x.insp.sistema!==i.sistema);
+  if(!abertas.length&&!outrasAndar.length) return '';
+  return `<div class="av-rep" style="margin-bottom:12px">
+    <div class="av-rep-tit">${ic('alert')} Histórico de pendências em aberto neste andar (${esc(brigAndarNome(i.andar))})</div>
+    <div class="av-rep-sub">Veja abaixo as pendências que já foram abertas no check-list deste andar e ainda aguardam solução (elas continuam saindo em todos os relatórios até serem resolvidas).</div>
+    ${abertas.map(h=>{
+      const fts=(h.ponto.fotos||[]).filter(Boolean);
+      return `<div class="av-rep-it">
+        <div class="av-rep-cab">
+          <span class="badge red">Pendente</span>
+          <span class="muted">${fmt(h.insp.data)}${h.insp.hora?' às '+esc(h.insp.hora):''} · ${esc(h.insp.responsavel||'—')} · ${esc(brigSis(h.insp.sistema).nome)}</span>
+        </div>
+        <div class="av-rep-obs"><b>${esc(h.ponto.desc)}</b> ${h.qtd>1?`(${h.qtd} peças)`:''}</div>
+        ${h.falhas.length?`<div style="color:#c2384a;font-size:11.5px;margin-top:2px">Falhou em: ${esc(h.falhas.join('; '))}</div>`:''}
+        ${h.ponto.obs?`<div class="muted" style="font-size:11.5px;margin-top:2px">Obs.: ${esc(h.ponto.obs)}</div>`:''}
+        ${h.chamado?`<div class="muted" style="font-size:11.5px">Chamado com ${esc(h.chamado.responsavel||'Gestão')} (${esc(h.chamado.status)})</div>`:''}
+        ${h.cobrancas?`<div class="muted" style="font-size:11.5px">Já reconfirmado ${h.cobrancas} vez(es) em check-list</div>`:''}
+        ${fts.length?`<div class="bg-fotos" style="margin-top:6px">${fts.map((f,fi)=>
+          `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" alt="Foto ${fi+1}">`).join('')}</div>`:''}
+        <div class="rowact" style="margin-top:7px;gap:6px">
+          ${i.status!=='Concluído'?`<button class="btn sm" onclick="brigCheckConfirmarMesma('${i.id}','${h.insp.id}',${h.idx})">
+            ${ic('checkCircle')} É essa mesma — continua pendente</button>`:''}
+          <button class="btn ghost sm" onclick="brigAcompanharInsp('${h.insp.id}')">${ic('search')} Como ficou</button>
+          <button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})">${ic('check')} Já foi resolvido</button>
+        </div>
+      </div>`;
+    }).join('')}
+    ${outrasAndar.length?`<div class="av-rep-fim" style="margin-top:6px">
+      Outros sistemas com pendência aberta neste andar: <b>${outrasAndar.map(x=>brigSis(x.insp.sistema).nome+' ('+x.ponto.desc+')').join(' · ')}</b>
+    </div>`:''}
+  </div>`;
+}
+/* Histórico mostrado dentro do ponto quando o usuário clica em NÃO CONF. para abrir nova pendência */
+function brigCheckHistPontoHtml(i,k){
+  if(!i||!i.pontos||!i.pontos[k]) return '';
+  const p=i.pontos[k];
+  const histPonto=brigHistoricoPendencias(i.condoId,{andar:i.andar,sistema:i.sistema,desc:p.desc,excInspId:i.id});
+  const histAndar=brigHistoricoPendencias(i.condoId,{andar:i.andar,sistema:i.sistema,excInspId:i.id})
+    .filter(x=>x.ponto.desc!==p.desc);
+  const lista=histPonto.concat(histAndar).slice(0,6);
+  if(!lista.length){
+    return `<div class="muted" style="font-size:11.5px;margin-bottom:8px;padding:6px 8px;background:#f8fafc;border-radius:6px;border:1px dashed #cbd5e1">
+      ${ic('clock')} Histórico: nenhuma pendência anterior registrada para este ponto em check-lists passados.
+    </div>`;
+  }
+  return `<div class="av-rep" style="margin-bottom:10px">
+    <div class="av-rep-tit">${ic('clock')} Histórico de pendências deste ponto / andar</div>
+    <div class="av-rep-sub">Confira o histórico antes de abrir uma nova pendência. Se for o mesmo problema ainda em aberto, confirme abaixo para não duplicar chamado.</div>
+    ${lista.map(h=>{
+      const fts=(h.ponto.fotos||[]).filter(Boolean);
+      return `<div class="av-rep-it">
+        <div class="av-rep-cab">
+          <span class="badge ${h.resolvida?'green':'red'}">${h.resolvida?'Resolvida':'Em aberto'}</span>
+          <span class="muted">${fmt(h.insp.data)}${h.insp.hora?' às '+esc(h.insp.hora):''} · ${esc(h.insp.responsavel||'—')}</span>
+        </div>
+        <div class="av-rep-obs"><b>${esc(h.ponto.desc)}</b> ${h.qtd>1?`(${h.qtd} peças)`:''}</div>
+        ${h.falhas.length?`<div style="color:#c2384a;font-size:11.5px">Falhou em: ${esc(h.falhas.join('; '))}</div>`:''}
+        ${h.ponto.obs?`<div class="muted" style="font-size:11.5px">Obs.: ${esc(h.ponto.obs)}</div>`:''}
+        ${h.resolvida&&h.resolucao?`<div style="color:#1d7a4c;font-size:11.5px">Resolvido${h.resolucao.por?' por '+esc(h.resolucao.por):''}${h.resolucao.em?' em '+fmt(h.resolucao.em):''}${h.resolucao.obs?' — '+esc(h.resolucao.obs):''}</div>`:''}
+        ${fts.length?`<div class="bg-fotos" style="margin-top:6px">${fts.map((f,fi)=>
+          `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" alt="Foto ${fi+1}">`).join('')}</div>`:''}
+        ${!h.resolvida&&i.status!=='Concluído'?`<div class="rowact" style="margin-top:6px;gap:6px">
+          <button class="btn sm" onclick="brigCheckConfirmarMesma('${i.id}','${h.insp.id}',${h.idx},${k})">
+            ${ic('checkCircle')} É essa mesma — continua assim</button>
+          <button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})">
+            ${ic('check')} Marcar anterior como resolvida</button>
+        </div>`:''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 /* ---- preenchimento do check-list ---- */
 function brigAbrir(cid,andar,sis){
+  brigSisSel=sis;
   let i=brigInsp.filter(x=>x.condoId===cid&&x.andar===andar&&x.sistema===sis&&
     String(x.data).slice(0,7)===brigMesAtual()).sort((a,b)=>b.data.localeCompare(a.data))[0];
   if(!i){
@@ -14030,9 +14559,23 @@ function brigAbrir(cid,andar,sis){
     i.hora=nowHora();
     save();
   }
-  brigAtual=i.id; page='brigada-form'; buildNav(); render();
+  if(brigSessao && Array.isArray(brigSessao.fila)){
+    const idx=brigSessao.fila.findIndex(p=>p.andar===andar&&p.sistema===sis);
+    if(idx>=0) brigSessao.pos=idx;
+  }
+  brigAtual=i.id;
+  brigSalvarEstado({cid,andar,sistema:sis,inspId:i.id,aberto:true});
+  page='brigada-form'; buildNav(); render();
 }
-function brigVoltar(){ brigAtual=null; page='brigada'; buildNav(); render(); }
+function brigVoltar(){
+  const i=brigAtual?_bi(brigAtual):null;
+  if(i){
+    brigSisSel=i.sistema;
+    brigSalvarEstado({cid:i.condoId||'c1',andar:i.andar,sistema:i.sistema,inspId:i.id,aberto:false});
+  }
+  brigAtual=null; page='brigada'; buildNav(); render();
+  if(typeof salvarSessaoAtiva==='function') salvarSessaoAtiva();
+}
 
 function viewBrigForm(){
   const i=brigInsp.find(x=>x.id===brigAtual);
@@ -14053,6 +14596,7 @@ function viewBrigForm(){
         </div>
       </div>
       ${p.sit==='NÃO CONFORME'?`<div class="bg-det">
+        ${brigCheckHistPontoHtml(i,k)}
         <div class="bg-itens">${s.itens.map(it=>`<label class="bg-chk">
           <input type="checkbox" ${p.itens&&p.itens[it]===false?'checked':''} ${fechado?'disabled':''}
             onchange="brigItem('${i.id}',${k},'${esc(it).replace(/'/g,"\\'")}',this.checked)">
@@ -14094,6 +14638,7 @@ function viewBrigForm(){
         Verificar em cada ponto: ${s.itens.join(' · ')}.
       </div>
     </div>
+    ${brigCheckAvisoAndar(i)}
     <div class="card" style="margin-bottom:12px"><div style="padding:12px">${pontos}</div></div>
     <div class="card"><div style="padding:12px">
       <div><label style="display:block;margin-bottom:5px">Observações gerais do andar</label>
@@ -14243,29 +14788,34 @@ function brigAbrirPdf(titulo,corpo){
   w.document.close();
 }
 /* tabela de pontos de uma inspeção */
-function brigTabela(i,soNC){
+function brigTabela(i,soNC,apenasPendentes){
   const s=brigSis(i.sistema);
-  const pts=soNC?brigNC(i):i.pontos;
+  let pts=soNC?brigNC(i):i.pontos;
+  if(apenasPendentes) pts=pts.filter(p=>!brigPendenciaResolvida(i,p));
   if(!pts.length) return '';
-  return `<table><thead><tr><th style="width:52%">PONTO INSPECIONADO</th>
-    <th style="width:14%">SITUAÇÃO</th><th style="width:34%">CONSTATAÇÃO / FOTO</th></tr></thead><tbody>
+  return `<table><thead><tr><th style="width:50%">PONTO INSPECIONADO</th>
+    <th style="width:16%">SITUAÇÃO</th><th style="width:34%">CONSTATAÇÃO / FOTO</th></tr></thead><tbody>
     ${pts.map(p=>{
       const falhas=Object.keys(p.itens||{}).filter(k=>p.itens[k]===false);
-      const cls=p.sit==='NÃO CONFORME'?'nc':(p.sit==='NÃO APLICÁVEL'?'na':'');
-      const stc=p.sit==='NÃO CONFORME'?'bad':(p.sit==='NÃO APLICÁVEL'?'na':'ok');
+      const ehNC=p.sit==='NÃO CONFORME';
+      const res=ehNC?brigPendenciaResolvida(i,p):false;
+      const infoRes=(ehNC&&res)?brigPendenciaInfoResolucao(i,p):null;
+      const cls=ehNC?(res?'':'nc'):(p.sit==='NÃO APLICÁVEL'?'na':'');
+      const stc=ehNC?(res?'ok':'bad'):(p.sit==='NÃO APLICÁVEL'?'na':'ok');
       const q=p.qtd>0?p.qtd:brigQtdDesc(p.desc);
       return `<tr class="${cls}">
-        <td>${esc(p.desc)}${q>1&&p.sit==='NÃO CONFORME'?` <b>(${q} peças)</b>`:''}</td>
-        <td class="st ${stc}">${p.sit==='NÃO CONFORME'?'NÃO CONFORME':p.sit}</td>
+        <td>${esc(p.desc)}${q>1&&ehNC?` <b>(${q} peças)</b>`:''}</td>
+        <td class="st ${stc}">${ehNC?(res?'NÃO CONF. (RESOLVIDA)':'NÃO CONFORME (PENDENTE)'):p.sit}</td>
         <td>${falhas.length?`<div class="fal">Falhou: ${esc(falhas.join('; '))}</div>`:''}
             ${p.obs?`<div class="obs">${esc(p.obs)}</div>`:''}
+            ${res&&infoRes?`<div style="font-size:10px;color:#1d7a4c;margin-top:2px"><b>Resolvida:</b> ${esc(infoRes.por||'')}${infoRes.em?' em '+fmt(infoRes.em):''}${infoRes.obs?' — '+esc(infoRes.obs):''}</div>`:''}
             ${(p.fotos||[]).length?`<div class="fts">${p.fotos.map(f=>`<img src="${srcFoto(f)}" alt="Foto anexada">`).join('')}</div>`:''}
-            ${!falhas.length&&!p.obs&&!(p.fotos||[]).length?'—':''}</td></tr>`;
+            ${!falhas.length&&!p.obs&&!(p.fotos||[]).length&&!res?'—':''}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
-function brigBlocoInsp(i,soNC){
+function brigBlocoInsp(i,soNC,apenasPendentes){
   const s=brigSis(i.sistema);
-  const nc=brigNC(i).length;
+  const nc=apenasPendentes?brigNC(i).filter(p=>!brigPendenciaResolvida(i,p)).length:brigNC(i).length;
   return `<div class="bloco">
     <div class="faixa">${esc(s.nome)} — ${esc(brigAndarNome(i.andar))}</div>
     <div class="id">
@@ -14274,9 +14824,37 @@ function brigBlocoInsp(i,soNC){
       <div class="r">Pontos</div><div class="v">${i.pontos.length}</div>
       <div class="r">Não conformes</div><div class="v">${nc?'<b style="color:#c2384a">'+nc+'</b>':'nenhum'}</div>
     </div>
-    ${brigTabela(i,soNC)}
+    ${brigTabela(i,soNC,apenasPendentes)}
     ${i.obs?`<div class="obs" style="margin-top:5px"><b>Observações:</b> ${esc(i.obs)}</div>`:''}
   </div>`;
+}
+/* Quadro de pendências ativas do check-list (permanece em todos os relatórios até ser resolvida) */
+function brigSecPendenciasAtivas(cid,mesRef,filtro){
+  const f=filtro||{};
+  let abertas=brigNCAbertas(cid,mesRef);
+  if(f.andar) abertas=abertas.filter(x=>String(x.insp.andar)===String(f.andar));
+  if(f.sistema) abertas=abertas.filter(x=>x.insp.sistema===f.sistema);
+  if(!abertas.length) return '';
+  return `<div class="faixa">Pendências do Check-list em Aberto (permanecem até serem resolvidas)</div>
+    <table><thead><tr>
+      <th style="width:12%">DATA</th>
+      <th style="width:16%">LOCAL</th>
+      <th style="width:20%">SISTEMA</th>
+      <th style="width:36%">PONTO / CONSTATAÇÃO</th>
+      <th style="width:16%">SITUAÇÃO</th>
+    </tr></thead><tbody>
+    ${abertas.map(x=>`<tr class="nc">
+      <td>${fmt(x.insp.data)}<div class="obs">${esc(x.insp.responsavel||'—')}</div></td>
+      <td><b>${esc(brigAndarNome(x.insp.andar))}</b></td>
+      <td>${esc(brigSis(x.insp.sistema).nome)}</td>
+      <td><b>${esc(x.ponto.desc)}</b>${x.qtd>1?` <b>(${x.qtd} peças)</b>`:''}
+        ${x.falhas.length?`<div class="fal">Falhou: ${esc(x.falhas.join('; '))}</div>`:''}
+        ${x.ponto.obs?`<div class="obs">${esc(x.ponto.obs)}</div>`:''}
+        ${(x.ponto.fotos||[]).length?`<div class="fts">${x.ponto.fotos.map(ft=>`<img src="${srcFoto(ft)}" alt="Foto">`).join('')}</div>`:''}
+      </td>
+      <td class="st bad">PENDENTE${x.chamado?`<div class="obs">Com ${esc(x.chamado.responsavel||'Gestão')}</div>`:''}${x.cobrancas?`<div class="obs">Cobrado ${x.cobrancas}x</div>`:''}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
 }
 /* 1 — um check-list */
 async function brigPdfInsp(id){
@@ -14285,31 +14863,39 @@ async function brigPdfInsp(id){
   brigAbrirPdf('Check-list '+brigSis(i.sistema).nome,
     brigCab('Relatório de Inspeção — '+brigSis(i.sistema).nome,
       condoName(i.condoId)+' · '+brigAndarNome(i.andar)+' · '+fmt(i.data))+
-    brigBlocoInsp(i,false)+brigAss(i.responsavel));
+    brigBlocoInsp(i,false)+
+    brigSecPendenciasAtivas(i.condoId,null,{andar:i.andar,sistema:i.sistema})+
+    brigAss(i.responsavel));
   audit('Gerou PDF de check-list da brigada',brigSis(i.sistema).nome+' · '+brigAndarNome(i.andar),'',i.condoId);
 }
 /* 2 — por andar (todos os sistemas) */
 async function brigPdfAndar(cid,andar,mes){
   const is=brigInsp.filter(x=>x.condoId===cid&&x.andar===andar&&String(x.data).slice(0,7)===mes)
     .sort((a,b)=>a.sistema.localeCompare(b.sistema));
-  await precarregarFotos(refsDe(is));
-  if(!is.length) return toast('Nenhum check-list deste andar no mês.');
+  const pendAndar=brigNCAbertas(cid,mes).filter(x=>String(x.insp.andar)===String(andar));
+  await precarregarFotos(refsDe(is.concat(pendAndar.map(x=>x.insp))));
+  if(!is.length&&!pendAndar.length) return toast('Nenhum check-list ou pendência deste andar no mês.');
   brigAbrirPdf('Brigada — '+brigAndarNome(andar),
     brigCab('Relatório da Brigada — '+brigAndarNome(andar),
       condoName(cid)+' · '+mesExtenso(mes)+' · '+is.length+' check-list(s)')+
-    brigResumoBox(is)+is.map(i=>brigBlocoInsp(i,false)).join('')+brigAss());
+    brigResumoBox(is,pendAndar)+
+    brigSecPendenciasAtivas(cid,mes,{andar})+
+    is.map(i=>brigBlocoInsp(i,false)).join('')+brigAss());
   audit('Gerou PDF da brigada por andar',brigAndarNome(andar),'',cid);
 }
 /* 3 — por sistema */
 async function brigPdfSistema(cid,sis,mes){
   const is=brigInsp.filter(x=>x.condoId===cid&&x.sistema===sis&&String(x.data).slice(0,7)===mes)
     .sort((a,b)=>brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
-  await precarregarFotos(refsDe(is));
-  if(!is.length) return toast('Nenhum check-list de '+brigSis(sis).nome+' no mês.');
+  const pendSis=brigNCAbertas(cid,mes).filter(x=>x.insp.sistema===sis);
+  await precarregarFotos(refsDe(is.concat(pendSis.map(x=>x.insp))));
+  if(!is.length&&!pendSis.length) return toast('Nenhum check-list ou pendência de '+brigSis(sis).nome+' no mês.');
   brigAbrirPdf('Brigada — '+brigSis(sis).nome,
     brigCab('Relatório de Inspeção — '+brigSis(sis).nome,
       condoName(cid)+' · '+mesExtenso(mes)+' · '+is.length+' andar(es)')+
-    brigResumoBox(is)+is.map(i=>brigBlocoInsp(i,false)).join('')+brigAss());
+    brigResumoBox(is,pendSis)+
+    brigSecPendenciasAtivas(cid,mes,{sistema:sis})+
+    is.map(i=>brigBlocoInsp(i,false)).join('')+brigAss());
   audit('Gerou PDF da brigada por sistema',brigSis(sis).nome,'',cid);
 }
 /* 4 — geral do mês */
@@ -14350,18 +14936,20 @@ function brigAtividade(cid,mes){
     diasMes.push({d:iso,ok:!!comRonda[iso]});
   }
   const semRonda=diasMes.filter(x=>!x.ok);
+  const pendCheck=brigNCAbertas(cid,mes);
   return {rondas:rs,insp:is,pessoas,diasMes,semRonda,
     ocorrencias:rs.filter(r=>!r.ok),
+    pendenciasCheck:pendCheck,
     concluidos:is.filter(i=>i.status==='Concluído').length};
 }
 function brigPdfAtividade(cid,mes){
   const a=brigAtividade(cid,mes);
-  if(!a.rondas.length&&!a.insp.length) return toast('Nenhuma atividade registrada neste mês.');
+  if(!a.rondas.length&&!a.insp.length&&!a.pendenciasCheck.length) return toast('Nenhuma atividade registrada neste mês.');
   const prog=brigProgresso(cid,mes);
   const topo=`<div class="tot">
     <div><div class="k">Rondas feitas</div><div class="v">${a.rondas.length}</div></div>
     <div><div class="k">Dias com ronda</div><div class="v ${a.semRonda.length?'bad':''}">${a.diasMes.length-a.semRonda.length}/${a.diasMes.length}</div></div>
-    <div><div class="k">Ocorrências</div><div class="v ${a.ocorrencias.length?'bad':''}">${a.ocorrencias.length}</div></div>
+    <div><div class="k">Ocorrências / Pendências</div><div class="v ${(a.ocorrencias.length||a.pendenciasCheck.length)?'bad':''}">${a.ocorrencias.length+a.pendenciasCheck.length}</div></div>
     <div><div class="k">Check-lists concluídos</div><div class="v">${a.concluidos}/${prog.total}</div></div>
   </div>`;
   const equipe=`<h2>Por brigadista</h2>
@@ -14381,6 +14969,7 @@ function brigPdfAtividade(cid,mes){
       <td>${fmt(r.data)}</td><td>${esc(r.hora||'')}</td><td>${esc(brigAndarNome(r.andar))}</td>
       <td>${esc(r.obs||'')}</td><td>${esc(r.prioridade||'—')}</td>
       <td>${esc(r.autor||'—')}</td></tr>`).join('')}</tbody></table>`:'';
+  const pendHtml=brigSecPendenciasAtivas(cid,mes);
   const checks=a.insp.length?`<h2>Check-lists do mês</h2>
     <table><thead><tr><th>DATA</th><th>SISTEMA</th><th>LOCAL</th><th>PONTOS</th>
       <th>NÃO CONFORMES</th><th>SITUAÇÃO</th><th>RESPONSÁVEL</th></tr></thead><tbody>
@@ -14391,46 +14980,51 @@ function brigPdfAtividade(cid,mes){
       <td>${esc(i.status)}</td><td>${esc(i.responsavel||'—')}</td></tr>`).join('')}</tbody></table>`:'';
   brigAbrirPdf('Brigada — atividades '+mes,
     brigCab('Relatório de Atividades da Brigada',condoName(cid)+' · '+mesExtenso(mes))+
-    topo+equipe+falhas+ocor+checks+
+    topo+equipe+falhas+ocor+pendHtml+checks+
     `<div class="rod">Emitido por ${esc(session?session.nome:'')} em ${nowStamp()}</div>`);
 }
 
 async function brigPdfGeral(cid,mes){
   const is=brigInsp.filter(x=>x.condoId===cid&&String(x.data).slice(0,7)===mes)
     .sort((a,b)=>a.sistema.localeCompare(b.sistema)||brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
-  await precarregarFotos(refsDe(is));
-  if(!is.length) return toast('Nenhum check-list neste mês.');
+  const pend=brigNCAbertas(cid,mes);
+  await precarregarFotos(refsDe(is.concat(pend.map(x=>x.insp))));
+  if(!is.length&&!pend.length) return toast('Nenhum check-list ou pendência neste mês.');
   brigAbrirPdf('Brigada — geral '+mes,
     brigCab('Relatório Geral da Brigada',condoName(cid)+' · '+mesExtenso(mes))+
-    brigResumoBox(is)+brigSecNC(cid,mes)+
-    '<h2 class="sec">Detalhamento por sistema e andar</h2>'+
-    is.map(i=>brigBlocoInsp(i,false)).join('')+brigAss());
+    brigResumoBox(is,pend)+brigSecNC(cid,mes)+brigSecPendenciasAtivas(cid,mes)+
+    (is.length?'<h2 class="sec">Detalhamento por sistema e andar</h2>'+is.map(i=>brigBlocoInsp(i,false)).join(''):'')+
+    brigAss());
   audit('Gerou PDF geral da brigada',mesExtenso(mes),'',cid);
 }
-/* 5 — só não conformidades */
+/* 5 — só não conformidades (inclui todas as pendências em aberto até serem resolvidas) */
 async function brigPdfNC(cid,mes){
-  const is=brigInsp.filter(x=>x.condoId===cid&&String(x.data).slice(0,7)===mes&&brigNC(x).length)
+  const pend=brigNCAbertas(cid,mes);
+  const idsInsp=[...new Set(pend.map(x=>x.insp.id))];
+  const is=idsInsp.map(id=>brigInsp.find(x=>x.id===id)).filter(Boolean)
     .sort((a,b)=>a.sistema.localeCompare(b.sistema)||brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
   await precarregarFotos(refsDe(is));
-  if(!is.length) return toast('Nenhuma não conformidade no mês — tudo conforme.');
+  if(!is.length) return toast('Nenhuma não conformidade pendente — tudo conforme.');
   brigAbrirPdf('Brigada — não conformidades',
-    brigCab('Relatório de Não Conformidades',
-      condoName(cid)+' · '+mesExtenso(mes)+' · itens que exigem providência')+
+    brigCab('Relatório de Não Conformidades e Pendências',
+      condoName(cid)+' · '+mesExtenso(mes)+' · pendências permanecem até serem resolvidas')+
     brigSecNC(cid,mes)+
-    '<h2 class="sec">Detalhamento das não conformidades</h2>'+
-    is.map(i=>brigBlocoInsp(i,true)).join('')+brigAss());
+    brigSecPendenciasAtivas(cid,mes)+
+    '<h2 class="sec">Detalhamento das não conformidades em aberto</h2>'+
+    is.map(i=>brigBlocoInsp(i,true,true)).join('')+brigAss());
   audit('Gerou PDF de não conformidades da brigada',mesExtenso(mes),'',cid);
 }
 function brigOrdAndar(a){ const i=BRIG_ANDARES.findIndex(x=>x.id===a); return i<0?99:i }
-function brigResumoBox(is){
+function brigResumoBox(is,pendAbertas){
   const tot=is.length;
-  const nc=is.reduce((s,i)=>s+brigNC(i).length,0);
-  const pc=is.reduce((s,i)=>s+brigQtdNC(i),0);
+  const pends=Array.isArray(pendAbertas)?pendAbertas:null;
+  const nc=pends?pends.length:is.reduce((s,i)=>s+brigNC(i).filter(p=>!brigPendenciaResolvida(i,p)).length,0);
+  const pc=pends?pends.reduce((s,x)=>s+x.qtd,0):is.reduce((s,i)=>s+brigQtdNC(i),0);
   const pts=is.reduce((s,i)=>s+i.pontos.length,0);
   return `<div class="tot">
     <div><div class="k">Check-lists</div><div class="v">${tot}</div></div>
     <div><div class="k">Pontos verificados</div><div class="v">${pts}</div></div>
-    <div><div class="k">Pontos não conformes</div><div class="v ${nc?'bad':''}">${nc}</div></div>
+    <div><div class="k">Pontos pendentes</div><div class="v ${nc?'bad':''}">${nc}</div></div>
     <div><div class="k">Peças a regularizar</div><div class="v ${pc?'bad':''}">${pc}</div></div>
   </div>`;
 }
@@ -14455,11 +15049,12 @@ function brigAss(resp){
 }
 /* escolher um andar para o relatório */
 function brigEscolherAndar(cid,sis,mes){
-  const as=BRIG_ANDARES.filter(a=>brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&String(i.data).slice(0,7)===mes));
-  if(!as.length) return toast('Nenhum check-list registrado no mês.');
+  const pendAndares=new Set(brigNCAbertas(cid,mes).map(x=>String(x.insp.andar)));
+  const as=BRIG_ANDARES.filter(a=>pendAndares.has(String(a.id))||brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&String(i.data).slice(0,7)===mes));
+  if(!as.length) return toast('Nenhum check-list ou pendência registrada no mês.');
   openModal('Relatório por andar',
     `<label>Andar</label><select id="bgAnd">${as.map(a=>`<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select>
-     <div class="muted" style="margin-top:8px">Sai um PDF com todos os sistemas inspecionados nesse andar.</div>`,
+     <div class="muted" style="margin-top:8px">Sai um PDF com todos os sistemas inspecionados e pendências abertas nesse andar.</div>`,
     `<button class="btn" onclick="closeModal()">Cancelar</button>
      <button class="btn primary" onclick="brigPdfAndar('${cid}',$('#bgAnd').value,'${mes}');closeModal()">Gerar PDF</button>`);
 }
@@ -14470,16 +15065,33 @@ function brigEscolherAndar(cid,sis,mes){
    um andar por vez, avançando sozinho até o último. */
 let brigSessao=null;   // {sistemas:[],fila:[{andar,sistema}],pos,iniciadaEm}
 
-function viewBrigInicio(){
+/* Retoma imediatamente o check-list da sessão ativa (andar e sistema onde parou) */
+function viewBrigSessao(){
+  const cid=condoFilter==='all'?'c1':condoFilter;
+  if(brigSessao&&Array.isArray(brigSessao.fila)&&brigSessao.pos<brigSessao.fila.length){
+    return brigAbrirDaSessao();
+  }
+  const p=brigOndeParou(cid);
+  if(p) return brigRetomar(cid);
+  brigSessao=null;
+  return viewBrigInicio(true);
+}
+
+function viewBrigInicio(forcarEscolha){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const mes=brigMesAtual();
-  if(brigSessao&&brigSessao.fila.length) return viewBrigSessao();
+  if(!forcarEscolha){
+    brigLerEstado(cid);
+    if(brigSessao&&brigSessao.fila&&brigSessao.pos<brigSessao.fila.length) return viewBrigSessao();
+  }
+  const parada=brigOndeParou(cid);
 
   const sis=BRIG_SISTEMAS.map(s=>{
     const p=brigProgSis(cid,s.id,mes);
     const falta=p.total-p.feitos;
+    const marcar=parada?(parada.sistema===s.id):(falta>0);
     return `<label class="bg-pick ${falta?'':'done'}">
-      <input type="checkbox" value="${s.id}" ${falta?'checked':''} onchange="brigPrever()">
+      <input type="checkbox" value="${s.id}" ${marcar?'checked':''} onchange="brigPrever()">
       <span class="bg-pk-ic">${ic(s.icone)}</span>
       <span class="bg-pk-t"><b>${esc(s.nome)}</b>
         <em>${falta?falta+' andar(es) a fazer':'tudo feito neste mês'} · ${s.periodicidade.toLowerCase()}</em></span>
@@ -14487,7 +15099,21 @@ function viewBrigInicio(){
     </label>`;
   }).join('');
 
-  $('#content').innerHTML=`
+  const cardContinuar=parada?`<div class="card" style="margin-bottom:14px;border-left:4px solid var(--accent);background:#f8fbff">
+    <div class="ap-faixa">${ic('play')} CONTINUAR DE ONDE VOCÊ PAROU</div>
+    <div style="padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:15px;font-weight:700">${esc(brigSis(parada.sistema).nome)} — ${esc(brigAndarNome(parada.andar))}</div>
+        <div class="muted" style="font-size:12.5px;margin-top:2px">Retome exatamente no andar e no sistema em que você parou.</div>
+      </div>
+      <div class="rowact">
+        <button class="btn primary" onclick="brigRetomar('${cid}')">${ic('play')} Voltar de onde parei</button>
+        <button class="btn ghost" onclick="brigSisSel='${parada.sistema}';go('brigada')">${ic('building')} Quadro por andar</button>
+      </div>
+    </div>
+  </div>`:'';
+
+  $('#content').innerHTML=cardContinuar+`
     <div class="card" style="margin-bottom:14px">
       <div class="ap-faixa">${ic('play')} INICIAR CHECK-LIST</div>
       <div style="padding:14px">
@@ -14554,6 +15180,8 @@ function brigIniciar(){
   const fila=brigMontarFila(cid,sel,$('#bgPular')?$('#bgPular').checked:true);
   if(!fila.length) return toast('Nada a fazer: tudo já foi feito neste mês.');
   brigSessao={sistemas:sel,fila,pos:0,iniciadaEm:nowStamp(),cid};
+  brigSisSel=fila[0].sistema;
+  brigSalvarEstado({cid,andar:fila[0].andar,sistema:fila[0].sistema,aberto:true});
   audit('Iniciou sessão de check-list',sel.map(x=>brigSis(x).nome).join(' + '),
     fila.length+' parada(s)',cid,'Brigada');
   brigAbrirDaSessao();
@@ -14569,10 +15197,13 @@ function brigProximo(){
   if(!brigSessao) return brigVoltar();
   brigSessao.pos++;
   if(brigSessao.pos>=brigSessao.fila.length) return brigFinalizarSessao();
+  const p=brigSessao.fila[brigSessao.pos];
+  if(p) brigSalvarEstado({cid:brigSessao.cid,andar:p.andar,sistema:p.sistema,aberto:true});
   brigAbrirDaSessao();
 }
 function brigFinalizarSessao(){
   const s=brigSessao; brigSessao=null;
+  brigLimparEstado();
   if(!s) return go('brigada');
   const feitos=s.fila.length;
   const ncs=s.fila.reduce((n,p)=>{
@@ -14612,8 +15243,15 @@ function brigDescartarRascunhoVazio(id){
 }
 function brigAbandonar(){
   if(!confirm('Encerrar a sequência? O que já foi concluído fica salvo.')) return;
+  const i=brigAtual?_bi(brigAtual):null;
+  const sis=i?i.sistema:brigSisSel;
+  const andar=i?i.andar:null;
   brigDescartarRascunhoVazio(brigAtual);
-  brigSessao=null; page='brigada'; buildNav(); render();
+  brigSessao=null;
+  brigSisSel=sis;
+  if(andar) brigSalvarEstado({cid:(i&&i.condoId)||'c1',andar,sistema:sis,inspId:null,aberto:false});
+  else brigLimparEstado();
+  brigAtual=null; page='brigada'; buildNav(); render();
 }
 /* barra de progresso mostrada dentro do check-list quando há sessão */
 function brigBarraSessao(){
@@ -14640,6 +15278,8 @@ function brigPular(){
   brigDescartarRascunhoVazio(brigAtual);
   brigSessao.pos++;
   if(brigSessao.pos>=brigSessao.fila.length) return brigFinalizarSessao();
+  const p=brigSessao.fila[brigSessao.pos];
+  if(p) brigSalvarEstado({cid:brigSessao.cid,andar:p.andar,sistema:p.sistema,aberto:true});
   brigAbrirDaSessao();
 }
 
@@ -15132,7 +15772,67 @@ function chamadoDaRonda(r){
   if(!r) return null;
   return tasks.find(t=>t.id===r.chamadoId) || tasks.find(t=>t.rondaId===r.id) || null;
 }
-function chamadosDaInspecao(id){ return tasks.filter(t=>t.brigInspId===id) }
+function chamadosDaInspecao(id){
+  const i=brigInsp.find(x=>x.id===id);
+  return tasks.filter(t=>t.brigInspId===id || (Array.isArray(t.brigInspIds)&&t.brigInspIds.includes(id)) || (i&&i.chamadoId&&t.id===i.chamadoId));
+}
+function brigResolverPendencia(inspId,ptIdx,obsArg){
+  const i=brigInsp.find(x=>x.id===inspId); if(!i) return;
+  const obs=obsArg!==undefined?obsArg:(prompt('O que foi feito para resolver esta pendência? (opcional)')??null);
+  if(obs===null) return;
+  const alvos=(ptIdx!==undefined&&ptIdx!==null&&i.pontos[ptIdx])?[i.pontos[ptIdx]]:brigNC(i);
+  alvos.forEach(p=>{
+    p.resolvido=true;
+    p.resolvidoEm=today();
+    p.resolvidoPor=session?session.nome:'Sistema';
+    p.obsResolucao=String(obs||'').trim();
+  });
+  (i.historico=i.historico||[]).push({
+    q:session?session.nome:'Sistema',w:nowStamp(),
+    t:'Pendência marcada como resolvida'+(alvos.length===1?' ('+alvos[0].desc+')':''),
+    obs:String(obs||'').trim()
+  });
+  /* Se todos os pontos não conformes desta inspeção foram resolvidos, conclui também o chamado vinculado */
+  if(brigNC(i).every(p=>brigPendenciaResolvida(i,p))){
+    i.resolvido=true;
+    chamadosDaInspecao(i.id).forEach(t=>{
+      if(t.status!=='Concluída'){
+        t.status='Concluída';
+        t.concluidoEm=today();
+        t.concluidoPor=session?session.nome:'Sistema';
+        t.obsConclusao=String(obs||'').trim()||'Resolvido e conferido no check-list da brigada.';
+        (t.historico=t.historico||[]).push({q:session?session.nome:'Sistema',w:nowStamp(),t:'Concluído a partir do check-list da brigada',obs:t.obsConclusao});
+      }
+    });
+  }
+  audit('Pendência do check-list resolvida',brigSis(i.sistema).nome+' · '+brigAndarNome(i.andar),String(obs||'Resolvida'),i.condoId,'Check-list');
+  save(); closeModal(); render();
+  toast('Pendência marcada como resolvida! Ela não sairá mais como aberta nos relatórios.');
+}
+/* Confirma que uma pendência anterior continua igual no check-list atual (igual ao "É esse mesmo" da Ronda) */
+function brigCheckConfirmarMesma(inspAtualId,inspAntId,idxAnt,idxAtual){
+  const i=_bi(inspAtualId), iAnt=_bi(inspAntId);
+  if(!i||!iAnt) return toast('Check-list não encontrado.');
+  const pAnt=iAnt.pontos[idxAnt];
+  if(!pAnt) return toast('Ponto anterior não encontrado.');
+  const k=(idxAtual!==undefined&&idxAtual!==null)?idxAtual:i.pontos.findIndex(x=>x.desc===pAnt.desc);
+  if(k<0||!i.pontos[k]) return toast('Ponto correspondente não encontrado neste andar.');
+  const p=i.pontos[k];
+  p.sit='NÃO CONFORME';
+  p.itens=JSON.parse(JSON.stringify(pAnt.itens||{}));
+  p.qtd=pAnt.qtd>0?pAnt.qtd:brigQtdDesc(pAnt.desc);
+  p.obs=pAnt.obs||'';
+  p.repeteDe=iAnt.id;
+  pAnt.vistoDeNovo=(pAnt.vistoDeNovo||0)+1;
+  pAnt.vistoPorUltimo=today();
+  p.vistoDeNovo=pAnt.vistoDeNovo;
+  const ts=chamadosDaInspecao(iAnt.id);
+  if(ts[0]){
+    i.chamadoId=ts[0].id;
+  }
+  save(); render();
+  toast('Pendência anterior carregada no ponto! Ao concluir, o chamado existente será atualizado sem duplicar.');
+}
 
 function chStatusCartao(t){
   if(!t) return `<div class="card" style="box-shadow:none;background:var(--slate-soft);padding:13px">
@@ -15209,6 +15909,7 @@ function brigAcompanharInsp(inspId){
   const i=brigInsp.find(x=>x.id===inspId); if(!i) return;
   const ts=chamadosDaInspecao(inspId);
   const ncs=brigNC(i);
+  const temPendente=ncs.some(p=>!brigPendenciaResolvida(i,p));
   openModal('Não conformes — '+brigAndarNome(i.andar),
     (ts.length?ts.map(chStatusCartao).join(''):chStatusCartao(null))+
     `<div class="section-title" style="margin-top:0"><h3>O que foi apontado</h3></div>
@@ -15218,19 +15919,30 @@ function brigAcompanharInsp(inspId){
        <div class="rot">Quem verificou</div><div class="val">${esc(i.responsavel||'—')}</div>
      </div>
      ${ncs.map(p=>{
+        const idxPt=i.pontos.indexOf(p);
         const fts=(p.fotos||[]).filter(Boolean);
-        return `<div class="feed-item" style="margin-top:8px;align-items:flex-start">
-         <div class="fi-ic">${ic('alert')}</div>
+        const falhas=Object.keys(p.itens||{}).filter(k=>p.itens[k]===false);
+        const res=brigPendenciaResolvida(i,p);
+        const infoRes=res?brigPendenciaInfoResolucao(i,p):null;
+        return `<div class="feed-item ${res?'green':'red'}" style="margin-top:8px;align-items:flex-start">
+         <div class="fi-ic">${ic(res?'checkCircle':'alert')}</div>
          <div style="flex:1;min-width:0">
-           <div class="ft">${esc(p.desc)}</div>
+           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+             <div class="ft">${esc(p.desc)}</div>
+             <span class="badge ${res?'b-conc':'b-atr'}">${res?'Resolvida':'Pendente'}</span>
+           </div>
+           ${falhas.length?`<div class="fd" style="color:#c2384a"><b>Falhou em:</b> ${esc(falhas.join('; '))}</div>`:''}
            ${p.obs?`<div class="fd">${esc(p.obs)}</div>`:''}
+           ${res&&infoRes?`<div class="fd" style="color:#1d7a4c;margin-top:4px"><b>Resolvido</b>${infoRes.por?' por '+esc(infoRes.por):''}${infoRes.em?' em '+fmt(infoRes.em):''}${infoRes.obs?' — '+esc(infoRes.obs):''}</div>`:''}
            ${fts.length?`<div class="bg-fotos" style="margin-top:6px">${fts.map((f,fi)=>
              `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" alt="Foto ${fi+1}"
                style="cursor:zoom-in" onclick="chAmpliar('${f}')">`).join('')}</div>`:''}
+           ${!res?`<div style="margin-top:8px"><button class="btn green sm" onclick="brigResolverPendencia('${i.id}',${idxPt})">${ic('check')} Marcar ponto como resolvido</button></div>`:''}
          </div></div>`}).join('')}
      <div id="chZoom"></div>
      ${ts.length===1?chLinhaTempo(ts[0]):''}`,
-    `<button class="btn ghost" onclick="closeModal()">Fechar</button>`);
+    `<button class="btn ghost" onclick="closeModal()">Fechar</button>
+     ${temPendente?`<button class="btn green" onclick="brigResolverPendencia('${i.id}',null)">${ic('checkCircle')} Resolver todas deste check-list</button>`:''}`);
   if(typeof hidratarFotos==='function') setTimeout(()=>hidratarFotos(),0);
 }
 
@@ -15713,8 +16425,17 @@ function relAbrir(tipo,cidForcado){
 }
 
 function relCorpo(d,p){
+  const pendChk=brigNCAbertas(d.cid||'c1',p&&p.fim?p.fim.slice(0,7):brigMesAtual());
+  const pendChkHtml=pendChk.length?`<div class="section-title"><h3>${ic('clipboardCheck')}Pendências do Check-list em Aberto (${pendChk.length})</h3></div>
+    ${pendChk.map(x=>`<div class="rel-it aberto">
+      <div class="rel-it-cab"><b>${esc(brigAndarNome(x.insp.andar))} — ${esc(brigSis(x.insp.sistema).nome)}</b>
+        <span class="muted">${fmt(x.insp.data)} · ${esc(x.insp.responsavel||'—')}</span>
+        <span class="badge red">Pendente</span></div>
+      <div class="rel-it-ob">${esc(x.ponto.desc)}${x.qtd>1?' ('+x.qtd+' peças)':''}${x.falhas.length?' · Falhou: '+esc(x.falhas.join('; ')):''}${x.ponto.obs?' · '+esc(x.ponto.obs):''}</div>
+      <div class="rel-it-st">Permanece nos relatórios até ser resolvida${x.cobrancas?' · já reconfirmada '+x.cobrancas+'x':''}</div>
+    </div>`).join('')}`:'';
   if(!d.passagens) return `<div class="muted">Nenhuma ronda registrada entre
-    ${fmt(p.ini)} e ${fmt(p.fim)}.</div>`;
+    ${fmt(p.ini)} e ${fmt(p.fim)}.</div>`+pendChkHtml;
   const pct=d.pctResolvido;
   const cor=pct===null?'':pct>=80?'verde':pct>=50?'ambar':'vermelho';
   return `
@@ -15778,6 +16499,8 @@ function relCorpo(d,p){
   </tr></thead><tbody>${d.ranking.map(x=>`<tr><td>${esc(x.andar)}</td>
     <td style="text-align:center">${x.total}</td>
     <td style="text-align:center">${x.abertos||'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
+
+  ${pendChkHtml}
 
   ${d.equipe.length?`<div class="rel-nota" style="margin-top:12px">Rondas registradas por:
     ${d.equipe.map(e=>esc(e)).join(', ')}. Cobertura de ${d.andaresCobertos} dos
@@ -18018,7 +18741,7 @@ const SYNC_COLS=['tasks','notas','cessoes','apontamentos','estoque','movEstoque'
 function _colRef(nome){
   switch(nome){
     case 'brigInsp':return brigInsp; case 'brigRondas':return brigRondas;
-    case 'salas':return salas;
+    case 'salas':return salas; case 'unidSind':return unidSind;
     case 'tasks':return tasks; case 'notas':return notas; case 'cessoes':return cessoes;
     case 'apontamentos':return apontamentos; case 'estoque':return estoque;
     case 'movEstoque':return movEstoque; case 'pedidos':return pedidos;
@@ -18216,7 +18939,14 @@ function aplicarSnapshot(d){
   prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
   analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[]; unidSind=d.unidSind||[];
   if(d.CFG) CFG=Object.assign(CFG,d.CFG);
-  creds=d.creds||{}; notifs=d.notifs||[]; notifState=d.notifState||{};
+  const _credsAnt=Object.assign({},lerCredsLocal(),creds||{});
+  creds=Object.assign({},_credsAnt,d.creds||{});
+  Object.keys(_credsAnt).forEach(k=>{
+    if(_credsAnt[k]&&_credsAnt[k].hash&&(!creds[k]||!creds[k].hash)) creds[k]=_credsAnt[k];
+  });
+  salvarCredsLocal();
+  notifs=d.notifs||[]; notifState=d.notifState||{};
+  aplicarNomesUsuarios(); aplicarPermsUsuarios();
   if(!prestadores.length) seedPrestadores();
   migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig(); migrarVendasCustas(); migrarFilaPub(); migrarRevisoesAp(); migrarMarcaEbiz(); migrarSalas();
   /* Mesmo motivo do laudo: esta migracao so existia no load(), entao o plano
@@ -18393,12 +19123,25 @@ function iniciarCom(guardado){
   _booting=false;
   aplicarMarca();
   buildProfiles();        /* monta a lista de acesso antes de escolher o perfil */
-  pickUser('u1');
+  if(!restaurarSessaoSalva()){
+    pickUser('u1');
+  }
   /* Conecta ao servidor depois de pintar a tela: o app abre offline-first */
-  setTimeout(()=>{ ligarSync().then(ok=>{ if(ok&&session) render(); }); },300);
+  setTimeout(()=>{ ligarSync().then(ok=>{
+    if(ok){
+      if(session) render();
+      else if(typeof pickedUser!=='undefined'&&pickedUser) pickUser(pickedUser);
+    }
+  }); },300);
   ligarEscutaConexao();   /* vigia a conexão desde o primeiro segundo */
   setTimeout(()=>{ migrarFotosEmbutidas().catch(()=>{}) },1500);
 }
+window.addEventListener('beforeunload',()=>{
+  try{
+    if(_saveTimer){ clearTimeout(_saveTimer); _saveTimer=null; salvarLocal(); }
+    if(session) salvarSessaoAtiva();
+  }catch(e){}
+});
 /* Sem IndexedDB (navegação privada antiga, ambiente de teste) o app abre
    pelo caminho síncrono de sempre; com ele, espera a leitura do disco. */
 if(typeof indexedDB==='undefined'||!indexedDB){
@@ -18413,6 +19156,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d80256fa7feede',t:'MTc5MjQ5OTE2Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-</body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8fd145cde2fff',t:'MTc5MjUwOTQzOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

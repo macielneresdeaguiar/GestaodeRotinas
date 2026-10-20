@@ -2,7 +2,7 @@
    Objetivo: o app abrir e funcionar sem internet (subsolo, casa de máquinas).
    Os DADOS ficam no localStorage do aparelho; aqui cuidamos só de ter o
    aplicativo em si disponível offline. */
-const VER   = 'grc-v14';
+const VER   = 'grc-v16';
 const SHELL = ['./', './index.html', './manifest.webmanifest',
   './icones/icone-192.png', './icones/icone-512.png',
   './icones/apple-touch-icon.png'];
@@ -51,12 +51,19 @@ self.addEventListener('fetch', e => {
     const cache = await caches.open(VER);
     try {
       const r = await redeComPrazo(req, 4000);
-      if (r && r.ok) cache.put(req, r.clone());
+      if (r && r.ok) {
+        cache.put(req, r.clone());
+        return r;
+      }
+      if (navegando) throw new Error('HTTP ' + (r ? r.status : 0));
       return r;
     } catch (err) {
       const guardado = await cache.match(req) ||
+                       await caches.match(req, { ignoreSearch: true }) ||
                        (navegando ? await cache.match('./index.html') ||
-                                    await cache.match('./') : null);
+                                    await cache.match('./') ||
+                                    await caches.match('./index.html', { ignoreSearch: true }) ||
+                                    await caches.match('./', { ignoreSearch: true }) : null);
       if (guardado) return guardado;
       if (navegando) {
         return new Response(
