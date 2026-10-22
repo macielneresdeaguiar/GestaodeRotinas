@@ -2211,7 +2211,7 @@ async function resolverFoto(v){
   const id=idDaRef(v);
   const tarefa=(async()=>{
     let d=await fotoLerLocal(id);
-    if(!d&&temServidor()&&!estaOffline()){
+    if(!d&&temServidor()&&(typeof navigator==='undefined'||navigator.onLine!==false)){
       try{
         const r=await fetchPrazo('/api/foto/'+encodeURIComponent(id),{headers:syncHeaders()},15000);
         if(r.ok){ const j=await r.json(); d=j.dados; if(d) fotoGravarLocal(id,d).catch(()=>{}) }
@@ -14724,7 +14724,7 @@ function brigReincidentes(cid){
 }
 
 /* ============ TELA — BRIGADA ============ */
-let brigSisSel='extintores', brigMesSel='', brigHistFiltro='abertas';
+let brigSisSel='extintores', brigMesSel='', brigHistFiltro='abertas', brigHistSis='';
 const BRIG_ESTADO_KEY='grc.brig.estado.v1';
 let _brigEstadoMem={};
 
@@ -14871,13 +14871,16 @@ function viewBrigada(){
   const resumo=an.resumo.length?`<div class="card" style="margin-bottom:14px">
     <div class="ap-faixa">${ic('alert')} NÃO CONFORMIDADES POR SISTEMA (PENDENTES ATÉ RESOLUÇÃO)</div>
     <div class="tablewrap"><table class="ap-tb"><thead><tr>
-      <th>SISTEMA</th><th>PEÇAS</th><th>PONTOS</th><th>ANDARES</th><th>AÇÕES</th></tr></thead><tbody>
+      <th>SISTEMA</th><th>PEÇAS</th><th>PONTOS</th><th>ANDARES</th><th>AÇÕES (RELATÓRIO SEPARADO)</th></tr></thead><tbody>
       ${an.resumo.map(r=>`<tr>
         <td><b>${esc(r.nome)}</b></td>
         <td><span class="badge red">${r.qtd}</span></td>
         <td>${r.pontos}</td>
         <td class="muted">${r.andares.map(brigAndarNome).join(', ')}</td>
-        <td><button class="btn sm" onclick="brigPdfNC('${cid}','${mes}')">Relatório de pendências</button></td>
+        <td><div class="rowact" style="gap:6px;flex-wrap:wrap">
+          <button class="btn sm danger" onclick="brigPdfNC('${cid}','${mes}','${r.sistema}')">${ic('alert')} Relatório de pendências (${esc(r.nome)})</button>
+          <button class="btn sm ghost" onclick="brigPdfSistema('${cid}','${r.sistema}','${mes}')">${ic('doc')} Completo (${esc(r.nome)})</button>
+        </div></td>
       </tr>`).join('')}
     </tbody></table></div></div>`:'';
 
@@ -14913,17 +14916,22 @@ function viewBrigada(){
   }).join('');
 
   /* Histórico de pendências do check-list (igual ao da ronda) */
-  const todasPend=brigHistoricoPendencias(cid);
+  const todasPend=brigHistoricoPendencias(cid,brigHistSis?{sistema:brigHistSis}:{});
   const pendAbertas=todasPend.filter(x=>!x.resolvida);
   const pendResolvidas=todasPend.filter(x=>!x.resolvida?false:true);
   const listaHist=brigHistFiltro==='abertas'?pendAbertas:(brigHistFiltro==='resolvidas'?pendResolvidas:todasPend);
   const cardHistorico=`<div class="card" style="margin-bottom:14px">
     <div class="ap-faixa" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <span>${ic('clock')} HISTÓRICO DE PENDÊNCIAS DO CHECK-LIST</span>
-      <span class="rowact no-print" style="gap:4px">
+      <span class="rowact no-print" style="gap:4px;flex-wrap:wrap">
+        <select onchange="brigHistSis=this.value;render()" style="padding:2px 8px;font-size:11px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;color:#0d1b2e">
+          <option value="" ${!brigHistSis?'selected':''}>Todos os sistemas</option>
+          ${BRIG_SISTEMAS.map(s=>`<option value="${s.id}" ${brigHistSis===s.id?'selected':''}>Só ${esc(s.nome)}</option>`).join('')}
+        </select>
         <button class="btn ${brigHistFiltro==='abertas'?'':'ghost'} sm" style="padding:2px 9px;font-size:11px" onclick="brigHistFiltro='abertas';render()">Pendentes (${pendAbertas.length})</button>
         <button class="btn ${brigHistFiltro==='resolvidas'?'':'ghost'} sm" style="padding:2px 9px;font-size:11px" onclick="brigHistFiltro='resolvidas';render()">Resolvidas (${pendResolvidas.length})</button>
         <button class="btn ${brigHistFiltro==='todas'?'':'ghost'} sm" style="padding:2px 9px;font-size:11px" onclick="brigHistFiltro='todas';render()">Todas (${todasPend.length})</button>
+        <button class="btn sm danger" style="padding:2px 9px;font-size:11px" onclick="brigPdfNC('${cid}','${mes}','${brigHistSis||''}')">${ic('print')} PDF ${brigHistSis?'só '+esc(brigSis(brigHistSis).nome):'Pendências'}</button>
       </span>
     </div>
     <div class="tablewrap"><table class="ap-tb"><thead><tr>
@@ -14956,9 +14964,17 @@ function viewBrigada(){
       <div class="ap-faixa">${ic('clipboardCheck')} CHECK-LIST POR ANDAR</div>
       <div style="padding:12px">
         <div class="bg-abas">${abas}</div>
-        <div class="muted" style="margin:10px 0 4px">
-          ${esc(brigSis(sis).nome)} · inspeção ${brigSis(sis).periodicidade.toLowerCase()} ·
-          toque no andar para preencher</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:10px 0 8px">
+          <div class="muted">
+            <b>${esc(brigSis(sis).nome)}</b> · inspeção ${brigSis(sis).periodicidade.toLowerCase()} ·
+            toque no andar para preencher</div>
+          <div class="rowact no-print" style="gap:6px;flex-wrap:wrap">
+            <button class="btn sm primary" onclick="brigPdfSistema('${cid}','${sis}','${mes}')" title="Gerar PDF somente do sistema ${esc(brigSis(sis).nome)}">${ic('doc')} PDF só ${esc(brigSis(sis).nome)}</button>
+            <button class="btn sm danger ghost" onclick="brigPdfNC('${cid}','${mes}','${sis}')" title="Gerar PDF somente das pendências de ${esc(brigSis(sis).nome)}">${ic('alert')} Pendências de ${esc(brigSis(sis).nome)}</button>
+            <button class="btn sm ghost" onclick="brigEscolherAndar('${cid}','${sis}','${mes}')" title="Gerar PDF de um andar específico">${ic('building')} PDF de 1 andar</button>
+            <button class="btn sm ghost" onclick="brigModalRelatorio('${cid}','${mes}','${sis}')" title="Escolher quais sistemas e andares retirar no relatório">${ic('clipboardCheck')} Retirar separado...</button>
+          </div>
+        </div>
         <div class="bg-grade">${grade}</div>
       </div>
     </div>`;
@@ -14971,13 +14987,20 @@ function viewBrigada(){
 
   $('#content').innerHTML=bannerRetomar+cards+ia+resumo+cardPorAndar+cardHistorico+`
     <div class="card">
-      <div class="ap-faixa">${ic('doc')} RELATÓRIOS</div>
-      <div style="padding:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn primary" onclick="brigPdfAtividade('${cid}','${mes}')">${ic('clipboardCheck')} O que foi feito no mês</button>
-        <button class="btn" onclick="brigPdfGeral('${cid}','${mes}')">${ic('doc')} Geral do mês</button>
-        <button class="btn" onclick="brigPdfSistema('${cid}','${sis}','${mes}')">${ic('doc')} Só ${esc(brigSis(sis).nome)}</button>
-        <button class="btn danger" onclick="brigPdfNC('${cid}','${mes}')">${ic('alert')} Só não conformidades</button>
-        <button class="btn" onclick="brigEscolherAndar('${cid}','${sis}','${mes}')">${ic('building')} De um andar</button>
+      <div class="ap-faixa">${ic('doc')} RELATÓRIOS DO CHECK-LIST (SEPARADOS POR SISTEMA / ANDAR OU GERAL)</div>
+      <div style="padding:12px">
+        <div class="muted" style="margin-bottom:8px"><b>Retirar separado (igual quando faz o check-list):</b> clique direto no sistema abaixo ou abra o seletor para escolher sistema(s), andar e tipo de relatório:</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="btn primary" onclick="brigModalRelatorio('${cid}','${mes}','${sis}')">${ic('clipboardCheck')} Escolher e retirar separado (Sistema / Andar)</button>
+          ${BRIG_SISTEMAS.map(s=>`<button class="btn ${s.id===sis?'':'ghost'} sm" onclick="brigPdfSistema('${cid}','${s.id}','${mes}')">${ic(s.icone)} Só ${esc(s.nome)}</button>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:8px;border-top:1px solid #e5ebf3">
+          <button class="btn primary" onclick="brigPdfAtividade('${cid}','${mes}')">${ic('clipboardCheck')} O que foi feito no mês</button>
+          <button class="btn" onclick="brigPdfGeral('${cid}','${mes}')">${ic('doc')} Geral do mês</button>
+          <button class="btn" onclick="brigPdfSistema('${cid}','${sis}','${mes}')">${ic('doc')} Só ${esc(brigSis(sis).nome)}</button>
+          <button class="btn danger" onclick="brigPdfNC('${cid}','${mes}')">${ic('alert')} Só não conformidades</button>
+          <button class="btn" onclick="brigEscolherAndar('${cid}','${sis}','${mes}')">${ic('building')} De um andar</button>
+        </div>
       </div>
     </div>`;
 }
@@ -15172,9 +15195,10 @@ function viewBrigForm(){
         placeholder="algo que valha registrar">${esc(i.obs||'')}</textarea></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         <button class="btn" onclick="brigVoltar()">${ic('arrowLeft')} Voltar</button>
+        <button class="btn" onclick="brigPdfInsp('${i.id}')">${ic('doc')} PDF deste check-list</button>
+        <button class="btn ghost" onclick="brigPdfSistema('${i.condoId||'c1'}','${i.sistema}','${String(i.data||today()).slice(0,7)}')">${ic('doc')} PDF só ${esc(s.nome)}</button>
         ${fechado?`${nc?`<button class="btn primary" onclick="brigAcompanharInsp('${i.id}')"
             title="Ver em que pé está o chamado dos não conformes">${ic('search')} Como ficaram os não conformes</button>`:''}
-          <button class="btn" onclick="brigPdfInsp('${i.id}')">${ic('doc')} PDF deste check-list</button>
           <button class="btn danger ghost" onclick="brigReabrir('${i.id}')">Reabrir</button>
           ${brigPodeExcluir(i)?`<button class="btn danger" onclick="brigExcluirInsp('${i.id}')">${ic('trash')}Excluir</button>`:''}`
         :`<button class="btn primary" onclick="brigConcluir('${i.id}')">${ic('checkCircle')} Concluir check-list</button>`}
@@ -15304,23 +15328,52 @@ function brigCab(tit,sub){
     <div class="t"><h1>${esc(tit)}</h1><div class="sub">${esc(sub)}</div></div>
     ${typeof LOGO_ABL!=='undefined'&&LOGO_ABL?`<img src="${LOGO_ABL}" alt="ABL Gestão Condominial">`:''}</div>`;
 }
+function brigFotosValidas(fotos){
+  return (fotos||[]).map(f=>{
+    if(!f) return '';
+    if(ehImagem(f)&&f!==PIX_VAZIO) return f;
+    if(ehRef(f)&&_fotoCache.has(f)){
+      const d=_fotoCache.get(f);
+      if(d&&d!==PIX_VAZIO) return d;
+    }
+    return '';
+  }).filter(Boolean);
+}
+function brigFotosHtml(fotos){
+  const ok=brigFotosValidas(fotos);
+  if(!ok.length) return '';
+  return `<div class="fts">${ok.map((src,idx)=>`<img src="${src}" alt="Foto ${idx+1}" onerror="this.remove()">`).join('')}</div>`;
+}
 function brigAbrirPdf(titulo,corpo){
   const w=window.open('','_blank');
   if(!w) return toast('Permita a abertura de janelas para gerar o PDF.');
   w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
     <title>${esc(titulo)}</title><style>${BRIG_CSS}</style></head>
     <body><div class="folha">${corpo}</div>
-    <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>`);
+    <script>
+      window.onload=function(){
+        var imgs=Array.prototype.slice.call(document.images||[]);
+        var pendentes=imgs.filter(function(im){return !im.complete});
+        if(!pendentes.length){ setTimeout(function(){window.print()},350); return; }
+        var rest=pendentes.length, disparou=false;
+        function pronto(){
+          if(disparou) return;
+          if(--rest<=0){ disparou=true; setTimeout(function(){window.print()},250); }
+        }
+        pendentes.forEach(function(im){ im.addEventListener('load',pronto); im.addEventListener('error',pronto); });
+        setTimeout(function(){ if(!disparou){ disparou=true; window.print(); } },2500);
+      };
+    <\/script></body></html>`);
   w.document.close();
 }
-/* tabela de pontos de uma inspeção */
+/* tabela de pontos de uma inspeção (só exibe espaço de foto quando houver foto anexada) */
 function brigTabela(i,soNC,apenasPendentes){
-  const s=brigSis(i.sistema);
   let pts=soNC?brigNC(i):i.pontos;
   if(apenasPendentes) pts=pts.filter(p=>!brigPendenciaResolvida(i,p));
   if(!pts.length) return '';
+  const temAlgumaFoto=pts.some(p=>brigFotosValidas(p.fotos).length>0);
   return `<table><thead><tr><th style="width:50%">PONTO INSPECIONADO</th>
-    <th style="width:16%">SITUAÇÃO</th><th style="width:34%">CONSTATAÇÃO / FOTO</th></tr></thead><tbody>
+    <th style="width:16%">SITUAÇÃO</th><th style="width:34%">${temAlgumaFoto?'CONSTATAÇÃO / FOTO':'CONSTATAÇÃO / OBSERVAÇÃO'}</th></tr></thead><tbody>
     ${pts.map(p=>{
       const falhas=Object.keys(p.itens||{}).filter(k=>p.itens[k]===false);
       const ehNC=p.sit==='NÃO CONFORME';
@@ -15329,14 +15382,15 @@ function brigTabela(i,soNC,apenasPendentes){
       const cls=ehNC?(res?'':'nc'):(p.sit==='NÃO APLICÁVEL'?'na':'');
       const stc=ehNC?(res?'ok':'bad'):(p.sit==='NÃO APLICÁVEL'?'na':'ok');
       const q=p.qtd>0?p.qtd:brigQtdDesc(p.desc);
+      const ftsHtml=brigFotosHtml(p.fotos);
       return `<tr class="${cls}">
         <td>${esc(p.desc)}${q>1&&ehNC?` <b>(${q} peças)</b>`:''}</td>
         <td class="st ${stc}">${ehNC?(res?'NÃO CONF. (RESOLVIDA)':'NÃO CONFORME (PENDENTE)'):p.sit}</td>
         <td>${falhas.length?`<div class="fal">Falhou: ${esc(falhas.join('; '))}</div>`:''}
             ${p.obs?`<div class="obs">${esc(p.obs)}</div>`:''}
             ${res&&infoRes?`<div style="font-size:10px;color:#1d7a4c;margin-top:2px"><b>Resolvida:</b> ${esc(infoRes.por||'')}${infoRes.em?' em '+fmt(infoRes.em):''}${infoRes.obs?' — '+esc(infoRes.obs):''}</div>`:''}
-            ${(p.fotos||[]).length?`<div class="fts">${p.fotos.map(f=>`<img src="${srcFoto(f)}" alt="Foto anexada">`).join('')}</div>`:''}
-            ${!falhas.length&&!p.obs&&!(p.fotos||[]).length&&!res?'—':''}</td></tr>`;
+            ${ftsHtml}
+            ${!falhas.length&&!p.obs&&!ftsHtml&&!res?'—':''}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
 function brigBlocoInsp(i,soNC,apenasPendentes){
@@ -15354,12 +15408,17 @@ function brigBlocoInsp(i,soNC,apenasPendentes){
     ${i.obs?`<div class="obs" style="margin-top:5px"><b>Observações:</b> ${esc(i.obs)}</div>`:''}
   </div>`;
 }
+function _brigMatchSis(sis,filtroSis){
+  if(!filtroSis) return true;
+  if(Array.isArray(filtroSis)) return !filtroSis.length||filtroSis.includes(sis);
+  return sis===filtroSis;
+}
 /* Quadro de pendências ativas do check-list (permanece em todos os relatórios até ser resolvida) */
 function brigSecPendenciasAtivas(cid,mesRef,filtro){
   const f=filtro||{};
   let abertas=brigNCAbertas(cid,mesRef);
   if(f.andar) abertas=abertas.filter(x=>String(x.insp.andar)===String(f.andar));
-  if(f.sistema) abertas=abertas.filter(x=>x.insp.sistema===f.sistema);
+  if(f.sistema) abertas=abertas.filter(x=>_brigMatchSis(x.insp.sistema,f.sistema));
   if(!abertas.length) return '';
   return `<div class="faixa">Pendências do Check-list em Aberto (permanecem até serem resolvidas)</div>
     <table><thead><tr>
@@ -15369,24 +15428,27 @@ function brigSecPendenciasAtivas(cid,mesRef,filtro){
       <th style="width:36%">PONTO / CONSTATAÇÃO</th>
       <th style="width:16%">SITUAÇÃO</th>
     </tr></thead><tbody>
-    ${abertas.map(x=>`<tr class="nc">
+    ${abertas.map(x=>{
+      const ftsHtml=brigFotosHtml(x.ponto.fotos);
+      return `<tr class="nc">
       <td>${fmt(x.insp.data)}<div class="obs">${esc(x.insp.responsavel||'—')}</div></td>
       <td><b>${esc(brigAndarNome(x.insp.andar))}</b></td>
       <td>${esc(brigSis(x.insp.sistema).nome)}</td>
       <td><b>${esc(x.ponto.desc)}</b>${x.qtd>1?` <b>(${x.qtd} peças)</b>`:''}
         ${x.falhas.length?`<div class="fal">Falhou: ${esc(x.falhas.join('; '))}</div>`:''}
         ${x.ponto.obs?`<div class="obs">${esc(x.ponto.obs)}</div>`:''}
-        ${(x.ponto.fotos||[]).length?`<div class="fts">${x.ponto.fotos.map(ft=>`<img src="${srcFoto(ft)}" alt="Foto">`).join('')}</div>`:''}
+        ${ftsHtml}
       </td>
       <td class="st bad">PENDENTE${x.chamado?`<div class="obs">Com ${esc(x.chamado.responsavel||'Gestão')}</div>`:''}${x.cobrancas?`<div class="obs">Cobrado ${x.cobrancas}x</div>`:''}</td>
-    </tr>`).join('')}
+    </tr>`}).join('')}
     </tbody></table>`;
 }
 /* 1 — um check-list */
 async function brigPdfInsp(id){
   const i=_bi(id); if(!i) return toast('Check-list não encontrado.');
-  await precarregarFotos(refsDe(i));
-  brigAbrirPdf('Check-list '+brigSis(i.sistema).nome,
+  const pend=brigNCAbertas(i.condoId,null).filter(x=>String(x.insp.andar)===String(i.andar)&&x.insp.sistema===i.sistema);
+  await precarregarFotos(refsDe([i].concat(pend.map(x=>x.insp))));
+  brigAbrirPdf('Check-list '+brigSis(i.sistema).nome+' — '+brigAndarNome(i.andar),
     brigCab('Relatório de Inspeção — '+brigSis(i.sistema).nome,
       condoName(i.condoId)+' · '+brigAndarNome(i.andar)+' · '+fmt(i.data))+
     brigBlocoInsp(i,false)+
@@ -15394,34 +15456,45 @@ async function brigPdfInsp(id){
     brigAss(i.responsavel));
   audit('Gerou PDF de check-list da brigada',brigSis(i.sistema).nome+' · '+brigAndarNome(i.andar),'',i.condoId);
 }
-/* 2 — por andar (todos os sistemas) */
-async function brigPdfAndar(cid,andar,mes){
-  const is=brigInsp.filter(x=>x.condoId===cid&&x.andar===andar&&String(x.data).slice(0,7)===mes)
+/* 2 — por andar (todos os sistemas ou filtrado por sistema / só NC) */
+async function brigPdfAndar(cid,andar,mes,sisFiltro,soNC){
+  let is=brigInsp.filter(x=>x.condoId===cid&&String(x.andar)===String(andar)&&String(x.data).slice(0,7)===mes&&_brigMatchSis(x.sistema,sisFiltro))
     .sort((a,b)=>a.sistema.localeCompare(b.sistema));
-  const pendAndar=brigNCAbertas(cid,mes).filter(x=>String(x.insp.andar)===String(andar));
+  const pendAndar=brigNCAbertas(cid,mes).filter(x=>String(x.insp.andar)===String(andar)&&_brigMatchSis(x.insp.sistema,sisFiltro));
+  if(soNC){
+    const idsPend=new Set(pendAndar.map(x=>x.insp.id));
+    is=is.filter(i=>idsPend.has(i.id)||brigNC(i).some(p=>!brigPendenciaResolvida(i,p)));
+  }
   await precarregarFotos(refsDe(is.concat(pendAndar.map(x=>x.insp))));
-  if(!is.length&&!pendAndar.length) return toast('Nenhum check-list ou pendência deste andar no mês.');
-  brigAbrirPdf('Brigada — '+brigAndarNome(andar),
-    brigCab('Relatório da Brigada — '+brigAndarNome(andar),
+  if(!is.length&&!pendAndar.length) return toast('Nenhum check-list ou pendência encontrada para esse filtro no andar.');
+  const rotSis=sisFiltro&&!Array.isArray(sisFiltro)?' · '+brigSis(sisFiltro).nome:'';
+  brigAbrirPdf('Brigada — '+brigAndarNome(andar)+rotSis,
+    brigCab('Relatório da Brigada — '+brigAndarNome(andar)+rotSis,
       condoName(cid)+' · '+mesExtenso(mes)+' · '+is.length+' check-list(s)')+
     brigResumoBox(is,pendAndar)+
-    brigSecPendenciasAtivas(cid,mes,{andar})+
-    is.map(i=>brigBlocoInsp(i,false)).join('')+brigAss());
-  audit('Gerou PDF da brigada por andar',brigAndarNome(andar),'',cid);
+    brigSecPendenciasAtivas(cid,mes,{andar,sistema:sisFiltro})+
+    is.map(i=>brigBlocoInsp(i,!!soNC,!!soNC)).join('')+brigAss());
+  audit('Gerou PDF da brigada por andar',brigAndarNome(andar)+rotSis,'',cid);
 }
-/* 3 — por sistema */
-async function brigPdfSistema(cid,sis,mes){
-  const is=brigInsp.filter(x=>x.condoId===cid&&x.sistema===sis&&String(x.data).slice(0,7)===mes)
+/* 3 — por sistema (separado de um único sistema, opcionalmente de 1 andar ou só NC) */
+async function brigPdfSistema(cid,sis,mes,opcoes){
+  const opt=opcoes||{};
+  let is=brigInsp.filter(x=>x.condoId===cid&&x.sistema===sis&&String(x.data).slice(0,7)===mes&&(!opt.andar||String(x.andar)===String(opt.andar)))
     .sort((a,b)=>brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
-  const pendSis=brigNCAbertas(cid,mes).filter(x=>x.insp.sistema===sis);
+  const pendSis=brigNCAbertas(cid,mes).filter(x=>x.insp.sistema===sis&&(!opt.andar||String(x.insp.andar)===String(opt.andar)));
+  if(opt.soNC){
+    const idsPend=new Set(pendSis.map(x=>x.insp.id));
+    is=is.filter(i=>idsPend.has(i.id)||brigNC(i).some(p=>!brigPendenciaResolvida(i,p)));
+  }
   await precarregarFotos(refsDe(is.concat(pendSis.map(x=>x.insp))));
   if(!is.length&&!pendSis.length) return toast('Nenhum check-list ou pendência de '+brigSis(sis).nome+' no mês.');
+  const subAndar=opt.andar?' · '+brigAndarNome(opt.andar):' · '+is.length+' andar(es)';
   brigAbrirPdf('Brigada — '+brigSis(sis).nome,
-    brigCab('Relatório de Inspeção — '+brigSis(sis).nome,
-      condoName(cid)+' · '+mesExtenso(mes)+' · '+is.length+' andar(es)')+
+    brigCab('Relatório de Inspeção — '+brigSis(sis).nome+(opt.soNC?' (Não Conformidades)':''),
+      condoName(cid)+' · '+mesExtenso(mes)+subAndar)+
     brigResumoBox(is,pendSis)+
-    brigSecPendenciasAtivas(cid,mes,{sistema:sis})+
-    is.map(i=>brigBlocoInsp(i,false)).join('')+brigAss());
+    brigSecPendenciasAtivas(cid,mes,{sistema:sis,andar:opt.andar})+
+    is.map(i=>brigBlocoInsp(i,!!opt.soNC,!!opt.soNC)).join('')+brigAss());
   audit('Gerou PDF da brigada por sistema',brigSis(sis).nome,'',cid);
 }
 /* 4 — geral do mês */
@@ -15471,43 +15544,52 @@ function brigAtividade(cid,mes){
 function brigPdfAtividade(cid,mes){
   const a=brigAtividade(cid,mes);
   if(!a.rondas.length&&!a.insp.length&&!a.pendenciasCheck.length) return toast('Nenhuma atividade registrada neste mês.');
-  const prog=brigProgresso(cid,mes);
-  const topo=`<div class="tot">
-    <div><div class="k">Rondas feitas</div><div class="v">${a.rondas.length}</div></div>
-    <div><div class="k">Dias com ronda</div><div class="v ${a.semRonda.length?'bad':''}">${a.diasMes.length-a.semRonda.length}/${a.diasMes.length}</div></div>
-    <div><div class="k">Ocorrências / Pendências</div><div class="v ${(a.ocorrencias.length||a.pendenciasCheck.length)?'bad':''}">${a.ocorrencias.length+a.pendenciasCheck.length}</div></div>
-    <div><div class="k">Check-lists concluídos</div><div class="v">${a.concluidos}/${prog.total}</div></div>
-  </div>`;
-  const equipe=`<h2>Por brigadista</h2>
-    <table><thead><tr><th>BRIGADISTA</th><th>DIAS ATIVOS</th><th>RONDAS</th>
-      <th>OCORRÊNCIAS</th><th>CHECK-LISTS</th><th>CONCLUÍDOS</th><th>NÃO CONFORMES</th></tr></thead><tbody>
-    ${a.pessoas.map(p=>`<tr><td><b>${esc(p.nome)}</b></td><td>${p.diasAtivos}</td><td>${p.rondas}</td>
-      <td class="${p.ocorr?'bad':''}">${p.ocorr}</td><td>${p.checks}</td><td>${p.concl}</td>
-      <td class="${p.nc?'bad':''}">${p.nc}</td></tr>`).join('')}
-    </tbody></table>`;
-  const falhas=a.semRonda.length?`<h2>Dias sem nenhuma ronda registrada</h2>
-    <p class="aviso">${a.semRonda.map(x=>fmt(x.d)).join(' · ')}</p>`:
-    `<h2>Cobertura da ronda</h2><p>Todos os ${a.diasMes.length} dias corridos do mês tiveram ronda registrada.</p>`;
-  const ocor=a.ocorrencias.length?`<h2>Ocorrências registradas na ronda</h2>
-    <table><thead><tr><th>DATA</th><th>HORA</th><th>LOCAL</th><th>O QUE FOI ENCONTRADO</th>
-      <th>PRIORIDADE</th><th>QUEM REGISTROU</th></tr></thead><tbody>
-    ${a.ocorrencias.sort((x,y)=>x.data.localeCompare(y.data)).map(r=>`<tr>
-      <td>${fmt(r.data)}</td><td>${esc(r.hora||'')}</td><td>${esc(brigAndarNome(r.andar))}</td>
-      <td>${esc(r.obs||'')}</td><td>${esc(r.prioridade||'—')}</td>
-      <td>${esc(r.autor||'—')}</td></tr>`).join('')}</tbody></table>`:'';
-  const pendHtml=brigSecPendenciasAtivas(cid,mes);
-  const checks=a.insp.length?`<h2>Check-lists do mês</h2>
-    <table><thead><tr><th>DATA</th><th>SISTEMA</th><th>LOCAL</th><th>PONTOS</th>
-      <th>NÃO CONFORMES</th><th>SITUAÇÃO</th><th>RESPONSÁVEL</th></tr></thead><tbody>
-    ${a.insp.sort((x,y)=>x.data.localeCompare(y.data)).map(i=>`<tr>
-      <td>${fmt(i.data)}</td><td>${esc(brigSis(i.sistema).nome)}</td>
-      <td>${esc(brigAndarNome(i.andar))}</td><td>${i.pontos.length}</td>
-      <td class="${brigNC(i).length?'bad':''}">${brigNC(i).length}</td>
-      <td>${esc(i.status)}</td><td>${esc(i.responsavel||'—')}</td></tr>`).join('')}</tbody></table>`:'';
-  brigAbrirPdf('Brigada — atividades '+mes,
-    brigCab('Relatório de Atividades da Brigada',condoName(cid)+' · '+mesExtenso(mes))+
-    topo+equipe+falhas+ocor+pendHtml+checks+
-    `<div class="rod">Emitido por ${esc(session?session.nome:'')} em ${nowStamp()}</div>`);
+  const refs=refsDe(a.ocorrencias.concat(a.pendenciasCheck.map(x=>x.insp)));
+  const faltamRefs=refs.filter(r=>ehRef(r)&&!_fotoCache.has(r));
+  const emitir=()=>{
+    const prog=brigProgresso(cid,mes);
+    const topo=`<div class="tot">
+      <div><div class="k">Rondas feitas</div><div class="v">${a.rondas.length}</div></div>
+      <div><div class="k">Dias com ronda</div><div class="v ${a.semRonda.length?'bad':''}">${a.diasMes.length-a.semRonda.length}/${a.diasMes.length}</div></div>
+      <div><div class="k">Ocorrências / Pendências</div><div class="v ${(a.ocorrencias.length||a.pendenciasCheck.length)?'bad':''}">${a.ocorrencias.length+a.pendenciasCheck.length}</div></div>
+      <div><div class="k">Check-lists concluídos</div><div class="v">${a.concluidos}/${prog.total}</div></div>
+    </div>`;
+    const equipe=`<h2>Por brigadista</h2>
+      <table><thead><tr><th>BRIGADISTA</th><th>DIAS ATIVOS</th><th>RONDAS</th>
+        <th>OCORRÊNCIAS</th><th>CHECK-LISTS</th><th>CONCLUÍDOS</th><th>NÃO CONFORMES</th></tr></thead><tbody>
+      ${a.pessoas.map(p=>`<tr><td><b>${esc(p.nome)}</b></td><td>${p.diasAtivos}</td><td>${p.rondas}</td>
+        <td class="${p.ocorr?'bad':''}">${p.ocorr}</td><td>${p.checks}</td><td>${p.concl}</td>
+        <td class="${p.nc?'bad':''}">${p.nc}</td></tr>`).join('')}
+      </tbody></table>`;
+    const falhas=a.semRonda.length?`<h2>Dias sem nenhuma ronda registrada</h2>
+      <p class="aviso">${a.semRonda.map(x=>fmt(x.d)).join(' · ')}</p>`:
+      `<h2>Cobertura da ronda</h2><p>Todos os ${a.diasMes.length} dias corridos do mês tiveram ronda registrada.</p>`;
+    const ocor=a.ocorrencias.length?`<h2>Ocorrências registradas na ronda</h2>
+      <table><thead><tr><th>DATA</th><th>HORA</th><th>LOCAL</th><th>O QUE FOI ENCONTRADO</th>
+        <th>PRIORIDADE</th><th>QUEM REGISTROU</th></tr></thead><tbody>
+      ${a.ocorrencias.sort((x,y)=>x.data.localeCompare(y.data)).map(r=>{
+        const fts=brigFotosHtml(r.fotos||(r.foto?[r.foto]:[]));
+        return `<tr>
+        <td>${fmt(r.data)}</td><td>${esc(r.hora||'')}</td><td>${esc(brigAndarNome(r.andar))}</td>
+        <td>${esc(r.obs||'')}${fts}</td><td>${esc(r.prioridade||'—')}</td>
+        <td>${esc(r.autor||'—')}</td></tr>`;
+      }).join('')}</tbody></table>`:'';
+    const pendHtml=brigSecPendenciasAtivas(cid,mes);
+    const checks=a.insp.length?`<h2>Check-lists do mês</h2>
+      <table><thead><tr><th>DATA</th><th>SISTEMA</th><th>LOCAL</th><th>PONTOS</th>
+        <th>NÃO CONFORMES</th><th>SITUAÇÃO</th><th>RESPONSÁVEL</th></tr></thead><tbody>
+      ${a.insp.sort((x,y)=>x.data.localeCompare(y.data)).map(i=>`<tr>
+        <td>${fmt(i.data)}</td><td>${esc(brigSis(i.sistema).nome)}</td>
+        <td>${esc(brigAndarNome(i.andar))}</td><td>${i.pontos.length}</td>
+        <td class="${brigNC(i).length?'bad':''}">${brigNC(i).length}</td>
+        <td>${esc(i.status)}</td><td>${esc(i.responsavel||'—')}</td></tr>`).join('')}</tbody></table>`:'';
+    brigAbrirPdf('Brigada — atividades '+mes,
+      brigCab('Relatório de Atividades da Brigada',condoName(cid)+' · '+mesExtenso(mes))+
+      topo+equipe+falhas+ocor+pendHtml+checks+
+      `<div class="rod">Emitido por ${esc(session?session.nome:'')} em ${nowStamp()}</div>`);
+  };
+  if(faltamRefs.length){ precarregarFotos(faltamRefs).then(emitir,emitir); }
+  else emitir();
 }
 
 async function brigPdfGeral(cid,mes){
@@ -15523,22 +15605,24 @@ async function brigPdfGeral(cid,mes){
     brigAss());
   audit('Gerou PDF geral da brigada',mesExtenso(mes),'',cid);
 }
-/* 5 — só não conformidades (inclui todas as pendências em aberto até serem resolvidas) */
-async function brigPdfNC(cid,mes){
-  const pend=brigNCAbertas(cid,mes);
+/* 5 — só não conformidades (pode filtrar separado por sistema e/ou andar) */
+async function brigPdfNC(cid,mes,sisFiltro,andarFiltro){
+  const pend=brigNCAbertas(cid,mes).filter(x=>_brigMatchSis(x.insp.sistema,sisFiltro)&&(!andarFiltro||String(x.insp.andar)===String(andarFiltro)));
   const idsInsp=[...new Set(pend.map(x=>x.insp.id))];
   const is=idsInsp.map(id=>brigInsp.find(x=>x.id===id)).filter(Boolean)
     .sort((a,b)=>a.sistema.localeCompare(b.sistema)||brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
   await precarregarFotos(refsDe(is));
-  if(!is.length) return toast('Nenhuma não conformidade pendente — tudo conforme.');
-  brigAbrirPdf('Brigada — não conformidades',
-    brigCab('Relatório de Não Conformidades e Pendências',
-      condoName(cid)+' · '+mesExtenso(mes)+' · pendências permanecem até serem resolvidas')+
-    brigSecNC(cid,mes)+
-    brigSecPendenciasAtivas(cid,mes)+
+  if(!is.length) return toast('Nenhuma não conformidade pendente'+(sisFiltro&&!Array.isArray(sisFiltro)?' em '+brigSis(sisFiltro).nome:'')+' — tudo conforme.');
+  const rotSis=sisFiltro?(Array.isArray(sisFiltro)?sisFiltro.map(s=>brigSis(s).nome).join(', '):brigSis(sisFiltro).nome):'';
+  const rotAndar=andarFiltro?' · '+brigAndarNome(andarFiltro):'';
+  brigAbrirPdf('Brigada — não conformidades'+(rotSis?' ('+rotSis+')':''),
+    brigCab('Relatório de Não Conformidades'+(rotSis?' — '+rotSis:' e Pendências'),
+      condoName(cid)+' · '+mesExtenso(mes)+rotAndar+' · pendências permanecem até serem resolvidas')+
+    brigSecNC(cid,mes,sisFiltro,andarFiltro)+
+    brigSecPendenciasAtivas(cid,mes,{sistema:sisFiltro,andar:andarFiltro})+
     '<h2 class="sec">Detalhamento das não conformidades em aberto</h2>'+
     is.map(i=>brigBlocoInsp(i,true,true)).join('')+brigAss());
-  audit('Gerou PDF de não conformidades da brigada',mesExtenso(mes),'',cid);
+  audit('Gerou PDF de não conformidades da brigada',(rotSis||'Geral')+' · '+mesExtenso(mes),'',cid);
 }
 function brigOrdAndar(a){ const i=BRIG_ANDARES.findIndex(x=>x.id===a); return i<0?99:i }
 function brigResumoBox(is,pendAbertas){
@@ -15554,9 +15638,19 @@ function brigResumoBox(is,pendAbertas){
     <div><div class="k">Peças a regularizar</div><div class="v ${pc?'bad':''}">${pc}</div></div>
   </div>`;
 }
-/* quadro-resumo das pendências, separado por sistema */
-function brigSecNC(cid,mes){
-  const r=brigResumoNC(cid,mes);
+/* quadro-resumo das pendências, separado por sistema (aceita filtro opcional por sistema/andar) */
+function brigSecNC(cid,mes,sisFiltro,andarFiltro){
+  let r=brigResumoNC(cid,mes).filter(x=>_brigMatchSis(x.sistema,sisFiltro));
+  if(andarFiltro){
+    const abertas=brigNCAbertas(cid,mes).filter(x=>_brigMatchSis(x.insp.sistema,sisFiltro)&&String(x.insp.andar)===String(andarFiltro));
+    const porSis={};
+    abertas.forEach(x=>{
+      const s=x.insp.sistema;
+      porSis[s]=porSis[s]||{sistema:s,nome:brigSis(s).nome,qtd:0,pontos:0,andares:new Set()};
+      porSis[s].qtd+=x.qtd; porSis[s].pontos+=1; porSis[s].andares.add(x.insp.andar);
+    });
+    r=Object.values(porSis).map(x=>({sistema:x.sistema,nome:x.nome,qtd:x.qtd,pontos:x.pontos,andares:[...x.andares]}));
+  }
   if(!r.length) return '<div class="faixa">Não conformidades</div><table><tbody><tr><td>Nenhuma não conformidade registrada no período.</td></tr></tbody></table>';
   return `<div class="faixa">Resumo das não conformidades</div>
     <table><thead><tr><th>SISTEMA</th><th style="width:90px">PEÇAS</th><th style="width:90px">PONTOS</th><th>ANDARES</th></tr></thead><tbody>
@@ -15573,16 +15667,105 @@ function brigAss(resp){
     <div class="rod">Documento gerado pelo sistema de Gestão de Rotinas Condominiais em ${nowStamp()}.
     As fotos anexadas integram o registro da inspeção.</div>`;
 }
-/* escolher um andar para o relatório */
+/* escolher um andar (e opcionalmente o sistema) para o relatório */
 function brigEscolherAndar(cid,sis,mes){
   const pendAndares=new Set(brigNCAbertas(cid,mes).map(x=>String(x.insp.andar)));
   const as=BRIG_ANDARES.filter(a=>pendAndares.has(String(a.id))||brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&String(i.data).slice(0,7)===mes));
   if(!as.length) return toast('Nenhum check-list ou pendência registrada no mês.');
   openModal('Relatório por andar',
-    `<label>Andar</label><select id="bgAnd">${as.map(a=>`<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select>
-     <div class="muted" style="margin-top:8px">Sai um PDF com todos os sistemas inspecionados e pendências abertas nesse andar.</div>`,
+    `<div class="field"><label>Andar</label>
+       <select id="bgAnd">${as.map(a=>`<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></div>
+     <div class="field" style="margin-top:10px"><label>Sistema</label>
+       <select id="bgAndSis">
+         ${BRIG_SISTEMAS.map(s=>`<option value="${s.id}" ${s.id===sis?'selected':''}>Só ${esc(s.nome)}</option>`).join('')}
+         <option value="">Todos os sistemas deste andar</option>
+       </select></div>
+     <div class="field" style="margin-top:10px"><label>O que mostrar</label>
+       <select id="bgAndModo">
+         <option value="completo">Check-list completo (todos os pontos)</option>
+         <option value="nc">Somente não conformidades / pendências</option>
+       </select></div>
+     <div class="muted" style="margin-top:8px">Você pode retirar apenas o sistema selecionado ou todos os sistemas do andar.</div>`,
     `<button class="btn" onclick="closeModal()">Cancelar</button>
-     <button class="btn primary" onclick="brigPdfAndar('${cid}',$('#bgAnd').value,'${mes}');closeModal()">Gerar PDF</button>`);
+     <button class="btn primary" onclick="brigPdfAndar('${cid}',$('#bgAnd').value,'${mes}',$('#bgAndSis')?$('#bgAndSis').value:'',($('#bgAndModo')&&$('#bgAndModo').value)==='nc');closeModal()">Gerar PDF</button>`);
+}
+/* Modal para escolher exatamente quais sistemas, qual andar e qual modo retirar no PDF (igual à tela de fazer o check-list) */
+function brigModalRelatorio(cid,mes,sisPre){
+  const c=cid||'c1', m=mes||brigMesSel||brigMesAtual(), sp=sisPre||brigSisSel||'extintores';
+  const as=BRIG_ANDARES;
+  const picks=BRIG_SISTEMAS.map(s=>{
+    const p=brigProgSis(c,s.id,m);
+    const pend=brigNCAbertas(c,m).filter(x=>x.insp.sistema===s.id).length;
+    const marcar=(s.id===sp);
+    return `<div class="bg-pick" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:10px;flex:1;min-width:190px;cursor:pointer;margin:0">
+        <input type="checkbox" class="bg-rel-sis" value="${s.id}" ${marcar?'checked':''}>
+        <span class="bg-pk-ic">${ic(s.icone)}</span>
+        <span class="bg-pk-t"><b>${esc(s.nome)}</b>
+          <em>${p.feitos}/${p.total} andar(es) no mês · ${pend?pend+' pendência(s)':'sem pendências'}</em></span>
+      </label>
+      <span class="rowact" style="gap:4px">
+        <button type="button" class="btn sm ghost" onclick="closeModal();brigPdfSistema('${c}','${s.id}','${m}')">${ic('doc')} Completo</button>
+        ${pend?`<button type="button" class="btn sm danger ghost" onclick="closeModal();brigPdfNC('${c}','${m}','${s.id}')">${ic('alert')} Só Pendências (${pend})</button>`:''}
+      </span>
+    </div>`;
+  }).join('');
+  openModal('Retirar Relatório de Check-list Separado',
+    `<div class="muted" style="margin-bottom:10px">
+       Escolha qual(is) sistema(s) deseja retirar no relatório (igual quando inicia o check-list), ou clique nos botões rápidos ao lado de cada sistema:</div>
+     <div class="rowact" style="gap:6px;margin-bottom:8px">
+       <button type="button" class="btn sm ghost" onclick="document.querySelectorAll('.bg-rel-sis').forEach(el=>el.checked=true)">Marcar todos</button>
+       <button type="button" class="btn sm ghost" onclick="document.querySelectorAll('.bg-rel-sis').forEach(el=>el.checked=false)">Desmarcar todos</button>
+     </div>
+     <div class="bg-picks">${picks}</div>
+     <div class="f2" style="margin-top:12px">
+       <div class="field"><label>Andar / Local</label>
+         <select id="bgRelAndar">
+           <option value="">Todos os andares inspecionados</option>
+           ${as.map(a=>`<option value="${a.id}">${esc(a.nome)}</option>`).join('')}
+         </select></div>
+       <div class="field"><label>O que exibir no relatório</label>
+         <select id="bgRelModo">
+           <option value="completo">Check-list completo (todos os pontos)</option>
+           <option value="nc">Somente Não Conformidades / Pendências</option>
+         </select></div>
+     </div>
+     <div class="muted" style="margin-top:8px;font-size:11.5px">As fotos anexadas aparecem automaticamente nos pontos que tiverem foto; pontos sem foto não exibem espaço em branco.</div>`,
+    `<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+     <button class="btn primary" onclick="brigConfirmarRelatorioSeparado('${c}','${m}')">${ic('print')} Gerar Relatório PDF</button>`);
+}
+async function brigPdfSeparado(cid,mes,sistemas,andar,soNC){
+  const sisArr=Array.isArray(sistemas)?sistemas:(sistemas?[sistemas]:[]);
+  if(!sisArr.length) return toast('Selecione ao menos um sistema para gerar o relatório.');
+  if(soNC){
+    return brigPdfNC(cid,mes,sisArr.length===1?sisArr[0]:sisArr,andar||'');
+  }
+  if(sisArr.length===1){
+    return brigPdfSistema(cid,sisArr[0],mes,{andar:andar||'',soNC:false});
+  }
+  const is=brigInsp.filter(x=>x.condoId===cid&&String(x.data).slice(0,7)===mes&&_brigMatchSis(x.sistema,sisArr)&&(!andar||String(x.andar)===String(andar)))
+    .sort((a,b)=>a.sistema.localeCompare(b.sistema)||brigOrdAndar(a.andar)-brigOrdAndar(b.andar));
+  const pend=brigNCAbertas(cid,mes).filter(x=>_brigMatchSis(x.insp.sistema,sisArr)&&(!andar||String(x.insp.andar)===String(andar)));
+  await precarregarFotos(refsDe(is.concat(pend.map(x=>x.insp))));
+  if(!is.length&&!pend.length) return toast('Nenhum check-list ou pendência encontrada para os filtros selecionados.');
+  const nomesSis=sisArr.map(s=>brigSis(s).nome).join(', ');
+  const subAndar=andar?' · '+brigAndarNome(andar):'';
+  brigAbrirPdf('Brigada — '+nomesSis,
+    brigCab('Relatório de Inspeção — '+nomesSis,condoName(cid)+' · '+mesExtenso(mes)+subAndar)+
+    brigResumoBox(is,pend)+
+    brigSecNC(cid,mes,sisArr,andar||'')+
+    brigSecPendenciasAtivas(cid,mes,{sistema:sisArr,andar:andar||''})+
+    (is.length?'<h2 class="sec">Detalhamento por sistema e andar</h2>'+is.map(i=>brigBlocoInsp(i,false)).join(''):'')+
+    brigAss());
+  audit('Gerou PDF separado da brigada',nomesSis+subAndar,'',cid);
+}
+function brigConfirmarRelatorioSeparado(cid,mes){
+  const sis=[...document.querySelectorAll('.bg-rel-sis:checked')].map(el=>el.value);
+  if(!sis.length) return toast('Marque ao menos um sistema.');
+  const andar=$('#bgRelAndar')?$('#bgRelAndar').value:'';
+  const soNC=($('#bgRelModo')&&$('#bgRelModo').value)==='nc';
+  closeModal();
+  brigPdfSeparado(cid,mes,sis,andar,soNC);
 }
 
 /* ============ SESSÃO GUIADA DE CHECK-LIST ============
@@ -15752,7 +15935,8 @@ function brigFinalizarSessao(){
         <div class="bg-txt">Tudo conforme nos pontos verificados.</div></div></div>`}
     </div>`,
     `<button class="btn" onclick="closeModal()">Fechar</button>
-     <button class="btn primary" onclick="closeModal();brigPdfGeral('${s.cid}',brigMesAtual())">Ver relatório</button>`);
+     ${ncs?`<button class="btn danger ghost" onclick="closeModal();brigPdfSeparado('${s.cid}',brigMesAtual(),${JSON.stringify(s.sistemas).replace(/"/g,"'")},'',true)">PDF só pendências</button>`:''}
+     <button class="btn primary" onclick="closeModal();brigPdfSeparado('${s.cid}',brigMesAtual(),${JSON.stringify(s.sistemas).replace(/"/g,"'")},'',false)">Ver relatório (${esc(s.sistemas.map(x=>brigSis(x).nome).join(', '))})</button>`);
 }
 function brigRascunhoIntocado(i){
   if(!i||i.status==='Concluído') return false;
@@ -20267,5 +20451,5 @@ window.addEventListener('keydown',e=>{
 });
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4da380f398b64e1',t:'MTc5MjUyMjMzOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e8f066bb45af23',t:'MTc5MjY3NjY5MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
