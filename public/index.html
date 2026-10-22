@@ -2866,105 +2866,171 @@ function viewDashboard(){
 
   const m=metrics(), ts=visibleTasks();
   const cards=[
-    ['Tarefas de Hoje',m.hoje.length,'','','hoje'],
-    ['Atrasadas',m.atras.length,'Requer ação imediata','red','atrasadas'],
+    ['Tarefas de Hoje',m.hoje.length,'Agenda do dia','','hoje'],
+    ['Atrasadas',m.atras.length,m.atras.length?'Requer atenção':'Em dia',m.atras.length?'red':'green','atrasadas'],
     ['Próximos 7 Dias',m.prox.length,'Planejamento','amber','prox7'],
-    ['Concluídas na Semana',m.conc.length,'','green','concsem'],
-    ['Pendentes',m.pend.length,'Pendente + Em andamento','amber','pendentes'],
+    ['Pendentes',m.pend.length,'Em aberto','amber','pendentes'],
+    ['Concluídas (Semana)',m.conc.length,'Últimos 7 dias','green','concsem'],
   ];
-  let html=`<div class="grid metrics">`;
+  let html=`<div class="grid metrics" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">`;
   const MICO={hoje:'today',atrasadas:'alertCircle',prox7:'calendar',concsem:'checkCircle',pendentes:'clock'};
-  cards.forEach(c=>html+=`<div class="card metric ${c[3]}" onclick="drill('${c[4]}')">
-      <div class="lbl">${ic(MICO[c[4]]||'chart')}${c[0]}</div><div class="val">${c[1]}</div><div class="sub">${c[2]||'&nbsp;'}</div>
-      <div class="t-sub" style="margin-top:6px">clique para detalhar</div></div>`);
-  html+=`<div class="card metric purple" onclick="drill('semana')">
-      <div class="lbl">% Conclusão Semanal</div><div class="val">${m.pct}%</div>
-      <div class="sub">${m.semanaConc.length} de ${m.semanaTot.length} tarefas</div>
-      <div class="progress"><div style="width:${m.pct}%"></div></div></div>`;
+  cards.forEach(c=>html+=`<div class="card metric ${c[3]}" style="padding:14px 16px;cursor:pointer" onclick="drill('${c[4]}')">
+      <div class="lbl">${ic(MICO[c[4]]||'chart')}${c[0]}</div>
+      <div class="val" style="font-size:26px;margin:4px 0 2px">${c[1]}</div>
+      <div class="sub" style="font-size:11.5px">${c[2]||'&nbsp;'}</div></div>`);
+  html+=`<div class="card metric purple" style="padding:14px 16px;cursor:pointer" onclick="drill('semana')">
+      <div class="lbl">${ic('chart')}% Conclusão Semanal</div>
+      <div class="val" style="font-size:26px;margin:4px 0 2px">${m.pct}%</div>
+      <div class="sub" style="font-size:11.5px">${m.semanaConc.length} de ${m.semanaTot.length} tarefas</div>
+      <div class="progress" style="margin-top:6px"><div style="width:${m.pct}%"></div></div></div>`;
   html+=`</div>`;
 
-  // Avisos
-  const avisos=[];
-  m.atras.slice().sort((a,b)=>a.vencimento.localeCompare(b.vencimento)).slice(0,6).forEach(t=>
-    avisos.push(['red',ic('alert'),`Atrasada: ${t.titulo}`,`${condoName(t.condoId)} · venceu em ${fmt(t.vencimento)} (${-diffDays(t.vencimento,today())} dia(s))`,t.id]));
-  ts.filter(t=>!t.responsavel&&t.status!=='Concluída').slice(0,5).forEach(t=>
-    avisos.push(['amber',ic('user'),`Sem responsável: ${t.titulo}`,`${condoName(t.condoId)} · venc. ${fmt(t.vencimento)}`,t.id]));
-  apontamentos.filter(a=>a.status!=='Resolvido'&&a.prioridade==='Urgente').slice(0,4).forEach(a=>
-    avisos.push(['red',ic('wrench'),`Apontamento urgente: ${a.titulo}`,`${condoName(a.condoId)} · ${esc(a.local)} · por ${a.autor}`,null]));
-  estoqueBaixo().slice(0,5).forEach(i=>
-    avisos.push(['amber',ic('box'),`Estoque baixo: ${i.nome}`,`${i.qtd} ${i.unidade} · mínimo ${i.minimo} — necessário comprar`,null]));
-  pedidos.filter(p=>p.status==='Aberto').slice(0,3).forEach(p=>
-    avisos.push(['blue',ic('cart'),`Pedido de material aguardando aprovação`,`${p.itens.length} item(ns) · solicitado por ${p.solicitante} em ${fmt(p.data)}`,null]));
-  leituras.filter(l=>leitStatusAuto(l)==='Atrasada'&&P().condos.includes(l.condoId)).slice(0,3).forEach(l=>
-    avisos.push(['red',ic('water'),`Leitura atrasada: ${l.tipo==='agua'?'Água':'Energia'}`,`${condoName(l.condoId)} · programada para ${fmt(l.data)}`,null]));
-    visibleCess().filter(c=>cessStatusAuto(c)==='Atrasada').slice(0,4).forEach(c=>
-      avisos.push(['red',ic('contract'),`Cessão atrasada: ${c.unidade}`,`${condoName(c.condoId)} · ${c.nome} · previsto ${fmt(c.vencimento)}`,null]));
-    /* Chamados aguardando o direcionamento do Gestor */
-    if(podeTriar()){ const tr=chamadosTriagem();
-      if(tr.length) avisos.push(['red',ic('bell'),
-        `${tr.length} chamado(s) aguardando seu direcionamento`,
-        `Aberto(s) na ronda por ${[...new Set(tr.map(x=>x.criadoPor))].filter(Boolean).join(', ')||'—'} — clique para direcionar`,
-        null,'abrirTriagemChamados()']); }
-    /* Chamados que a brigada abriu na ronda — manutenção e gestor */
-    { const rc=rondaChamadosAbertos();
-      const ru=rc.filter(chamadoUrgente).length, rs=chamadosAProgramar().length;
-      const ra=chamadosProgramados().filter(t=>diffDays(t.vencimento,today())<0).length;
-      if(rc.length) avisos.push([ru||ra?'red':'amber',ic('route'),
-        `${rc.length} chamado(s) da ronda com a manutenção`,
-        [ru?ru+' urgente(s)':'',rs?rs+' aguardando data':'',ra?ra+' passou da data':'']
-          .filter(Boolean).join(' · ')+' — clique para organizar',
-        null,'abrirPainelChamadosRonda()']); }
-    /* Brigada: não conformidades abertas viram aviso no painel do Gestor */
-    if(P().brigada||P().tipos.includes('Gestor')) brigResumoNC('c1',brigMesAtual()).slice(0,4).forEach(r=>
-      avisos.push(['red',ic('flame'),`${r.qtd} ${r.qtd>1?'itens não conformes':'item não conforme'}: ${r.nome}`,
-        `E-Business · ${r.andares.length} andar(es): ${r.andares.map(brigAndarNome).join(', ')} — apontado pela brigada`,null]));
-    moAguardandoLaudo().slice(0,4).forEach(m=>
-      avisos.push(['amber',ic('upload'),
-        `Falta o laudo: ${m.servico}`,
-        `${condoName(m.condoId)} · serviço feito em ${fmt(m._exec.data)}${m._exec.prestador?' por '+m._exec.prestador:''} · ${m._dias} dia(s) aguardando o documento`,
-        null,`moAnexarLaudo('${m.id}',0)`]));
-    moVencendo(30).slice(0,5).forEach(m=>
-      avisos.push([m._dias<0?'red':'amber',ic('shieldCheck'),
-        (m._dias<0?`Manutenção vencida: ${m.servico}`:`Manutenção a vencer: ${m.servico}`),
-        `${condoName(m.condoId)} · ${m.periodicidade}${m.obrigLegal?' · obrigação legal':''} · ${m._dias<0?('venceu há '+Math.abs(m._dias)+' dia'+(Math.abs(m._dias)===1?'':'s')):m._dias===0?'vence hoje':('faltam '+m._dias+' dias')} · ${fmt(m._pr)}`,
-        ()=>go('manutobrig')]));
-    pubVencendo(30).slice(0,4).forEach(a=>
-      avisos.push([a._dias<0?'red':'amber',ic('megaphone'),
-        (a._dias<0?`Contrato de publicidade vencido: ${a.empresa}`:`Contrato de publicidade a vencer: ${a.empresa}`),
-        `${condoName(a.condoId)} · ${a.elevador} · ${a._dias<0?('venceu há '+Math.abs(a._dias)+' dia'+(Math.abs(a._dias)===1?'':'s')):a._dias===0?'vence hoje':('faltam '+a._dias+' dias')} · ${fmt(a.fim)}`,
-        ()=>go('publicidade')]));
-  m.hoje.filter(t=>t.prioridade==='Alta').slice(0,4).forEach(t=>
-    avisos.push(['blue',ic('clock'),`Prioridade alta hoje: ${t.titulo}`,`${condoName(t.condoId)} · ${t.responsavel||'sem responsável'}`,t.id]));
+  /* Resumo agrupado de atenção por setor (1 linha limpa por módulo, sem poluição visual) */
+  const alertasSetor=[];
+  if(podeTriar()){
+    const tr=chamadosTriagem();
+    if(tr.length) alertasSetor.push({
+      cor:'red', icone:ic('bell'),
+      tit:`${tr.length} chamado(s) aguardando direcionamento`,
+      sub:`Aberto(s) por ${[...new Set(tr.map(x=>x.criadoPor))].filter(Boolean).join(', ')||'—'}`,
+      acao:`abrirTriagemChamados()`, btn:'Direcionar'
+    });
+  }
+  const apUrg=apontamentos.filter(a=>a.status!=='Resolvido'&&a.prioridade==='Urgente');
+  if(apUrg.length) alertasSetor.push({
+    cor:'red', icone:ic('wrench'),
+    tit:`${apUrg.length} apontamento(s) urgente(s) em aberto`,
+    sub:apUrg.slice(0,2).map(a=>a.titulo).join(' · ')+(apUrg.length>2?` (+${apUrg.length-2})`:''),
+    acao:`go('apontamentos')`, btn:'Abrir'
+  });
+  const leitAtr=leituras.filter(l=>leitStatusAuto(l)==='Atrasada'&&P().condos.includes(l.condoId));
+  if(leitAtr.length) alertasSetor.push({
+    cor:'red', icone:ic('water'),
+    tit:`${leitAtr.length} leitura(s) pendente(s) / em atraso`,
+    sub:[...new Set(leitAtr.map(l=>l.tipo==='agua'?'Água':'Energia'))].join(' e ')+' · mais antiga de '+fmt(leitAtr[0].data),
+    acao:`go('leituras')`, btn:'Leituras'
+  });
+  const cessAtr=visibleCess().filter(c=>cessStatusAuto(c)==='Atrasada');
+  if(cessAtr.length) alertasSetor.push({
+    cor:'red', icone:ic('contract'),
+    tit:`${cessAtr.length} cessão(ões) de direito atrasada(s)`,
+    sub:cessAtr.slice(0,3).map(c=>'Unid. '+c.unidade).join(', '),
+    acao:`go('cessoes')`, btn:'Cessões'
+  });
+  const moVenc=moVencendo(30), moLaudo=moAguardandoLaudo();
+  const moVencidas=moVenc.filter(x=>x._dias<0).length, moAVencer=moVenc.filter(x=>x._dias>=0).length;
+  if(moVencidas||moAVencer||moLaudo.length){
+    const partes=[];
+    if(moVencidas) partes.push(`${moVencidas} vencida(s)`);
+    if(moAVencer) partes.push(`${moAVencer} a vencer (30d)`);
+    if(moLaudo.length) partes.push(`${moLaudo.length} aguardando laudo`);
+    alertasSetor.push({
+      cor:moVencidas?'red':'amber', icone:ic('shieldCheck'),
+      tit:`Manutenções Obrigatórias: ${partes.join(' · ')}`,
+      sub:moVenc.slice(0,2).map(x=>x.servico).join(' · ')||(moLaudo[0]?moLaudo[0].servico:''),
+      acao:`go('manutobrig')`, btn:'Ver painel'
+    });
+  }
+  const pubVenc=pubVencendo(30);
+  if(pubVenc.length){
+    const pv=pubVenc.filter(x=>x._dias<0).length, pa=pubVenc.filter(x=>x._dias>=0).length;
+    alertasSetor.push({
+      cor:pv?'amber':'blue', icone:ic('megaphone'),
+      tit:`Publicidade nos Elevadores: ${[pv?pv+' vencido(s)':'',pa?pa+' a vencer':''].filter(Boolean).join(' · ')}`,
+      sub:pubVenc.slice(0,3).map(a=>a.empresa).join(', ')+(pubVenc.length>3?` (+${pubVenc.length-3})`:''),
+      acao:`go('publicidade')`, btn:'Contratos'
+    });
+  }
+  const estB=estoqueBaixo(), pedAb=pedidos.filter(p=>p.status==='Aberto');
+  if(estB.length||pedAb.length){
+    const pts=[];
+    if(estB.length) pts.push(`${estB.length} item(ns) com estoque baixo`);
+    if(pedAb.length) pts.push(`${pedAb.length} pedido(s) aguardando aprovação`);
+    alertasSetor.push({
+      cor:pedAb.length?'blue':'amber', icone:ic('box'),
+      tit:`Estoque e Compras: ${pts.join(' · ')}`,
+      sub:estB.slice(0,3).map(i=>i.nome).join(', ')||'Pedidos de material pendentes',
+      acao:pedAb.length?`go('pedidos')`:`go('estoque')`, btn:'Ver'
+    });
+  }
+  const semResp=ts.filter(t=>!t.responsavel&&t.status!=='Concluída');
+  if(semResp.length){
+    alertasSetor.push({
+      cor:'amber', icone:ic('user'),
+      tit:`${semResp.length} tarefa(s) sem responsável definido`,
+      sub:semResp.slice(0,2).map(t=>t.titulo).join(' · '),
+      acao:`go('tarefas')`, btn:'Atribuir'
+    });
+  }
 
-  html+=`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));margin-top:18px">
-    <div class="card"><div class="section-title" style="margin-top:0"><h3>Avisos Importantes</h3>
-      <span class="spacer badge b-atr">${avisos.filter(a=>a[0]==='red').length} críticos</span></div>
-      ${avisos.length?avisos.map(a=>`<div class="feed-item ${a[0]}" ${a[5]?`style="cursor:pointer" onclick="${a[5]}"`:(a[4]?`style="cursor:pointer" onclick="openTask('${a[4]}')"`:'')}>
-        <div>${a[1]}</div><div><div class="ft">${esc(a[2])}</div><div class="fd">${esc(a[3])}</div></div></div>`).join('')
-        :'<div class="empty">'+ic('inbox','ico-lg')+'<div>Nenhuma pendência crítica.</div></div>'}
+  /* Coluna Esquerda: Agenda de Hoje + Tarefas Atrasadas | Coluna Direita: Atenção por Setor */
+  const listaAtras=m.atras.slice().sort((a,b)=>String(a.vencimento).localeCompare(String(b.vencimento)));
+  html+=`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:16px;margin-top:16px;align-items:start">
+    <div class="card">
+      <div class="section-title" style="margin-top:0">
+        <h3>${ic('today')} Agenda de Hoje & Atrasadas</h3>
+        <span class="spacer" style="display:flex;gap:6px;align-items:center">
+          ${listaAtras.length?`<span class="badge b-atr">${listaAtras.length} atrasada(s)</span>`:''}
+          <span class="badge b-and">${m.hoje.length} para hoje</span>
+        </span>
+      </div>
+      ${listaAtras.length?`<div class="t-sub" style="font-weight:700;color:#c2384a;margin:4px 0 6px;text-transform:uppercase;font-size:11px;letter-spacing:.04em">Em atraso</div>
+        ${listaAtras.slice(0,5).map(t=>`<div class="feed-item red" style="cursor:pointer;padding:10px 12px;margin-bottom:6px" onclick="openTask('${t.id}')">
+          <div>${ic('alert')}</div>
+          <div style="flex:1;min-width:0">
+            <div class="ft">${esc(t.titulo)}</div>
+            <div class="fd">${condoName(t.condoId)} · ${esc(t.responsavel||'sem responsável')} · venceu em ${fmt(t.vencimento)} (${-diffDays(t.vencimento,today())}d)</div>
+          </div>
+          ${badgePrio(t.prioridade)}
+        </div>`).join('')}
+        ${listaAtras.length>5?`<div class="t-sub" style="margin-bottom:8px;cursor:pointer;color:var(--blue)" onclick="drill('atrasadas')">+ ${listaAtras.length-5} tarefa(s) atrasada(s)…</div>`:''}`:''}
+      <div class="t-sub" style="font-weight:700;color:var(--navy);margin:${listaAtras.length?'12px':'4px'} 0 6px;text-transform:uppercase;font-size:11px;letter-spacing:.04em">Para hoje — ${fmt(today())}</div>
+      ${m.hoje.length?m.hoje.map(t=>`<div class="feed-item blue" style="cursor:pointer;padding:10px 12px;margin-bottom:6px" onclick="openTask('${t.id}')">
+        <div>${ic('checkCircle')}</div>
+        <div style="flex:1;min-width:0">
+          <div class="ft">${esc(t.titulo)}</div>
+          <div class="fd">${condoName(t.condoId)} · ${esc(t.responsavel||'sem responsável')}</div>
+        </div>
+        ${badgePrio(t.prioridade)}
+      </div>`).join('')
+      :`<div class="empty" style="padding:18px 12px">${ic('inbox')}<div style="margin-top:4px">Nenhuma tarefa pendente para hoje.</div></div>`}
+      <div class="rowact no-print" style="margin-top:10px;justify-content:flex-end">
+        <button class="btn sm ghost" onclick="go('hoje')">Meu Dia</button>
+        <button class="btn sm ghost" onclick="go('tarefas')">Todas as tarefas</button>
+      </div>
     </div>
-    <div class="card"><div class="section-title" style="margin-top:0"><h3>Agenda de Hoje — ${fmt(today())}</h3></div>
-      ${m.hoje.length?m.hoje.map(t=>`<div class="feed-item blue" style="cursor:pointer" onclick="openTask('${t.id}')">
-        <div>•</div><div style="flex:1"><div class="ft">${esc(t.titulo)}</div>
-        <div class="fd">${condoName(t.condoId)} · ${esc(t.responsavel||'sem responsável')}</div></div>
-        ${badgePrio(t.prioridade)}</div>`).join('')
-        :'<div class="empty">'+ic('inbox','ico-lg')+'<div>Sem tarefas para hoje.</div></div>'}
-    </div></div>`;
 
-  // resumo por condomínio
-  html+=`<div class="section-title"><h3>${ic('building')} Resumo por Condomínio</h3></div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">`;
+    <div class="card">
+      <div class="section-title" style="margin-top:0">
+        <h3>${ic('bell')} Resumo de Atenção por Setor</h3>
+        <span class="spacer badge ${alertasSetor.some(a=>a.cor==='red')?'b-atr':'b-conc'}">${alertasSetor.length} setor(es)</span>
+      </div>
+      ${alertasSetor.length?alertasSetor.map(a=>`<div class="feed-item ${a.cor}" style="cursor:pointer;padding:10px 12px;margin-bottom:6px;align-items:center" onclick="${a.acao}">
+        <div>${a.icone}</div>
+        <div style="flex:1;min-width:0">
+          <div class="ft">${esc(a.tit)}</div>
+          ${a.sub?`<div class="fd" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.sub)}</div>`:''}
+        </div>
+        <button class="btn sm ghost" style="flex-shrink:0" onclick="event.stopPropagation();${a.acao}">${esc(a.btn||'Abrir')}</button>
+      </div>`).join('')
+      :'<div class="empty" style="padding:24px 12px">'+ic('inbox','ico-lg')+'<div>Todos os setores estão em dia.</div></div>'}
+    </div>
+  </div>`;
+
+  // Resumo por condomínio
+  html+=`<div class="section-title" style="margin-top:18px"><h3>${ic('building')} Resumo por Condomínio</h3></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">`;
   condosDo('tarefas').forEach(c=>{
     const l=ts.filter(t=>t.condoId===c.id);
     const cc=l.filter(t=>t.status==='Concluída').length, at=l.filter(t=>t.status==='Atrasada').length;
     const pc=l.length?Math.round(cc/l.length*100):0;
-    html+=`<div class="card"><div style="display:flex;align-items:center;gap:8px"><b style="color:var(--navy)">${c.nome}</b>
+    html+=`<div class="card" style="padding:14px 16px"><div style="display:flex;align-items:center;gap:8px"><b style="color:var(--navy)">${c.nome}</b>
       <span class="spacer badge ${at?'b-atr':'b-conc'}">${at} atrasada(s)</span></div>
-      <div class="t-sub" style="margin-top:8px">${l.length} tarefas no escopo · ${cc} concluídas</div>
-      <div class="progress"><div style="width:${pc}%"></div></div>
-      <div class="t-sub" style="margin-top:6px">${pc}% de conclusão geral</div></div>`;
+      <div class="t-sub" style="margin-top:6px">${l.length} tarefas no escopo · ${cc} concluídas (${pc}%)</div>
+      <div class="progress" style="margin-top:6px"><div style="width:${pc}%"></div></div></div>`;
   });
   html+=`</div>`;
-  $('#content').innerHTML=cardChamadosRonda()+iaCard('Leitura do dia',iaTudo(condoFilter).slice(0,5),false)+html;
+  $('#content').innerHTML=cardChamadosRonda()+html;
 }
 /* ============ CARTAO FIXO DOS CHAMADOS DA RONDA ============
    Pedido do Gestor: o urgente nao pode depender de pop-up nem de alerta que
@@ -2980,32 +3046,30 @@ function cardChamadosRonda(){
     const r=brigRondas.find(x=>x.id===t.rondaId)||{};
     const d=r.data?diffDays(r.data,today()):null;
     const ha=d===null?'':d===0?'hoje':'há '+Math.abs(d)+' dia(s)';
-    return `<div class="feed-item red" style="align-items:flex-start;cursor:pointer"
+    return `<div class="feed-item red" style="align-items:center;cursor:pointer;padding:8px 12px;margin-bottom:6px"
          onclick="abrirChamadoRonda('${t.id}')">
       <div style="flex:1;min-width:0">
-        <div class="ft">${esc(brigAndarNome(r.andar)||t.titulo)}</div>
-        <div class="fd">${esc(r.obs||t.titulo)}</div>
-        <div class="t-sub" style="margin-top:3px">apontado ${esc(ha)} por ${esc(r.autor||t.criadoPor||'—')}</div>
+        <div class="ft">${esc(brigAndarNome(r.andar)||t.titulo)} — <span style="font-weight:500">${esc(r.obs||t.titulo)}</span></div>
+        <div class="t-sub">apontado ${esc(ha)} por ${esc(r.autor||t.criadoPor||'—')}</div>
       </div></div>`;
   };
   const chips=[];
   if(semData.length) chips.push(`<span class="badge b-pend">${semData.length} sem data</span>`);
   if(atras.length)   chips.push(`<span class="badge b-atr">${atras.length} passou da data</span>`);
   if(hoje.length)    chips.push(`<span class="badge b-and">${hoje.length} para hoje</span>`);
-  return `<div class="card" style="margin-bottom:14px;border-left:5px solid ${urg.length?'#c2384a':'#f08c00'}">
-    <div class="section-title" style="margin-top:0">
-      <h3>${ic('route')} Chamados da ronda</h3>
-      <span class="spacer badge ${urg.length?'b-atr':'b-conc'}">${urg.length} urgente(s)</span></div>
-    ${urg.length?`<div class="muted" style="font-size:12px;margin-bottom:8px">
-        Urgente é para atender agora — não tem data e continua aqui até ser concluída.</div>
-      ${urg.slice(0,5).map(item).join('')}
-      ${urg.length>5?`<div class="muted" style="margin-top:6px">e mais ${urg.length-5} urgente(s)…</div>`:''}`
-     :'<div class="muted" style="font-size:12px;margin-bottom:8px">Nenhum urgente em aberto.</div>'}
-    ${chips.length?`<div class="rowact" style="margin-top:10px;gap:6px">${chips.join('')}</div>`:''}
-    <div class="rowact no-print" style="margin-top:10px">
-      <button class="btn sm primary" onclick="abrirPainelChamadosRonda()">
+  return `<div class="card" style="margin-bottom:14px;padding:12px 16px;border-left:5px solid ${urg.length?'#c2384a':'#f08c00'}">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:${urg.length?'8px':'0'}">
+      <b style="color:var(--navy);display:flex;align-items:center;gap:6px;font-size:14.5px">${ic('route')} Chamados da ronda</b>
+      <span class="badge ${urg.length?'b-atr':'b-conc'}">${urg.length} urgente(s)</span>
+      ${chips.join('')}
+      <span class="spacer"></span>
+      <button class="btn sm primary no-print" onclick="abrirPainelChamadosRonda()">
         ${podeProgramarChamado()?'Organizar e marcar datas':'Ver chamados'}</button>
-    </div></div>`;
+    </div>
+    ${urg.length?`${urg.slice(0,3).map(item).join('')}
+      ${urg.length>3?`<div class="muted" style="font-size:12px;margin-top:4px">e mais ${urg.length-3} urgente(s)…</div>`:''}`
+     :''}
+  </div>`;
 }
 function badgeStatus(s){const m={'Pendente':'b-pend','Em Andamento':'b-and','Concluída':'b-conc','Atrasada':'b-atr'};return `<span class="badge ${m[s]}">${s}</span>`}
 function badgePrio(p){const m={'Urgente':'b-urg','Alta':'b-alta','Média':'b-media','Baixa':'b-baixa'};
@@ -20780,6 +20844,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4eaceaa4cd4debf',t:'MTc5MjY5NjI4MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4eb6b6ac91e181b',t:'MTc5MjcwMjcwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
