@@ -132,6 +132,10 @@ export async function lerWorkspace(id = 'default') {
    em producao. Aqui: se a chave sumiu do que chegou mas existe com conteudo
    no que esta gravado, mantemos a gravada. Nao mexe em chave enviada vazia
    de proposito; so na que foi OMITIDA. */
+function _statusConcluido(st) {
+  return st === 'Concluída' || st === 'Concluído' || st === 'Pago' || st === 'Registrada';
+}
+
 function preservarColecoes(novo, antigo) {
   if (!novo || !antigo || typeof novo !== 'object' || typeof antigo !== 'object') return novo;
   let mantidas = [];
@@ -144,6 +148,41 @@ function preservarColecoes(novo, antigo) {
     }
   }
   if (mantidas.length) console.log('[grc] coleções preservadas (cliente antigo):', mantidas.join(', '));
+
+  /* Check-list da Brigada não abre demandas para o Gestor em tasks (origem='brigada'):
+     impede que aparelhos com versão antiga em cache recriem essas demandas no servidor. */
+  if (Array.isArray(novo.tasks)) {
+    novo.tasks = novo.tasks.filter(t => !t || t.origem !== 'brigada');
+  }
+
+  /* Proteção contra regressão de registros já concluídos ou com histórico mais recente:
+     impede que um aparelho com cache antigo sobrescreva cessões, tarefas, check-lists
+     da brigada, salas, notas ou manutenções já concluídas no servidor. */
+  const colsProtegidas = ['cessoes', 'tasks', 'brigInsp', 'salas', 'notas', 'manutObrig'];
+  for (const col of colsProtegidas) {
+    if (!Array.isArray(novo[col]) || !Array.isArray(antigo[col]) || !antigo[col].length) continue;
+    const mapaAnt = new Map();
+    for (const item of antigo[col]) {
+      if (item && item.id) mapaAnt.set(item.id, item);
+    }
+    for (let i = 0; i < novo[col].length; i++) {
+      const nv = novo[col][i];
+      if (!nv || !nv.id) continue;
+      const ant = mapaAnt.get(nv.id);
+      if (!ant) continue;
+      const hAnt = Array.isArray(ant.historico) ? ant.historico.length : 0;
+      const hNv = Array.isArray(nv.historico) ? nv.historico.length : 0;
+      const ultNv = hNv ? String((nv.historico[hNv - 1] && nv.historico[hNv - 1].t) || '') : '';
+      const reabertoExplicito = hNv > hAnt && /reabert|desmarcad|volta/i.test(ultNv);
+      if (_statusConcluido(ant.status) && !_statusConcluido(nv.status) && !reabertoExplicito) {
+        novo[col][i] = ant;
+        continue;
+      }
+      if (hAnt > hNv && !(_statusConcluido(nv.status) && !_statusConcluido(ant.status))) {
+        novo[col][i] = ant;
+      }
+    }
+  }
   return novo;
 }
 
