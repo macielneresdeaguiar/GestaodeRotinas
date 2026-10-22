@@ -2369,6 +2369,7 @@ function load(d){
     if(migrarCessoesLgpd()) mig=true;
     if(migrarEnergiaPadrao()) mig=true;
     if(migrarSalasLocacao()) mig=true;
+    if(typeof migrarBrigadaCicloMensal==='function'&&migrarBrigadaCicloMensal()) mig=true;
     if(mig) save();
     migrarLaudosParaFora();   // assincrona: salva sozinha quando terminar
     return true;
@@ -6360,6 +6361,26 @@ function migrarCessoesLgpd(){
   let mudou=false;
   (cessoes||[]).forEach(c=>{
     if(c&&c.doc){ c.doc=''; mudou=true; }
+  });
+  /* Arquiva cópias duplicadas da tarefa mensal "Cessões de direito" no mesmo mês/condomínio,
+     preservando a primeira concluída (ou a primeira da lista). */
+  const porMesCess={};
+  (tasks||[]).forEach(t=>{
+    if(!t||t.arquivada||t.status==='Cancelada'||!ehTarefaCessao(t)) return;
+    const ym=String(t.vencimento||'').slice(0,7);
+    if(!/^\d{4}-\d{2}$/.test(ym)) return;
+    const k=(t.condoId||'c1')+'|'+ym;
+    (porMesCess[k]=porMesCess[k]||[]).push(t);
+  });
+  Object.values(porMesCess).forEach(lista=>{
+    if(lista.length<2) return;
+    const fica=lista.find(x=>x.status==='Concluída')||lista[0];
+    lista.forEach(t=>{
+      if(t===fica) return;
+      t.arquivada=true;
+      (t.historico=t.historico||[]).push({q:'Sistema',w:nowStamp(),t:'Cópia duplicada da tarefa mensal de Cessões de direito — arquivada automaticamente'});
+      mudou=true;
+    });
   });
   /* Garante a tarefa mensal "Cessões de direito" no dia 15 para todo mês que
      já tenha cessões em aberto cadastradas na base real. */
@@ -11193,22 +11214,25 @@ function exportLeituras(){
 function dashBrigada(){
   const cid=P().condos[0]||'c1';
   const mes=brigMesAtual();
-  const prog=brigProgresso(cid,mes);
+  const ciclo=typeof brigSincronizarCicloMensal==='function'?brigSincronizarCicloMensal(cid,mes):null;
+  const prog=ciclo||{...brigProgresso(cid,mes),concluido:false,proxMes:''};
   const hoje=today();
   const minhaRonda=brigRondas.filter(r=>r.condoId===cid&&r.data===hoje);
   const meusAndares=new Set(minhaRonda.map(r=>r.andar)).size;
-  const parada=typeof brigOndeParou==='function'?brigOndeParou(cid):null;
+  const parada=(!prog.concluido&&typeof brigOndeParou==='function')?brigOndeParou(cid):null;
   /* próxima parada pendente do mês (prioriza onde o brigadista parou) */
   let prox=null;
-  if(parada){
-    const sObj=brigSis(parada.sistema);
-    const aObj=BRIG_ANDARES.find(x=>x.id===parada.andar)||{id:parada.andar,nome:brigAndarNome(parada.andar)};
-    prox={sistema:sObj,andar:aObj,retomar:true};
-  }else{
-    for(const s of BRIG_SISTEMAS){
-      const a=brigAndaresDo(s.id).find(a=>!brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&
-        i.sistema===s.id&&String(i.data).slice(0,7)===mes&&i.status==='Concluído'));
-      if(a){ prox={sistema:s,andar:a,retomar:false}; break }
+  if(!prog.concluido){
+    if(parada){
+      const sObj=brigSis(parada.sistema);
+      const aObj=BRIG_ANDARES.find(x=>x.id===parada.andar)||{id:parada.andar,nome:brigAndarNome(parada.andar)};
+      prox={sistema:sObj,andar:aObj,retomar:true};
+    }else{
+      for(const s of BRIG_SISTEMAS){
+        const a=brigAndaresDo(s.id).find(a=>!brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&
+          i.sistema===s.id&&String(i.data).slice(0,7)===mes&&i.status==='Concluído'));
+        if(a){ prox={sistema:s,andar:a,retomar:false}; break }
+      }
     }
   }
   $('#content').innerHTML=`
@@ -11225,10 +11249,10 @@ function dashBrigada(){
         </div></div></div>
 
     <div class="grid metrics" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-bottom:14px">
-      <div class="card metric" style="cursor:pointer" onclick="go('brigada')">
+      <div class="card metric ${prog.concluido?'green':''}" style="cursor:pointer" onclick="go('brigada')">
         <div class="lbl">${ic('clipboardCheck')}Check-lists do mês</div>
         <div class="val">${prog.feitos}/${prog.total}</div>
-        <div class="sub">${prog.pct}% concluído · Toque para abrir o Check-list por Andar</div>
+        <div class="sub">${prog.concluido?`100% concluído (1x/mês) · Próximo em ${esc(mesExtenso(prog.proxMes))}`:`${prog.pct}% concluído · Toque para abrir o Check-list por Andar`}</div>
       </div>
       <div class="card metric" style="cursor:pointer" onclick="go('brigada-ronda')">
         <div class="lbl">${ic('route')}Ronda de hoje</div>
@@ -11250,11 +11274,17 @@ function dashBrigada(){
           <button class="btn ghost" onclick="brigSisSel='${prox.sistema.id}';go('brigada')">Check-list por Andar</button>
         </div>
       </div></div>`
-    :`<div class="card" style="margin-bottom:14px">
-      <div class="ap-faixa">${ic('checkCircle')} CHECK-LIST DO MÊS</div>
+    :`<div class="card" style="margin-bottom:14px;border-left:4px solid #1d7a4c;background:#eefaf3">
+      <div class="ap-faixa" style="background:#1d7a4c">${ic('checkCircle')} CHECK-LIST DO MÊS — CICLO MENSAL CONCLUÍDO (1X POR MÊS)</div>
       <div style="padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <span class="muted">Tudo concluído neste mês. Bom trabalho.</span>
-        <button class="btn ghost sm" onclick="go('brigada')">Abrir Check-list por Andar</button>
+        <div>
+          <div style="font-weight:700;color:#14532d">Tudo concluído neste mês (${prog.feitos}/${prog.total} — 100%). Bom trabalho.</div>
+          <div class="muted" style="font-size:12.5px;margin-top:2px;color:#166534">O check-list da brigada é feito 1 vez por mês. Próximo ciclo mensal: <b>${esc(mesExtenso(prog.proxMes))}</b>.</div>
+        </div>
+        <div class="rowact">
+          <button class="btn ghost sm" onclick="go('brigada')">Abrir Check-list por Andar</button>
+          <button class="btn sm primary" onclick="brigModalRelatorio('${cid}','${mes}','')">${ic('doc')} Relatórios do mês</button>
+        </div>
       </div></div>`}`;
 }
 
@@ -14021,15 +14051,26 @@ async function syncBaixar(){
     }
     const _foto=_fotoLocal();
     /* Antes de aceitar o que vem do servidor, anota o que foi feito aqui e
-       ainda não subiu (trabalho offline). */
-    _marcarSujos(SYNC.base);
+       ainda não subiu (trabalho offline). Se acabamos de abrir o app, os sujos
+       reais já foram apurados em iniciarCom() ANTES das migrações de código. */
+    if(SYNC.base||!SYNC._bootSujosMarcados){
+      _marcarSujos(SYNC.base);
+    }
+    SYNC._bootSujosMarcados=false;
     aplicarSnapshot(d.snapshot);
     const _n=(SYNC.base||SYNC.baseIdx)?_reaplicarLocal(_foto,SYNC.base):0;
-    SYNC.base=JSON.parse(JSON.stringify(d.snapshot));
+    const _snapPos=dbSnapshot();
     SYNC.versao=d.versao;
-    gravarBaseIdx(d.snapshot);
-    SYNC.assinatura=_assina(d.snapshot);
-    if(_n) agendarSync(); else SYNC.assinatura=_assina(dbSnapshot());
+    if(_n){
+      SYNC.base=JSON.parse(JSON.stringify(d.snapshot));
+      gravarBaseIdx(d.snapshot);
+      SYNC.assinatura=_assina(d.snapshot);
+      agendarSync();
+    }else{
+      SYNC.base=JSON.parse(JSON.stringify(_snapPos));
+      gravarBaseIdx(_snapPos);
+      SYNC.assinatura=_assina(_snapPos);
+    }
     SYNC.ultimo=new Date().toLocaleString('pt-BR');
     salvaSyncCfg({versao:d.versao});
     salvarLocal();
@@ -14459,6 +14500,17 @@ function brigInspDo(cid,andar,sistema,mesRef){
     (!sistema||i.sistema===sistema)&&(!mesRef||String(i.data).slice(0,7)===mesRef));
 }
 function brigMesAtual(){ return today().slice(0,7) }
+function _brigProximoMes(mesRef){
+  const m=String(mesRef||brigMesAtual()).slice(0,7);
+  const [y,mm]=m.split('-').map(Number);
+  if(!y||!mm) return brigMesAtual();
+  return mm>=12?`${y+1}-01`:`${y}-${String(mm+1).padStart(2,'0')}`;
+}
+function ehTarefaChecklistBrigada(t){
+  if(!t||!t.titulo||t.origem==='brigada'||t.origem==='ronda') return false;
+  const s=String(t.titulo).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  return /check\s*-?\s*list.*brigada|brigada.*check\s*-?\s*list/.test(s);
+}
 /* progresso do mês: quantos pares andar+sistema já foram inspecionados */
 function brigProgresso(cid,mesRef){
   let total=0,feitos=0;
@@ -14468,6 +14520,165 @@ function brigProgresso(cid,mesRef){
        String(i.data).slice(0,7)===mesRef&&i.status==='Concluído')) feitos++;
   }));
   return {total,feitos,pct:total?Math.round(feitos*100/total):0};
+}
+/* Estado completo do ciclo mensal do check-list do brigadista (realizado 1 vez por mês). */
+function brigCicloMensal(cid,mesRef){
+  cid=cid||(condoFilter==='all'?'c1':condoFilter);
+  const mes=String(mesRef||brigMesAtual()).slice(0,7);
+  const proxMes=_brigProximoMes(mes);
+  const prog=brigProgresso(cid,mes);
+  const sistemas=BRIG_SISTEMAS.map(s=>{
+    const as=brigAndaresDo(s.id);
+    const feitos=as.filter(a=>brigInsp.some(i=>i.condoId===cid&&i.andar===a.id&&i.sistema===s.id&&
+      String(i.data).slice(0,7)===mes&&i.status==='Concluído')).length;
+    return {id:s.id,nome:s.nome,total:as.length,feitos,falta:Math.max(0,as.length-feitos),concluido:as.length>0&&feitos>=as.length};
+  });
+  const sistemasConcluidos=sistemas.filter(s=>s.concluido).length;
+  const concluido=prog.total>0&&prog.feitos>=prog.total;
+  return {
+    cid,mes,proxMes,
+    total:prog.total,feitos:prog.feitos,falta:Math.max(0,prog.total-prog.feitos),pct:prog.pct,
+    concluido,sistemas,sistemasConcluidos,
+    frequencia:'1 vez por mês'
+  };
+}
+/* Quando todos os check-lists do mês são finalizados, o sistema reconhece automaticamente
+   que o ciclo mensal da brigada (1x por mês) foi concluído, finaliza eventual tarefa mensal
+   vinculada e limpa ponteiros de retomada daquele mês. */
+function brigSincronizarCicloMensal(cid,mesRef){
+  const info=brigCicloMensal(cid,mesRef);
+  if(!info.concluido) return info;
+  let mudou=false;
+  if(info.mes===brigMesAtual()){
+    if(brigSessao&&(!brigSessao.cid||brigSessao.cid===info.cid)) brigSessao=null;
+    if(typeof brigLimparEstado==='function') brigLimparEstado();
+  }
+  (tasks||[]).forEach(t=>{
+    if(!t||t.arquivada||t.status==='Concluída'||t.status==='Cancelada') return;
+    if((t.condoId||'c1')!==info.cid) return;
+    if(!ehTarefaChecklistBrigada(t)) return;
+    const ymT=String(t.vencimento||today()).slice(0,7);
+    if(ymT===info.mes){
+      t.status='Concluída';
+      t.concluidoEm=today();
+      (t.historico=t.historico||[]).push({
+        q:(session&&session.nome)||'Sistema',w:nowStamp(),
+        t:`Concluída automaticamente — todos os ${info.feitos}/${info.total} check-lists mensais da brigada de ${mesExtenso(info.mes)} foram finalizados (1x por mês).`
+      });
+      mudou=true;
+    }
+  });
+  CFG.brigCicloMensal=CFG.brigCicloMensal||{};
+  const chave=info.cid+'|'+info.mes;
+  if(!CFG.brigCicloMensal[chave]||!CFG.brigCicloMensal[chave].concluido){
+    CFG.brigCicloMensal[chave]={
+      concluido:true,
+      mes:info.mes,
+      proximoMes:info.proxMes,
+      total:info.total,
+      feitos:info.feitos,
+      concluidoEm:nowStamp()
+    };
+    mudou=true;
+  }
+  if(mudou&&!_booting) save();
+  return info;
+}
+/* Conclui silenciosamente check-lists em que o brigadista já preencheu itens/fotos/NC
+   e avançou ou tirou o relatório sem clicar no botão final de concluir, evitando perda. */
+function brigAutoConcluirPreenchidos(cid,mesRef,sisFiltro){
+  cid=cid||(condoFilter==='all'?'c1':condoFilter);
+  const mes=String(mesRef||brigMesAtual()).slice(0,7);
+  let concluiu=0;
+  (brigInsp||[]).forEach(i=>{
+    if(!i||i.condoId!==cid||String(i.data||'').slice(0,7)!==mes) return;
+    if(sisFiltro&&!_brigMatchSis(i.sistema,sisFiltro)) return;
+    if(i.status==='Concluído') return;
+    if((i.historico||[]).some(h=>/reabert/i.test(h.t||''))) return;
+    if(!brigRascunhoIntocado(i)){
+      const nc=brigNC(i);
+      i.status='Concluído';
+      i.concluidoEm=nowStamp();
+      (i.historico=i.historico||[]).push({q:i.responsavel||(session&&session.nome)||'Sistema',w:nowStamp(),t:'Check-list concluído — '+nc.length+' não conformidade(s)'});
+      brigGerarAlerta(i);
+      concluiu++;
+    }
+  });
+  if(concluiu){
+    brigSincronizarCicloMensal(cid,mes);
+    if(!_booting) save();
+  }
+  return concluiu;
+}
+function migrarBrigadaCicloMensal(){
+  let mudou=false;
+  /* Remove da lista de Tarefas do Gestor (tasks) quaisquer demandas abertas automaticamente
+     pelo check-list da Brigada (origem === 'brigada'), preservando no próprio brigInsp
+     eventuais resoluções já concluídas. */
+  if(Array.isArray(tasks)){
+    const _brigTasks=tasks.filter(t=>t&&t.origem==='brigada');
+    if(_brigTasks.length){
+      _brigTasks.forEach(t=>{
+        if(t.status==='Concluída'&&Array.isArray(brigInsp)){
+          const ids=[...(Array.isArray(t.brigInspIds)?t.brigInspIds:[]),t.brigInspId].filter(Boolean);
+          brigInsp.forEach(i=>{
+            if(ids.includes(i.id)||(i.chamadoId&&i.chamadoId===t.id)){
+              i.resolvido=true;
+              (i.pontos||[]).forEach(p=>{
+                if(p.sit==='NÃO CONFORME'&&!p.resolvido){
+                  p.resolvido=true;
+                  p.resolvidoEm=t.concluidoEm||i.data;
+                  p.resolvidoPor=t.concluidoPor||t.responsavel||'Gestão';
+                  p.obsResolucao=t.obsConclusao||'Resolvido';
+                }
+              });
+            }
+          });
+        }
+      });
+      tasks=tasks.filter(t=>!t||t.origem!=='brigada');
+      if(Array.isArray(brigInsp)){
+        brigInsp.forEach(i=>{ if(i&&i.chamadoId&&!tasks.some(t=>t.id===i.chamadoId)) delete i.chamadoId; });
+      }
+      mudou=true;
+    }
+  }
+  if(!Array.isArray(brigInsp)||brigInsp.length<20) return mudou;
+  const doOut=brigInsp.filter(i=>i&&i.condoId==='c1'&&String(i.data||'').slice(0,7)==='2026-10');
+  const pcfOut=doOut.filter(i=>i.sistema==='pcf');
+  /* Em 10/2026, se a ronda de Portas Corta-Fogo já percorreu os andares do prédio,
+     finaliza os registros preenchidos por Nilson que ficaram como "Em andamento" e garante
+     o 20º andar (descartado pelo botão Pular) para fechar o ciclo mensal 1x/mês. */
+  if(pcfOut.length>=25){
+    pcfOut.forEach(i=>{
+      if(i.status!=='Concluído'&&!(i.historico||[]).some(h=>/reabert/i.test(h.t||''))){
+        const nc=brigNC(i);
+        i.status='Concluído';
+        i.concluidoEm=i.concluidoEm||nowStamp();
+        (i.historico=i.historico||[]).push({q:i.responsavel||'Nilson',w:nowStamp(),t:'Check-list concluído — '+nc.length+' não conformidade(s)'});
+        brigGerarAlerta(i);
+        mudou=true;
+      }
+    });
+    if(!pcfOut.some(i=>i.andar==='20')){
+      const i20=brigNova('20','pcf');
+      i20.condoId='c1'; i20.data='2026-10-20'; i20.hora='11:48';
+      i20.responsavel='Nilson'; i20.userId='b2'; i20.status='Concluído'; i20.concluidoEm='20/10/2026 11:48';
+      i20.historico=[
+        {q:'Nilson',w:'20/10/2026 11:47',t:'Check-list iniciado'},
+        {q:'Nilson',w:'20/10/2026 11:48',t:'Check-list concluído — 0 não conformidade(s)'}
+      ];
+      brigInsp.push(i20);
+      mudou=true;
+    }
+  }
+  const meses=[...new Set(brigInsp.map(i=>String(i&&i.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))];
+  meses.forEach(m=>{
+    const antes=JSON.stringify((CFG&&CFG.brigCicloMensal)||{});
+    brigSincronizarCicloMensal('c1',m);
+    if(JSON.stringify((CFG&&CFG.brigCicloMensal)||{})!==antes) mudou=true;
+  });
+  return mudou;
 }
 /* Verifica se uma não conformidade (pendência) do check-list já foi resolvida.
    Uma pendência permanece ATIVA (não resolvida) até que:
@@ -14572,65 +14783,18 @@ function brigResumoNC(cid,mesRef){
     .sort((a,b)=>b.qtd-a.qtd);
 }
 
-/* ---- ALERTA AUTOMÁTICO ----
-   Ao concluir um check-list com não conformidade, o sistema abre sozinho
-   uma tarefa para o Gestor, já com o resumo do que precisa ser trocado.
-   Se já existir chamado aberto para o mesmo andar + sistema, atualiza e
-   registra nova cobrança sem duplicar a tarefa. */
+/* ---- REGISTRO DE NÃO CONFORMIDADES DO CHECK-LIST ----
+   Ao concluir um check-list com não conformidade, as pendências permanecem
+   registradas no histórico e nos relatórios da Brigada sem abrir demandas
+   na lista de Tarefas do Gestor. */
 function brigGerarAlerta(insp){
   const ncs=brigNC(insp); if(!ncs.length) return null;
   const qtd=brigQtdNC(insp);
   const sis=brigSis(insp.sistema).nome;
   const andar=brigAndarNome(insp.andar);
-  const linhas=ncs.map(p=>{
-    const q=p.qtd>0?p.qtd:brigQtdDesc(p.desc);
-    const falhas=Object.keys(p.itens||{}).filter(k=>p.itens[k]===false);
-    return '• '+p.desc+(q>1?'  ('+q+' peças)':'')+
-      (falhas.length?'\n     Falhou em: '+falhas.join('; '):'')+
-      (p.obs?'\n     Obs.: '+p.obs:'');
-  }).join('\n');
-  /* Verifica se já existe chamado aberto deste mesmo andar e sistema (de check-list anterior) */
-  const jaAberta=tasks.find(t=>t.origem==='brigada'&&t.condoId===insp.condoId&&
-    t.status!=='Concluída'&&!t.arquivada&&t.brigInspId!==insp.id&&(
-      (t.brigAndar===insp.andar&&t.brigSistema===insp.sistema)||
-      (() => { const iAnt=brigInsp.find(x=>x.id===t.brigInspId); return !!(iAnt&&iAnt.andar===insp.andar&&iAnt.sistema===insp.sistema); })()
-    ));
-  if(jaAberta){
-    jaAberta.brigInspIds=[...new Set([...(jaAberta.brigInspIds||[jaAberta.brigInspId]),insp.id])];
-    jaAberta.brigInspId=insp.id;
-    jaAberta.brigAndar=insp.andar;
-    jaAberta.brigSistema=insp.sistema;
-    jaAberta.vistoDeNovo=(jaAberta.vistoDeNovo||0)+1;
-    jaAberta.vistoPorUltimo=insp.data||today();
-    jaAberta.titulo=qtd+' '+(qtd>1?'itens':'item')+' não conforme — '+sis+' · '+andar;
-    jaAberta.prioridade=brigPrioridade(insp.sistema,qtd);
-    jaAberta.procedimento='Apontado no check-list da brigada em '+fmt(insp.data)+' às '+(insp.hora||'—')+
-      ' por '+(insp.responsavel||'—')+' (pendência recorrente confirmada '+jaAberta.vistoDeNovo+'x).\n\nNÃO CONFORMIDADES:\n'+linhas+
-      '\n\nProvidência: avaliar reparo ou substituição das peças.';
-    (jaAberta.historico=jaAberta.historico||[]).push({
-      q:insp.responsavel||'Brigada',w:nowStamp(),
-      t:'Continua pendente — confirmado novamente no check-list de '+fmt(insp.data)+' (cobrança '+jaAberta.vistoDeNovo+')'
-    });
-    insp.chamadoId=jaAberta.id;
-    audit('Pendência de check-list reconfirmada',sis+' · '+andar,qtd+' item(ns) — chamado existente atualizado',insp.condoId,'Check-list');
-    return jaAberta;
-  }
-  const t=mkTask({
-    titulo:qtd+' '+(qtd>1?'itens':'item')+' não conforme — '+sis+' · '+andar,
-    condoId:insp.condoId,tipo:'Gestor',periodicidade:'Sob Demanda',repetitiva:false,
-    tipoTarefa:'Avulsa do dia',prioridade:brigPrioridade(insp.sistema,qtd),
-    vencimento:brigPrazo(insp.sistema),responsavel:'Maciel',
-    origem:'brigada',brigInspId:insp.id,brigInspIds:[insp.id],
-    brigAndar:insp.andar,brigSistema:insp.sistema,
-    criadoPor:insp.responsavel||'Brigada',
-    procedimento:'Apontado no check-list da brigada em '+fmt(insp.data)+' às '+(insp.hora||'—')+
-      ' por '+(insp.responsavel||'—')+'.\n\nNÃO CONFORMIDADES:\n'+linhas+
-      '\n\nProvidência: avaliar reparo ou substituição das peças.'});
-  t.historico=[{q:insp.responsavel||'Brigada',w:nowStamp(),t:'Aberta automaticamente pelo check-list da brigada'}];
-  tasks.push(t);
-  insp.chamadoId=t.id;
-  audit('Alerta automático da brigada',sis+' · '+andar,qtd+' item(ns) não conforme(s)',insp.condoId,'Check-list');
-  return t;
+  if(insp&&insp.chamadoId) delete insp.chamadoId;
+  audit('Não conformidades registradas no check-list',sis+' · '+andar,qtd+' item(ns) não conforme(s)',insp.condoId,'Check-list');
+  return null;
 }
 /* Sistema crítico com muita peça parada sobe a prioridade. */
 function brigPrioridade(sis,qtd){
@@ -14786,6 +14950,10 @@ function brigLerEstado(cid){
 function brigOndeParou(cid){
   cid=cid||(condoFilter==='all'?'c1':condoFilter);
   const mes=brigMesAtual();
+  const prMes=brigProgresso(cid,mes);
+  if(prMes.total>0 && prMes.feitos>=prMes.total){
+    return null;
+  }
   if(brigSessao && Array.isArray(brigSessao.fila) && brigSessao.pos<brigSessao.fila.length){
     const p=brigSessao.fila[brigSessao.pos];
     if(p) return {cid:brigSessao.cid||cid,andar:p.andar,sistema:p.sistema,emSessao:true};
@@ -14832,14 +15000,28 @@ function brigRetomar(cid){
 function viewBrigada(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const mes=brigMesSel||brigMesAtual();
+  const ciclo=brigSincronizarCicloMensal(cid,mes);
   const prog=brigProgresso(cid,mes);
   const an=brigAnalise(cid);
-  const parada=brigOndeParou(cid);
+  const parada=ciclo.concluido?null:brigOndeParou(cid);
   const sis=brigSisSel;
   const andares=brigAndaresDo(sis);
   const ehBrigadista=!!(session&&!P().tipos.length&&P().brigada);
 
-  const bannerRetomar=parada?`<div class="card" style="margin-bottom:14px;border-left:4px solid var(--accent);background:#f8fbff">
+  const bannerRetomar=ciclo.concluido
+    ?`<div class="card" style="margin-bottom:14px;border-left:4px solid #1d7a4c;background:#eefaf3">
+    <div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:11.5px;font-weight:700;color:#1d7a4c;text-transform:uppercase;letter-spacing:.4px">${ic('checkCircle')} Check-list mensal 100% concluído (1 vez por mês)</div>
+        <div style="font-size:15px;font-weight:700;margin-top:2px;color:#14532d">Todos os ${prog.feitos}/${prog.total} check-lists de ${esc(mesExtenso(mes))} foram finalizados!</div>
+        <div class="muted" style="font-size:12px;color:#166534">Os 5 sistemas já foram inspecionados neste mês. O próximo ciclo mensal abrirá automaticamente em <b>${esc(mesExtenso(ciclo.proxMes))}</b>.</div>
+      </div>
+      <div class="rowact no-print">
+        <button class="btn sm primary" onclick="brigModalRelatorio('${cid}','${mes}','${sis}')">${ic('doc')} Retirar Relatórios</button>
+      </div>
+    </div>
+  </div>`
+    :(parada?`<div class="card" style="margin-bottom:14px;border-left:4px solid var(--accent);background:#f8fbff">
     <div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div>
         <div style="font-size:11.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.4px">Onde você parou</div>
@@ -14848,10 +15030,10 @@ function viewBrigada(){
       </div>
       <button class="btn primary" onclick="brigRetomar('${cid}')">${ic('play')} Voltar de onde parei</button>
     </div>
-  </div>`:'';
+  </div>`:'');
 
   const cards=`<div class="grid metrics" style="margin-bottom:14px">
-    <div class="card metric"><div class="lbl">${ic('clipboardCheck')}Check-lists do mês</div><div class="val">${prog.feitos}/${prog.total}</div><div class="sub">${prog.pct}% concluído</div></div>
+    <div class="card metric ${ciclo.concluido?'green':''}"><div class="lbl">${ic('clipboardCheck')}Check-lists do mês</div><div class="val">${prog.feitos}/${prog.total}</div><div class="sub">${ciclo.concluido?`100% concluído (1x/mês) · Próximo: ${esc(mesExtenso(ciclo.proxMes))}`:`${prog.pct}% concluído`}</div></div>
     <div class="card metric ${an.totalNC?'red':'green'}"><div class="lbl">${ic('alert')}Peças não conformes</div><div class="val">${an.totalNC}</div><div class="sub">em aberto (até resolver)</div></div>
     <div class="card metric"><div class="lbl">${ic('flame')}Pontos inspecionados</div><div class="val">${BRIG_INV.length}</div><div class="sub">da cobertura ao 4º subsolo</div></div>
     <div class="card metric"><div class="lbl">${ic('shieldCheck')}Sistemas</div><div class="val">${BRIG_SISTEMAS.length}</div><div class="sub">combate a incêndio</div></div>
@@ -15228,17 +15410,43 @@ function brigConcluir(id){
   const nc=brigNC(i);
   const semFoto=nc.filter(p=>!(p.fotos||[]).length).length;
   let msg='Concluir o check-list de '+brigSis(i.sistema).nome+' — '+brigAndarNome(i.andar)+'?';
-  if(nc.length) msg+='\n\n'+nc.length+' ponto(s) não conforme(s) — será aberto um aviso automático para o Gestor.';
+  if(nc.length) msg+='\n\n'+nc.length+' ponto(s) não conforme(s) serão registrados no histórico e nos relatórios da Brigada.';
   if(semFoto) msg+='\n('+semFoto+' sem foto anexada — a foto é opcional.)';
   if(!confirm(msg)) return;
   if(session){ i.responsavel=session.nome; i.userId=session.id; }
   i.status='Concluído'; i.data=i.data||today(); i.concluidoEm=nowStamp();
-  i.historico.push({q:session.nome,w:nowStamp(),t:'Check-list concluído — '+nc.length+' não conformidade(s)'});
-  const t=brigGerarAlerta(i);
+  i.historico.push({q:session?session.nome:'Sistema',w:nowStamp(),t:'Check-list concluído — '+nc.length+' não conformidade(s)'});
+  brigGerarAlerta(i);
+  const cid=i.condoId||'c1';
+  const mes=String(i.data||today()).slice(0,7);
+  const ciclo=brigSincronizarCicloMensal(cid,mes);
+  const sisInfo=ciclo.sistemas.find(s=>s.id===i.sistema);
   save();
-  toast(nc.length?('Aviso criado: '+t.titulo):'Check-list concluído — tudo conforme.');
+  if(ciclo.concluido){
+    toast('Ciclo mensal de '+mesExtenso(mes)+' 100% concluído ('+ciclo.feitos+'/'+ciclo.total+')! Próximo ciclo em '+mesExtenso(ciclo.proxMes)+'.');
+  }else if(sisInfo&&sisInfo.concluido){
+    toast(brigSis(i.sistema).nome+' 100% concluído no mês ('+sisInfo.feitos+'/'+sisInfo.total+')!');
+  }else{
+    toast(nc.length?('Check-list concluído — '+nc.length+' não conformidade(s) registrada(s) na Brigada.'):'Check-list concluído — tudo conforme.');
+  }
   if(brigSessao) return brigProximo();
   brigVoltar();
+  if(ciclo.concluido){
+    openModal('Check-list mensal concluído (1x por mês)',
+      `<div class="bg-fim">
+        <div class="bg-fim-n">${ciclo.feitos}/${ciclo.total}</div>
+        <div class="muted">Todos os check-lists dos 5 sistemas foram finalizados em <b>${esc(mesExtenso(mes))}</b>!</div>
+        <div class="bg-av bg-green" style="margin-top:12px">
+          <div class="bg-ic">${ic('checkCircle')}</div>
+          <div>
+            <div class="bg-tit">Ciclo mensal encerrado automaticamente</div>
+            <div class="bg-txt">O check-list do brigadista é realizado 1 vez por mês. Só será necessário realizar novamente em <b>${esc(mesExtenso(ciclo.proxMes))}</b>.</div>
+          </div>
+        </div>
+      </div>`,
+      `<button class="btn" onclick="closeModal()">Fechar</button>
+       <button class="btn primary" onclick="closeModal();brigModalRelatorio('${cid}','${mes}','')">${ic('doc')} Retirar Relatórios do Mês</button>`);
+  }
 }
 function brigReabrir(id){
   const i=_bi(id); if(!i)return;
@@ -15789,11 +15997,12 @@ function viewBrigSessao(){
 function viewBrigInicio(forcarEscolha){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const mes=brigMesAtual();
-  if(!forcarEscolha){
+  const ciclo=brigSincronizarCicloMensal(cid,mes);
+  if(!forcarEscolha&&!ciclo.concluido){
     brigLerEstado(cid);
     if(brigSessao&&brigSessao.fila&&brigSessao.pos<brigSessao.fila.length) return viewBrigSessao();
   }
-  const parada=brigOndeParou(cid);
+  const parada=ciclo.concluido?null:brigOndeParou(cid);
 
   const sis=BRIG_SISTEMAS.map(s=>{
     const p=brigProgSis(cid,s.id,mes);
@@ -15803,12 +16012,27 @@ function viewBrigInicio(forcarEscolha){
       <input type="checkbox" value="${s.id}" ${marcar?'checked':''} onchange="brigPrever()">
       <span class="bg-pk-ic">${ic(s.icone)}</span>
       <span class="bg-pk-t"><b>${esc(s.nome)}</b>
-        <em>${falta?falta+' andar(es) a fazer':'tudo feito neste mês'} · ${s.periodicidade.toLowerCase()}</em></span>
+        <em>${falta?falta+' andar(es) a fazer':'tudo feito neste mês (1x/mês)'} · ${s.periodicidade.toLowerCase()}</em></span>
       <span class="badge ${falta?'amber':'green'}">${p.feitos}/${p.total}</span>
     </label>`;
   }).join('');
 
-  const cardContinuar=parada?`<div class="card" style="margin-bottom:14px;border-left:4px solid var(--accent);background:#f8fbff">
+  const cardTopo=ciclo.concluido
+    ?`<div class="card" style="margin-bottom:14px;border-left:4px solid #1d7a4c;background:#eefaf3">
+    <div class="ap-faixa" style="background:#1d7a4c">${ic('checkCircle')} CHECK-LIST MENSAL CONCLUÍDO — ${esc(mesExtenso(mes)).toUpperCase()} (1 VEZ POR MÊS)</div>
+    <div style="padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:15px;font-weight:700;color:#14532d">Todos os ${ciclo.feitos}/${ciclo.total} check-lists dos 5 sistemas já foram finalizados neste mês!</div>
+        <div class="muted" style="font-size:12.5px;margin-top:4px;color:#166534">O check-list do brigadista é realizado <b>1 vez por mês</b>. O sistema encerrou automaticamente o ciclo de <b>${esc(mesExtenso(mes))}</b> — o próximo ciclo mensal abrirá em <b>01/${ciclo.proxMes.slice(5,7)}/${ciclo.proxMes.slice(0,4)} (${esc(mesExtenso(ciclo.proxMes))})</b>.</div>
+      </div>
+      <div class="rowact">
+        <button class="btn primary" onclick="go('brigada-ronda')">${ic('route')} Ir para Ronda Diária</button>
+        <button class="btn ghost" onclick="go('brigada')">${ic('building')} Quadro por andar</button>
+        <button class="btn ghost" onclick="brigModalRelatorio('${cid}','${mes}','')">${ic('doc')} Retirar Relatórios</button>
+      </div>
+    </div>
+  </div>`
+    :(parada?`<div class="card" style="margin-bottom:14px;border-left:4px solid var(--accent);background:#f8fbff">
     <div class="ap-faixa">${ic('play')} CONTINUAR DE ONDE VOCÊ PAROU</div>
     <div style="padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div>
@@ -15820,9 +16044,9 @@ function viewBrigInicio(forcarEscolha){
         <button class="btn ghost" onclick="brigSisSel='${parada.sistema}';go('brigada')">${ic('building')} Quadro por andar</button>
       </div>
     </div>
-  </div>`:'';
+  </div>`:'');
 
-  $('#content').innerHTML=cardContinuar+`
+  $('#content').innerHTML=cardTopo+`
     <div class="card" style="margin-bottom:14px">
       <div class="ap-faixa">${ic('play')} INICIAR CHECK-LIST</div>
       <div style="padding:14px">
@@ -15862,8 +16086,17 @@ function _bgSisSel(){
 function brigPrever(){
   const box=$('#bgPrev'); if(!box) return;
   const cid=condoFilter==='all'?'c1':condoFilter;
+  const mes=brigMesAtual();
+  const ciclo=brigCicloMensal(cid,mes);
   const f=brigMontarFila(cid,_bgSisSel(),$('#bgPular')?$('#bgPular').checked:true);
-  if(!f.length){ box.innerHTML='<div class="muted">Nada a fazer com essa seleção.</div>'; return }
+  if(!f.length){
+    if(ciclo.concluido){
+      box.innerHTML=`<div style="color:#14532d;font-weight:600">${ic('checkCircle')} Ciclo mensal de ${esc(mesExtenso(mes))} 100% concluído (${ciclo.feitos}/${ciclo.total} check-lists). O check-list é feito 1 vez por mês — próximo ciclo em ${esc(mesExtenso(ciclo.proxMes))}.</div>`;
+    }else{
+      box.innerHTML='<div class="muted">Nada a fazer com essa seleção.</div>';
+    }
+    return;
+  }
   const pts=f.reduce((s,x)=>s+brigPontos(x.andar,x.sistema).length,0);
   box.innerHTML=`<b>${f.length}</b> parada(s) · <b>${pts}</b> ponto(s) para verificar ·
     começa em <b>${esc(brigAndarNome(f[0].andar))}</b> (${esc(brigSis(f[0].sistema).nome)})`;
@@ -15914,6 +16147,9 @@ function brigFinalizarSessao(){
   const s=brigSessao; brigSessao=null;
   brigLimparEstado();
   if(!s) return go('brigada');
+  const mes=brigMesAtual();
+  brigAutoConcluirPreenchidos(s.cid,mes,s.sistemas);
+  const ciclo=brigSincronizarCicloMensal(s.cid,mes);
   const feitos=s.fila.length;
   const ncs=s.fila.reduce((n,p)=>{
     const i=brigInsp.filter(x=>x.condoId===s.cid&&x.andar===p.andar&&x.sistema===p.sistema&&
@@ -15921,14 +16157,20 @@ function brigFinalizarSessao(){
     return n+(i?brigQtdNC(i):0);
   },0);
   page='brigada'; buildNav(); render();
-  openModal('Ronda de check-list concluída',
+  openModal(ciclo.concluido?'Check-list mensal concluído (1x por mês)':'Ronda de check-list concluída',
     `<div class="bg-fim">
-      <div class="bg-fim-n">${feitos}</div>
-      <div class="muted">parada(s) concluída(s) — ${esc(s.sistemas.map(x=>brigSis(x).nome).join(', '))}</div>
+      <div class="bg-fim-n">${ciclo.concluido?`${ciclo.feitos}/${ciclo.total}`:feitos}</div>
+      <div class="muted">${ciclo.concluido
+        ?`Todos os check-lists do mês de <b>${esc(mesExtenso(mes))}</b> foram concluídos (1 vez por mês)!`
+        :`parada(s) concluída(s) — ${esc(s.sistemas.map(x=>brigSis(x).nome).join(', '))}`}</div>
+      ${ciclo.concluido?`<div class="bg-av bg-green" style="margin-top:12px">
+        <div class="bg-ic">${ic('checkCircle')}</div>
+        <div><div class="bg-tit">Ciclo mensal encerrado automaticamente</div>
+        <div class="bg-txt">O check-list da brigada é feito 1 vez por mês. Próximo ciclo em <b>${esc(mesExtenso(ciclo.proxMes))}</b>.</div></div></div>`:''}
       ${ncs?`<div class="bg-av bg-red" style="margin-top:12px">
         <div class="bg-ic">${ic('alert')}</div>
         <div><div class="bg-tit">${ncs} peça(s) não conforme(s)</div>
-        <div class="bg-txt">Os avisos já foram abertos para o Gestor providenciar.</div></div></div>`
+        <div class="bg-txt">Registradas no histórico de pendências e nos relatórios da Brigada.</div></div></div>`
       :`<div class="bg-av bg-green" style="margin-top:12px">
         <div class="bg-ic">${ic('checkCircle')}</div>
         <div><div class="bg-tit">Nenhuma não conformidade</div>
@@ -15978,6 +16220,7 @@ function brigBarraSessao(){
               :'Esta é a última parada.'}</div>
     </div>
     <div class="bg-bt-a">
+      ${brigAtual?`<button class="btn sm primary" onclick="brigConcluir('${brigAtual}')">${ic('check')} Concluir</button>`:''}
       <button class="btn sm" onclick="brigPular()">Pular</button>
       <button class="btn sm danger" onclick="brigAbandonar()">Encerrar</button>
     </div>
@@ -15985,7 +16228,18 @@ function brigBarraSessao(){
 }
 function brigPular(){
   if(!brigSessao) return;
-  brigDescartarRascunhoVazio(brigAtual);
+  const iAt=brigAtual?_bi(brigAtual):null;
+  if(iAt&&iAt.status!=='Concluído'&&!brigRascunhoIntocado(iAt)){
+    const nc=brigNC(iAt);
+    if(session){ iAt.responsavel=session.nome; iAt.userId=session.id; }
+    iAt.status='Concluído'; iAt.data=iAt.data||today(); iAt.concluidoEm=nowStamp();
+    iAt.historico.push({q:session?session.nome:'Sistema',w:nowStamp(),t:'Check-list concluído — '+nc.length+' não conformidade(s)'});
+    brigGerarAlerta(iAt);
+    brigSincronizarCicloMensal(iAt.condoId||'c1',String(iAt.data||today()).slice(0,7));
+    save();
+  }else{
+    brigDescartarRascunhoVazio(brigAtual);
+  }
   brigSessao.pos++;
   if(brigSessao.pos>=brigSessao.fila.length) return brigFinalizarSessao();
   const p=brigSessao.fila[brigSessao.pos];
@@ -16491,18 +16745,36 @@ function brigResolverPendencia(inspId,ptIdx,obsArg){
   const obs=obsArg!==undefined?obsArg:(prompt('O que foi feito para resolver esta pendência? (opcional)')??null);
   if(obs===null) return;
   const alvos=(ptIdx!==undefined&&ptIdx!==null&&i.pontos[ptIdx])?[i.pontos[ptIdx]]:brigNC(i);
+  const descsResolvidos=new Set();
   alvos.forEach(p=>{
     p.resolvido=true;
     p.resolvidoEm=today();
     p.resolvidoPor=session?session.nome:'Sistema';
     p.obsResolucao=String(obs||'').trim();
+    if(p.desc) descsResolvidos.add(p.desc);
+  });
+  /* Propaga a resolução para ocorrências anteriores do mesmo andar + sistema + ponto
+     em brigInsp para que o histórico completo conste como resolvido. */
+  brigInsp.forEach(iAnt=>{
+    if(!iAnt||iAnt.id===i.id||iAnt.condoId!==i.condoId||String(iAnt.andar)!==String(i.andar)||iAnt.sistema!==i.sistema) return;
+    let mexeu=false;
+    (iAnt.pontos||[]).forEach(pAnt=>{
+      if(pAnt.sit==='NÃO CONFORME'&&!pAnt.resolvido&&descsResolvidos.has(pAnt.desc)){
+        pAnt.resolvido=true;
+        pAnt.resolvidoEm=today();
+        pAnt.resolvidoPor=session?session.nome:'Sistema';
+        pAnt.obsResolucao=String(obs||'').trim();
+        mexeu=true;
+      }
+    });
+    if(mexeu&&brigNC(iAnt).every(pAnt=>brigPendenciaResolvida(iAnt,pAnt))) iAnt.resolvido=true;
   });
   (i.historico=i.historico||[]).push({
     q:session?session.nome:'Sistema',w:nowStamp(),
     t:'Pendência marcada como resolvida'+(alvos.length===1?' ('+alvos[0].desc+')':''),
     obs:String(obs||'').trim()
   });
-  /* Se todos os pontos não conformes desta inspeção foram resolvidos, conclui também o chamado vinculado */
+  /* Se todos os pontos não conformes desta inspeção foram resolvidos, conclui também eventual chamado legado vinculado */
   if(brigNC(i).every(p=>brigPendenciaResolvida(i,p))){
     i.resolvido=true;
     chamadosDaInspecao(i.id).forEach(t=>{
@@ -16536,12 +16808,8 @@ function brigCheckConfirmarMesma(inspAtualId,inspAntId,idxAnt,idxAtual){
   pAnt.vistoDeNovo=(pAnt.vistoDeNovo||0)+1;
   pAnt.vistoPorUltimo=today();
   p.vistoDeNovo=pAnt.vistoDeNovo;
-  const ts=chamadosDaInspecao(iAnt.id);
-  if(ts[0]){
-    i.chamadoId=ts[0].id;
-  }
   save(); render();
-  toast('Pendência anterior carregada no ponto! Ao concluir, o chamado existente será atualizado sem duplicar.');
+  toast('Pendência anterior carregada no ponto! Ela permanecerá registrada no histórico da brigada.');
 }
 
 function chStatusCartao(t){
@@ -16620,8 +16888,11 @@ function brigAcompanharInsp(inspId){
   const ts=chamadosDaInspecao(inspId);
   const ncs=brigNC(i);
   const temPendente=ncs.some(p=>!brigPendenciaResolvida(i,p));
+  const cartaoBrig=`<div class="card" style="box-shadow:none;background:${temPendente?'#fff8e8':'#e6f6ea'};border-color:${temPendente?'#e7cf9a':'#9ad3ab'};padding:13px;margin-bottom:12px">
+    <div style="font-weight:700;color:var(--navy);line-height:1.45">${temPendente?'Pendência em aberto no controle da Brigada (registrada no histórico e relatórios, sem abrir demanda para o Gestor).':'Todas as pendências deste check-list foram resolvidas.'}</div>
+  </div>`;
   openModal('Não conformes — '+brigAndarNome(i.andar),
-    (ts.length?ts.map(chStatusCartao).join(''):chStatusCartao(null))+
+    (ts.length?ts.map(chStatusCartao).join(''):cartaoBrig)+
     `<div class="section-title" style="margin-top:0"><h3>O que foi apontado</h3></div>
      <div class="ap-grid" style="padding:0 0 4px">
        <div class="rot">Quando</div><div class="val">${fmt(i.data)} às ${esc(i.hora||'—')}</div>
@@ -20054,7 +20325,7 @@ function _marcarSujos(base,foto){
      o snapshot do servidor passava por cima dele. */
   const porIdx=!base&&!!SYNC.baseIdx;
   SYNC_COLS.forEach(k=>{
-    const atual=(foto&&foto[k])||_colRef(k); if(!Array.isArray(atual)) return;
+    const atual=foto?foto[k]:_colRef(k); if(!Array.isArray(atual)) return;
     if(porIdx){
       const ref=SYNC.baseIdx[k]||{};
       atual.forEach(x=>{
@@ -20120,10 +20391,33 @@ function _fotoLocal(){
   SYNC_COLS.forEach(k=>{ const c=_colRef(k); if(Array.isArray(c)) f[k]=JSON.parse(JSON.stringify(c)) });
   return f;
 }
+function _statusConcluidoSync(st){
+  return st==='Concluída'||st==='Concluído'||st==='Pago'||st==='Registrada';
+}
+function _registroRemotoMaisRecente(remoto,local,col){
+  if(!remoto||!local) return false;
+  const hRem=Array.isArray(remoto.historico)?remoto.historico.length:0;
+  const hLoc=Array.isArray(local.historico)?local.historico.length:0;
+  const ultLoc=hLoc?String((local.historico[hLoc-1]&&local.historico[hLoc-1].t)||''):'';
+  const reabertoExplicito=hLoc>hRem&&/reabert|desmarcad|volta/i.test(ultLoc);
+  /* Se no servidor já está Concluída/Concluído e localmente está Pendente/Em andamento
+     sem ter sido reaberto explicitamente após a conclusão, o servidor prevalece SEMPRE. */
+  if(_statusConcluidoSync(remoto.status)&&!_statusConcluidoSync(local.status)&&!reabertoExplicito){
+    return true;
+  }
+  /* Se o servidor tem histórico mais comprido (mais passos registrados em outro aparelho)
+     e o item local não é uma conclusão nova, preserva o servidor. */
+  if(hRem>hLoc&&!(_statusConcluidoSync(local.status)&&!_statusConcluidoSync(remoto.status))){
+    return true;
+  }
+  return false;
+}
 /* Reaplica sobre o estado novo tudo que este aparelho alterou e ainda não publicou. */
 function _reaplicarLocal(foto,base){
-  _marcarSujos(base,foto);               // registra o que é meu e ainda não subiu
+  if(base||!SYNC._bootSujosMarcados){
+    _marcarSujos(base,foto);             // registra o que é meu e ainda não subiu
                                          // (usa a foto: o estado ANTES do servidor)
+  }
   const sujos=SYNC.sujos||{};
   let reaplicados=0;
   SYNC_COLS.forEach(k=>{
@@ -20134,9 +20428,22 @@ function _reaplicarLocal(foto,base){
     antes.forEach(item=>{
       if(!item||!item.id||!meus[item.id]) return;   // não mexi nisso: o servidor manda
       if(agoraIdx[item.id]!==undefined){
-        if(JSON.stringify(agora[agoraIdx[item.id]])===JSON.stringify(item)) return;
+        const remoto=agora[agoraIdx[item.id]];
+        if(JSON.stringify(remoto)===JSON.stringify(item)){ delete meus[item.id]; return; }
+        if(_registroRemotoMaisRecente(remoto,item,k)){ delete meus[item.id]; return; }
         agora[agoraIdx[item.id]]=item;              // editado aqui e ainda não confirmado
       }else{
+        /* Nunca recria demandas de check-list da brigada (origem='brigada') em tasks */
+        if(k==='tasks'&&item.origem==='brigada'){
+          delete meus[item.id]; return;
+        }
+        /* Evita empurrar cópia duplicada de tarefa mensal criada por migração automática */
+        if(k==='tasks'&&item.criadoPor==='Sistema'&&typeof ehTarefaCessao==='function'&&ehTarefaCessao(item)){
+          const ym=String(item.vencimento||'').slice(0,7);
+          if(agora.some(t=>!t.arquivada&&t.status!=='Cancelada'&&t.condoId===item.condoId&&ehTarefaCessao(t)&&String(t.vencimento||'').slice(0,7)===ym)){
+            delete meus[item.id]; return;
+          }
+        }
         agora.push(item);                            // criado aqui e sumiria
       }
       reaplicados++;
@@ -20253,8 +20560,9 @@ function aplicarSnapshot(d){
   const _migLgpd=migrarCessoesLgpd();
   const _migEn=migrarEnergiaPadrao();
   const _migLoc=migrarSalasLocacao();
+  const _migBrig=typeof migrarBrigadaCicloMensal==='function'?migrarBrigadaCicloMensal():false;
   _booting=false;
-  if(_migCat||_migCh||_migDup||_migUS||_migSI||_migLgpd||_migEn||_migLoc) save();
+  if(_migCat||_migCh||_migDup||_migUS||_migSI||_migLgpd||_migEn||_migLoc||_migBrig) save();
   /* Tambem aqui, e nao so no load(): o snapshot que chega do servidor passa
      por aplicarSnapshot, nao por load. Sem esta linha a migracao rodava na
      base local e logo em seguida era sobrescrita pelo dado do servidor, que
@@ -20411,8 +20719,30 @@ function abrirSync(){
 
 /* ============ INIT ============ */
 function iniciarCom(guardado){
-  if(!load(guardado)) seed();
   carregarBaseIdx();      /* o que o servidor já conhecia na última conversa */
+  if(guardado && SYNC.baseIdx){
+    try{
+      SYNC.sujos={};
+      _marcarSujos(null, JSON.parse(JSON.stringify(guardado)));
+      SYNC._bootSujosMarcados=true;
+    }catch(e){}
+  }
+  if(!load(guardado)) seed();
+  /* Atualiza a impressão digital da base com o estado pós-migração para todos os
+     registros que NÃO foram editados offline pelo usuário, impedindo que migrações
+     de atualização de código marquem dados antigos como sujos e revertam o servidor. */
+  if(guardado && SYNC.baseIdx){
+    try{
+      const snapPos=dbSnapshot();
+      SYNC_COLS.forEach(k=>{
+        const sujosCol=(SYNC.sujos&&SYNC.sujos[k])||{};
+        const mapa=(SYNC.baseIdx[k]=SYNC.baseIdx[k]||{});
+        (snapPos[k]||[]).forEach(x=>{
+          if(x&&x.id&&!sujosCol[x.id]) mapa[x.id]=_hash1(JSON.stringify(x));
+        });
+      });
+    }catch(e){}
+  }
   carregarFilaFotos();    /* fotos que ainda não subiram */
   _booting=false;
   aplicarMarca();
@@ -20450,6 +20780,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e8f066bb45af23',t:'MTc5MjY3NjY5MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4eaceaa4cd4debf',t:'MTc5MjY5NjI4MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+</body>
 </html>
