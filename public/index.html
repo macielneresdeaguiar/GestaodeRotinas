@@ -1528,7 +1528,67 @@ const SEED_TASKS=[
   ['Orçamento anual','Gestor','Anual','Alta','Elaborar e aprovar a peça orçamentária anual.']
 ];
 
-let tasks=[], maints=[], notas=[], cessoes=[], apontamentos=[], estoque=[], movEstoque=[], pedidos=[];
+let tasks=[], maints=[], notas=[], cessoes=[], apontamentos=[], estoque=[], movEstoque=[], pedidos=[], afazeres=[];
+
+/* Produtos iniciais do estoque (lista do gestor, 23-10-2026).
+   Quantidade mínima ainda não definida pelo usuário — será ajustada item a item. */
+if (estoque.length===0 && typeof session!=='undefined' && session) {
+  const _s=session.nome;
+  const _agora=nowStamp();
+  const _seed=[
+    /* Imagem 1 */
+    {nome:'lâmpada de led bulbo 60w', categoria:'Iluminação', unidade:'un', qtd:25, minimo:5, local:'', obs:''},
+    {nome:'lâmpada de led t8 120cm', categoria:'Iluminação', unidade:'un', qtd:25, minimo:5, local:'', obs:''},
+    {nome:'sifão sanfonado', categoria:'Hidráulica', unidade:'un', qtd:5, minimo:2, local:'', obs:''},
+    {nome:'disco de corte diamantado', categoria:'Ferramentas', unidade:'un', qtd:2, minimo:1, local:'', obs:''},
+    {nome:'pressunstato MG', categoria:'Hidráulica', unidade:'un', qtd:3, minimo:1, local:'', obs:''},
+    {nome:'fonte chaveada', categoria:'Elétrica', unidade:'un', qtd:2, minimo:1, local:'', obs:''},
+    {nome:'fechadura com chave fixa', categoria:'Ferragens', unidade:'un', qtd:7, minimo:2, local:'', obs:''},
+    {nome:'torneira de fechamento automático', categoria:'Hidráulica', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'censor de presença', categoria:'Elétrica', unidade:'un', qtd:23, minimo:3, local:'', obs:''},
+    {nome:'fita anti-derrapante', categoria:'Segurança', unidade:'un', qtd:9, minimo:2, local:'', obs:''},
+    {nome:'fita isolante', categoria:'Elétrica', unidade:'un', qtd:5, minimo:2, local:'', obs:''},
+    {nome:'fita veda rosca', categoria:'Hidráulica', unidade:'un', qtd:3, minimo:2, local:'', obs:''},
+    {nome:'torneira de bancada', categoria:'Hidráulica', unidade:'un', qtd:3, minimo:1, local:'', obs:''},
+    {nome:'espuma expansiva', categoria:'Civil', unidade:'un', qtd:2, minimo:1, local:'', obs:''},
+    {nome:'rolo de espuma p pintura 5cm', categoria:'Pintura', unidade:'un', qtd:5, minimo:2, local:'', obs:''},
+    {nome:'pincel trincha 2"', categoria:'Pintura', unidade:'un', qtd:3, minimo:2, local:'', obs:''},
+    {nome:'fita dupla-face adere', categoria:'Civil', unidade:'un', qtd:3, minimo:2, local:'', obs:''},
+    {nome:'rolo de lã 23cm', categoria:'Pintura', unidade:'un', qtd:2, minimo:2, local:'', obs:''},
+    {nome:'thinner galão', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'fita zebrada', categoria:'Segurança', unidade:'un', qtd:2, minimo:1, local:'', obs:''},
+    /* Imagem 2 */
+    {nome:'Massa corrida Suvinil 18 k', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'tinta acrílica luztol Branco gelo 18L', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'tinta acrílica Max vinil branco neve 18L', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'tinta piso cinza médio 18 L Suvinil', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'tinta piso cinza escuro 18 L Suvinil', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'textura Suvinil bege 18L', categoria:'Pintura', unidade:'un', qtd:2, minimo:1, local:'', obs:''},
+    {nome:'cola de contato galão 3,6', categoria:'Civil', unidade:'un', qtd:4, minimo:1, local:'', obs:''},
+    {nome:'tinta acrílica preto Absolut 3,6', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'esmalte sintético 3,6 L vermelho', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'esmalte sintético 3,6 L verde folha', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'esmalte sintético 3,6 L preto brilhante', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'esmalte sintético 3,6 L branco brilhante', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'esmalte sintético 3,6 L cinza médio', categoria:'Pintura', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'fita crepe 25×50', categoria:'Pintura', unidade:'un', qtd:6, minimo:2, local:'', obs:''},
+    {nome:'fita crepe 48×50', categoria:'Pintura', unidade:'un', qtd:2, minimo:1, local:'', obs:''},
+    {nome:'acendedor elétrico', categoria:'Elétrica', unidade:'un', qtd:6, minimo:2, local:'', obs:''},
+    {nome:'acendedor com tomada', categoria:'Elétrica', unidade:'un', qtd:4, minimo:1, local:'', obs:''},
+    {nome:'acento para vaso sanitário tradicional', categoria:'Hidráulica', unidade:'un', qtd:3, minimo:1, local:'', obs:''},
+    {nome:'estopas de algodão 500 GM', categoria:'Limpeza', unidade:'un', qtd:2, minimo:2, local:'', obs:''},
+    {nome:'lubrificante WD 40 300 ml', categoria:'Ferramentas', unidade:'un', qtd:2, minimo:1, local:'', obs:''},
+    {nome:'cola de contato 100g', categoria:'Civil', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'cola de cano adesivo plástico 850g', categoria:'Hidráulica', unidade:'un', qtd:1, minimo:1, local:'', obs:''},
+    {nome:'cola de cano aguatherm 175g vermelha', categoria:'Hidráulica', unidade:'un', qtd:0, minimo:1, local:'', obs:'SEM ESTOQUE — zerado'}
+  ];
+  _seed.forEach(s=>{
+    const it=Object.assign({id:uid('es'),criadoPor:_s,
+      historico:[{q:_s,w:_agora,t:`Item cadastrado com saldo inicial de ${s.qtd} ${s.unidade} (mínimo ${s.minimo})`}]},s);
+    estoque.push(it);
+    movEstoque.push({id:uid('mv'),itemId:it.id,tipo:'Entrada',qtd:s.qtd,saldo:s.qtd,data:today(),quem:_s,motivo:'Saldo inicial'});
+  });
+}
 let anuncios=[]; // publicidade nos elevadores (locação de espaços p/ divulgação)
 let analises=[]; // análise de projetos: check-list de aprovação de obra das unidades
 
@@ -2043,7 +2103,7 @@ const _memStore=(()=>{const m={};return {getItem:k=>k in m?m[k]:null,setItem:(k,
 function store(){ try{ return (typeof window!=='undefined'&&window.localStorage)||_memStore }catch(e){ return _memStore } }
 function dbSnapshot(){
   return {v:DB_VER, savedAt:new Date().toISOString(),
-    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,brigInsp,brigRondas,salas,unidSind,
+    tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,afazeres,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,brigInsp,brigRondas,salas,unidSind,
     auditLog, CFG, creds, notifs, notifState};
 }
 /* ============ ONDE O APP GUARDA OS DADOS NO APARELHO ============
@@ -2349,7 +2409,7 @@ function load(d){
     vcUnidades=d.vcUnidades||[]; vcCiclos=d.vcCiclos||[]; vcVendas=d.vcVendas||[];
   tasks=d.tasks||[]; notas=d.notas||[]; cessoes=d.cessoes||[];
     apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
-    pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
+    pedidos=d.pedidos||[]; afazeres=d.afazeres||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
     prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
     analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[]; unidSind=d.unidSind||[];
     if(!prestadores.length) seedPrestadores();
@@ -2734,7 +2794,7 @@ function buildNav(){
   if(P().tipos.length){
     items.push(['#','','Operação']);
     items.push(['hoje','today','Tarefas de Hoje'],['rotina','route','Minha Rotina'],
-      ['tarefas-adm','clipboardCheck','Tarefas Administrativas']);
+      ['tarefas-adm','clipboardCheck','Tarefas Administrativas'],['afazeres','list','Afazeres']);
     if(P().tipos.includes('Gestor')) items.push(['tarefas-gestor','briefcase','Tarefas do Gestor']);
     items.push(['calendario','calendar','Calendário']);
     items.push(['#','','Financeiro']);
@@ -2807,7 +2867,7 @@ function render(){
   if(dayRef&&document.querySelector('#drawer')&&$('#drawer').classList.contains&&$('#drawer').classList.contains('open')){try{renderDay()}catch(e){}}
   const titles={dashboard:'Dashboard',tarefas:'Gerenciador de Tarefas',
     'tarefas-adm':'Tarefas Administrativas','tarefas-gestor':'Tarefas do Gestor',calendario:'Calendário',rotina:'Minha Rotina',
-    hoje:'Tarefas de Hoje — Planejamento Diário',leituras:'Leituras / Água e Energia',notas:'Controle de Notas Fiscais',
+    hoje:'Tarefas de Hoje — Planejamento Diário',afazeres:'Lista de Afazeres (sem data)',leituras:'Leituras / Água e Energia',notas:'Controle de Notas Fiscais',
     estoque:'Controle de Estoque',pedidos:'Pedidos de Material',relmensal:'Relatório Mensal de Gestão',
     apontamentos:'Apontamentos de Manutenção',manutobrig:'Manutenções Obrigatórias — Plano e Laudos',cessoes:'Cessão de Direitos — Ocupação de Unidades',vendascustas:'Vendas e Custas — Rateio de Água e Energia',    publicidade:'Publicidade nos Elevadores — Locação de Espaços',emails:'Padrões de E-mails e Solicitação de Boleto CRM',analises:'Análise de Projetos — Check-list de Aprovação',ocupacao:'Taxa de Ocupação — Mapa de Salas',locacao:'Salas para Locação e Venda — Estoque Disponível','brigada-inicio':'Brigada — Iniciar Check-list',brigada:'Brigada de Incêndio — Check-list por Andar','brigada-ronda':(session&&!P().brigada&&P().ronda)?'Ronda Diária e Chamados':'Brigada — Ronda Diária','brigada-form':'Brigada — Check-list',relatorios:'Relatórios',config:'Configurações'};
   /* A portaria so tem duas telas. Travar aqui, no roteador, cobre tambem
@@ -2827,6 +2887,7 @@ function render(){
   if(page==='brigada-form'){ return viewBrigForm() }
   if(page==='brigada'){ return viewBrigada() }
   if(page==='brigada-ronda'){ return viewBrigRonda() }
+  if(page==='afazeres'){ return viewAfazeres() }
   if(page==='tarefas-adm'){tipoLock='Administrativo';return viewTasks()}
   if(page==='tarefas-gestor'){tipoLock='Gestor';return viewTasks()}
   if(page==='calendario'){tipoLock=null;taskView='calendario';return viewTasks()}
@@ -2834,7 +2895,7 @@ function render(){
   const R={dashboard:viewDashboard,hoje:viewHoje,leituras:viewLeituras,tarefas:viewTasks,rotina:viewRotina,
     notas:viewNotas,cessoes:viewCessoes,vendascustas:viewVendasCustas,publicidade:viewPublicidade,emails:viewEmailsPadrao,manutobrig:viewManutObrig,estoque:viewEstoque,pedidos:viewPedidos,
     apontamentos:viewApontamentos,relatorios:viewReports,relmensal:viewRelatorioMensal,config:viewConfig,
-    unidsind:viewUnidSind,unidades:viewUnidades,locacao:viewSalasLocacao};
+    unidsind:viewUnidSind,unidades:viewUnidades,locacao:viewSalasLocacao,afazeres:viewAfazeres};
   (R[page]||viewDashboard)();
 }
 
@@ -4040,7 +4101,146 @@ function delAvulsa(id){
   tasks=tasks.filter(x=>x.id!==id); render(); toast('Tarefa excluída.');
 }
 
-/* ============ MINHA ROTINA ============ */
+/* ============ AFazeres — lista sem data ============
+   Itens que ainda não têm data marcada. Ficam aqui como "caixa de entrada".
+   De cada item o responsável pode criar uma tarefa agendada (que aparece
+   em Tarefas de Hoje) ou simplesmente excluir quando não for mais necessário.
+*/
+function viewAfazeres(){
+  const q=(afFilters.q||'').toLowerCase();
+  const list=afazeres.filter(a=>{
+    if(condoFilter!=='all'&&a.condoId!==condoFilter&&a.condoId!=='geral') return false;
+    if(q&&!(a.titulo||'').toLowerCase().includes(q)&&!(a.procedimento||'').toLowerCase().includes(q)) return false;
+    if(afFilters.status&&a.status!==afFilters.status) return false;
+    if(afFilters.resp&&a.responsavel!==afFilters.resp) return false;
+    if(afFilters.prio&&a.prioridade!==afFilters.prio) return false;
+    return true;
+  }).sort((a,b)=>{const p={'Urgente':0,'Alta':1,'Média':2,'Baixa':3};return (p[a.prioridade||'Média']||2)-(p[b.prioridade||'Média']||2)||(a.titulo||'').localeCompare(b.titulo||'')});
+  const resps=[...new Set(list.map(a=>a.responsavel||'—'))];
+  let html=`<div class="toolbar no-print">
+    <input placeholder="Buscar afazer..." value="${esc(afFilters.q||'')}" oninput="afFilters.q=this.value;render()" style="min-width:200px">
+    <select onchange="afFilters.status=this.value;render()">${opt(['','Pendente','Em Andamento','Concluída','Cancelada'],afFilters.status||'','Status')}</select>
+    <select onchange="afFilters.resp=this.value;render()">${opt(['',...resps],afFilters.resp||'','Responsável')}</select>
+    <select onchange="afFilters.prio=this.value;render()">${opt(['','Alta','Média','Baixa'],afFilters.prio||'','Prioridade')}</select>
+    <div class="spacer"></div>
+    ${P().create?`<button class="btn" onclick="formAfazer()">+ Novo Afazer</button>`:''}
+  </div>`;
+  html+=`<div class="chip-list no-print" style="margin-bottom:12px">
+    <span class="badge b-pend">Total: ${list.length}</span>
+    <span class="badge b-atr">Pendentes: ${list.filter(a=>a.status==='Pendente').length}</span>
+    <span class="badge b-conc">Concluídos: ${list.filter(a=>a.status==='Concluída').length}</span>
+    <span class="badge b-tag">Sem data · só vira tarefa quando você agendar</span></div>`;
+  if(!list.length){
+    html+=`<div class="card empty">${ic('list','ico-lg')}<div>Nenhum afazer cadastrado.</div>
+      <div class="t-sub" style="margin-top:6px">Use [+ Novo Afazer] para lançar itens sem data. Eles ficam aqui até você decidir quando executar.</div></div>`;
+  }else{
+    html+=`<div class="tablewrap"><table><thead><tr>
+      <th>Afazer</th><th>Descrição</th><th>Condomínio</th><th>Responsável</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+      ${list.map(a=>`<tr>
+        <td><input type="checkbox" class="afSel" value="${a.id}" onchange="afazerMarcar('${a.id}',this.checked)"></td>
+        <td><label style="cursor:pointer;display:block" onclick="event.target.tagName!=='INPUT'&&openAfazer('${a.id}')"><div class="t-title">${esc(a.titulo)}</div></label></td>
+        <td data-l="Descrição">${esc((a.procedimento||'').slice(0,60))}${(a.procedimento||'').length>60?'…':''}</td>
+        <td data-l="Condomínio">${badgeCondo(a.condoId)}</td>
+        <td data-l="Responsável">${a.responsavel?esc(a.responsavel):'<span class="badge b-avencer">sem responsável</span>'}</td>
+        <td data-l="Prioridade">${badgePrio(a.prioridade||'Média')}</td>
+        <td data-l="Status">${badgeStatus(a.status)}</td>
+        <td><div class="rowact no-print nowrap">
+          <button class="iconact" title="Ver detalhes" onclick="openAfazer('${a.id}')">${ic('eye')}</button>
+          ${P().edit?`<button class="iconact" title="Editar" onclick="formAfazer('${a.id}')">${ic('edit')}</button>`:''}
+          ${P().create?`<button class="iconact ok" title="Agendar como tarefa" onclick="afazerParaTarefa('${a.id}')">${ic('calendar')}</button>`:''}
+          ${canDelete(a)?`<button class="iconact del" title="Excluir" onclick="delAfazer('${a.id}')">${ic('trash')}</button>`:''}
+        </div></td></tr>`).join('')}</tbody></table></div>`;
+  }
+  $('#content').innerHTML=html;
+}
+function openAfazer(id){
+  const a=afazeres.find(x=>x.id===id); if(!a)return;
+  $('#modalTitle').textContent='Afazer — '+a.titulo;
+  $('#modalBody').innerHTML=`
+    <div class="chip-list" style="margin-bottom:14px">${badgeCondo(a.condoId)}<span class="badge b-tag">${a.tipo||'Administrativo'}</span>${badgePrio(a.prioridade||'Média')}${badgeStatus(a.status)}</div>
+    <div class="f2">
+      <div><div class="t-sub">Responsável</div><b>${esc(a.responsavel||'— não atribuído —')}</b></div>
+      <div><div class="t-sub">Tipo</div><b>${a.tipo||'Administrativo'}</b></div>
+    </div>
+    <div style="margin-top:14px"><div class="t-sub">Descrição / Procedimento</div><p style="margin-top:4px">${esc(a.procedimento||'—')}</p></div>
+    ${a.observacao?`<div style="margin-top:12px"><div class="t-sub">Observação</div><p>${esc(a.observacao)}</p></div>`:''}
+    ${a.anexo?`<div style="margin-top:10px"><span class="badge b-tag">${ic('paperclip')} ${esc(a.anexo)}</span></div>`:''}
+    ${histHtml(a.historico)}`;
+  $('#modalFoot').innerHTML=`
+    ${P().create?`<button class="btn ok" onclick="afazerParaTarefa('${a.id}')">${ic('calendar')} Agendar como tarefa</button>`:''}
+    ${P().edit?`<button class="btn" onclick="formAfazer('${a.id}')">Editar</button>`:''}
+    ${canDelete(a)?`<button class="btn danger" onclick="delAfazer('${a.id}')">Excluir</button>`:''}
+    <button class="btn ghost" onclick="closeModal()">Fechar</button>`;
+  $('#modal').classList.add('open');
+}
+function formAfazer(id){
+  if(!(id?P().edit:P().create)) return toast('Sem permissão.');
+  const a=id?afazeres.find(x=>x.id===id):null;
+  $('#modalTitle').textContent=a?'Editar Afazer':'Novo Afazer';
+  $('#modalBody').innerHTML=`
+    <div class="field"><label>Título</label><input id="afTit" value="${esc(a?.titulo||'')}" placeholder="ex.: revisar contrato de limpeza"></div>
+    <div class="field"><label>Descrição / Procedimento</label><textarea id="afDesc" rows="3">${esc(a?.procedimento||'')}</textarea></div>
+    <div class="f2">
+      <div class="field"><label>Condomínio</label><select id="afCondo">
+        ${condosDo('tarefas').map(c=>`<option value="${c.id}" ${a?.condoId===c.id?'selected':''}>${c.nome}</option>`).join('')}
+        <option value="geral" ${a?.condoId==='geral'?'selected':''}>Geral</option></select></div>
+      <div class="field"><label>Responsável</label><input id="afResp" list="respList" value="${esc(a?.responsavel||session.nome)}">
+        <datalist id="respList">${USERS.map(u=>`<option>${u.nome}</option>`).join('')}</datalist></div>
+      <div class="field"><label>Prioridade</label><select id="afPrio">${PRIOS4.map(p=>`<option ${((a?.prioridade)||'Média')===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="field"><label>Status</label><select id="afStatus">${['Pendente','Em Andamento','Concluída','Cancelada'].map(p=>`<option ${((a?.status)||'Pendente')===p?'selected':''}>${p}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>Observação</label><textarea id="afObs" rows="2">${esc(a?.observacao||'')}</textarea></div>
+    <div class="field"><label>Anexo</label><input id="afAnexo" value="${esc(a?.anexo||'')}" placeholder="ex.: nota_contrato.pdf"></div>
+    <div class="t-sub">${ic('list')} Afazer sem data: não aparece em Tarefas de Hoje nem vira atrasado. Para executar, use [Agendar como tarefa].</div>`;
+  $('#modalFoot').innerHTML=`<button class="btn ghost" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="saveAfazer('${id||''}')">Salvar</button>`;
+  $('#modal').classList.add('open');
+}
+function saveAfazer(id){
+  const o={titulo:$('#afTit').value.trim(),procedimento:$('#afDesc').value.trim(),condoId:$('#afCondo').value,
+    responsavel:$('#afResp').value.trim(),prioridade:$('#afPrio').value,status:$('#afStatus').value,
+    observacao:$('#afObs').value.trim(),anexo:$('#afAnexo').value.trim()};
+  if(!o.titulo) return toast('Informe o título.');
+  if(id){
+    const a=afazeres.find(x=>x.id===id); Object.assign(a,o);
+    a.historico.push({q:session.nome,w:nowStamp(),t:'Afazer editado'});
+    toast('Afazer atualizado.');
+  }else{
+    const a=Object.assign({id:uid('af'),tipo:P().tipos.includes('Administrativo')?'Administrativo':'Gestor',
+      vencimento:null,dataProgramada:null,periodicidade:'Sob Demanda',repetitiva:false,tipoTarefa:'Afazer',
+      concluidoEm:null,concluidoPor:null,criadoPor:session.nome,serieId:null,horario:'',concluidoHora:'',
+      historico:[{q:session.nome,w:nowStamp(),t:'Afazer criado'}]},o);
+    afazeres.push(a); toast('Afazer criado.');
+  }
+  closeModal(); render();
+}
+function delAfazer(id){
+  const a=afazeres.find(x=>x.id===id); if(!a)return;
+  if(!canDelete(a)) return toast('Você só pode excluir os seus afazeres.');
+  if(!confirm(`Excluir "${a.titulo}"?`))return;
+  audit('Exclusão de afazer',a.titulo,'sem data',a.condoId,'');
+  afazeres=afazeres.filter(x=>x.id!==id); render(); toast('Afazer excluído.');
+}
+/* Converte um afazer (sem data) em uma tarefa agendada, abrindo o formulário
+   de Tarefa do Dia já com os dados preenchidos. O afazer original permanece
+   (pode ser excluído depois, se quiser). */
+function afazerParaTarefa(id){
+  const a=afazeres.find(x=>x.id===id); if(!a)return;
+  formHoje(null);
+  // preenche o modal de tarefa do dia com os dados do afazer
+  setTimeout(()=>{
+    $('#hjTit').value=a.titulo;
+    $('#hjDesc').value=a.procedimento||'';
+    $('#hjCondo').value=a.condoId;
+    $('#hjResp').value=a.responsavel||session.nome;
+    $('#hjPrio').value=a.prioridade||'Média';
+    $('#hjStatus').value=a.status||'Pendente';
+    $('#hjObs').value=a.observacao||'';
+    $('#hjAnexo').value=a.anexo||'';
+  },50);
+  toast('Preencha a data e salve para criar a tarefa agendada.');
+}
+window.afFilters={q:'',status:'',resp:'',prio:''};
 let rotinaTab='dia';
 let mesRotina=today().slice(0,7);
 const ROTINAS_OFF=new Set();
@@ -20631,7 +20831,7 @@ function aplicarSnapshot(d){
   apontamentos=d.apontamentos||[]; estoque=d.estoque||[]; movEstoque=d.movEstoque||[];
   pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
   prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
-  analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[]; unidSind=d.unidSind||[];
+  analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[]; unidSind=d.unidSind||[]; afazeres=d.afazeres||[];
   if(d.CFG) CFG=Object.assign(CFG,d.CFG);
   const _credsAnt=Object.assign({},lerCredsLocal(),creds||{});
   creds=Object.assign({},_credsAnt,d.creds||{});
@@ -20874,5 +21074,5 @@ window.addEventListener('keydown',e=>{
 });
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a50b241af9e00a7a',t:'MTc5MzAzNTMyNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
