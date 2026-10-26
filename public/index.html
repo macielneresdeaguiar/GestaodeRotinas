@@ -11000,7 +11000,10 @@ function formLeitura(id){
           ${tipo==='agua'?'placeholder="ex.: 67645,00"':''}></div>
       ${tipo==='energia'?`<div class="field"><label>Fator multiplicador</label><input type="number" step="0.01" id="ltFator" value="${l?l.fator:1}" oninput="calcLeit()"></div>`
         :`<input type="hidden" id="ltFator" value="1">`}
-      <div class="field"><label>Leitura anterior (${unid(tipo)})</label><input type="number" step="0.01" id="ltAnt" value="${ant!=null?ant:''}" oninput="calcLeit()"></div>
+      <div class="field"><label style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <span>Leitura anterior (${unid(tipo)})</span>
+        <button type="button" class="btn sm ghost" style="padding:2px 8px;font-size:11px" onclick="leitAplicarTrocaMedidor()" title="Usar quando a concessionária troca o hidrômetro/relógio por um novo zerado">${ic('refresh')} Troca de relógio (zerar anterior)</button>
+      </label><input type="number" step="0.01" id="ltAnt" value="${ant!=null?ant:''}" oninput="calcLeit()"></div>
       <div class="field"><label>Responsável</label><input id="ltResp" value="${esc(l?.responsavel||session.nome)}"></div>
     </div>
     <div id="ltCalc"></div>
@@ -11058,7 +11061,12 @@ function calcLeit(){
           </div>
           <div class="t-sub" style="margin-top:7px;line-height:1.55">
             Se o número está certo mesmo (troca de medidor ou o relógio virou de
-            99999 para zero), explique na observação antes de salvar.
+            99999 para zero), explique na observação antes de salvar ou clique abaixo:
+          </div>
+          <div style="margin-top:8px">
+            <button type="button" class="btn sm primary" onclick="leitAplicarTrocaMedidor()">
+              ${ic('refresh')} Foi troca de hidrômetro / relógio zerado (definir anterior = 0)
+            </button>
           </div>
         </div>
       </div></div>`;
@@ -11071,6 +11079,20 @@ function calcLeit(){
       ${m?` · média: ${Math.round(m).toLocaleString('pt-BR')} (${det.usados} dia${det.usados===1?'':'s'})`:''}</div>
       ${det.ignorados?`<div class="t-sub" style="margin-top:2px">${det.ignorados} dia(s) justificado(s) ficaram de fora do cálculo.</div>`:''}
       <div style="margin-top:6px">${badgeFarol({cor,media:m,txt})} <span class="t-sub">${esc(txt)}</span></div>`:''}</div>`;
+}
+function leitAplicarTrocaMedidor(){
+  const inpAnt=document.querySelector('#ltAnt');
+  if(inpAnt) inpAnt.value='0';
+  const inpObs=document.querySelector('#ltObs');
+  if(inpObs){
+    const atual=String(inpObs.value||'').trim();
+    if(!/hidr[oô]metro trocado|troca de hidr[oô]m|troca de medidor/i.test(atual)){
+      inpObs.value=(atual?atual+' · ':'')+'Hidrômetro trocado pela concessionária (relógio novo zerado)';
+    }
+  }
+  calcLeit();
+  leitAvaliarObs();
+  toast('Leitura anterior definida como 0 (troca de hidrômetro/relógio zerado).');
 }
 /* Mostra, enquanto o responsável digita, que o sistema entendeu a justificativa. */
 function leitAvaliarObs(){
@@ -11163,9 +11185,16 @@ function saveLeitura(id,tipo){
       anterior:leitura,consumo:null,status:'Programada',obs:'',anexo:'',responsavel:o.responsavel,
       historico:[{q:'Sistema',w:nowStamp(),t:'Próxima leitura programada automaticamente (+'+intervalo+' dia'+(intervalo>1?'s':'')+')'}]});
   }
+  /* Atualiza a leitura anterior de leituras programadas posteriores para refletir a última registrada */
+  const ultReg=leituras.filter(x=>x.tipo===tipo&&x.condoId===cid&&x.status==='Registrada')
+    .sort((a,b)=>b.data.localeCompare(a.data))[0];
+  if(ultReg){
+    leituras.filter(x=>x.tipo===tipo&&x.condoId===cid&&x.status!=='Registrada'&&x.data>=ultReg.data)
+      .forEach(x=>{ x.anterior=ultReg.leitura; });
+  }
   const f=farol(alvo);
   const conc=concluirTarefaLeitura(cid,data,tipo,alvo);
-  closeModal(); render();
+  save(); closeModal(); render();
   toast(f&&f.cor==='vermelho'
     ? 'Consumo acima de 1.5x da média! Verificar vazamento ou anomalia.'
     : `Leitura salva.${conc?' Tarefa do dia concluída.':''} Próxima programada para ${fmt(pi)}.`);
@@ -20844,6 +20873,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4eb6b6ac91e181b',t:'MTc5MjcwMjcwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-</body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a50b241af9e00a7a',t:'MTc5MzAzNTMyNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
