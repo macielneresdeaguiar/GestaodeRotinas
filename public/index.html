@@ -2932,13 +2932,17 @@ function viewDashboard(){
     ['Próximos 7 Dias',m.prox.length,'Planejamento','amber','prox7'],
     ['Pendentes',m.pend.length,'Em aberto','amber','pendentes'],
     ['Concluídas (Semana)',m.conc.length,'Últimos 7 dias','green','concsem'],
+    ['Afazeres',afazeres.filter(a=>a.status!=='Concluída'&&a.status!=='Cancelada').length,'Sem data','purple','afazeres'],
   ];
   let html=`<div class="grid metrics" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">`;
-  const MICO={hoje:'today',atrasadas:'alertCircle',prox7:'calendar',concsem:'checkCircle',pendentes:'clock'};
-  cards.forEach(c=>html+=`<div class="card metric ${c[3]}" style="padding:14px 16px;cursor:pointer" onclick="drill('${c[4]}')">
+  const MICO={hoje:'today',atrasadas:'alertCircle',prox7:'calendar',concsem:'checkCircle',pendentes:'clock',afazeres:'list'};
+  cards.forEach(c=>{
+    var onclick = c[4]==='afazeres' ? "go('afazeres')" : "drill('"+c[4]+"')";
+    html+=`<div class="card metric ${c[3]}" style="padding:14px 16px;cursor:pointer" onclick="`+onclick+`">
       <div class="lbl">${ic(MICO[c[4]]||'chart')}${c[0]}</div>
       <div class="val" style="font-size:26px;margin:4px 0 2px">${c[1]}</div>
-      <div class="sub" style="font-size:11.5px">${c[2]||'&nbsp;'}</div></div>`);
+      <div class="sub" style="font-size:11.5px">${c[2]||'&nbsp;'}</div></div>`;
+  });
   html+=`<div class="card metric purple" style="padding:14px 16px;cursor:pointer" onclick="drill('semana')">
       <div class="lbl">${ic('chart')}% Conclusão Semanal</div>
       <div class="val" style="font-size:26px;margin:4px 0 2px">${m.pct}%</div>
@@ -4117,6 +4121,8 @@ function viewAfazeres(){
     return true;
   }).sort((a,b)=>{const p={'Urgente':0,'Alta':1,'Média':2,'Baixa':3};return (p[a.prioridade||'Média']||2)-(p[b.prioridade||'Média']||2)||(a.titulo||'').localeCompare(b.titulo||'')});
   const resps=[...new Set(list.map(a=>a.responsavel||'—'))];
+  const pendentes=list.filter(a=>a.status==='Pendente').length;
+  const concluidos=list.filter(a=>a.status==='Concluída').length;
   let html=`<div class="toolbar no-print">
     <input placeholder="Buscar afazer..." value="${esc(afFilters.q||'')}" oninput="afFilters.q=this.value;render()" style="min-width:200px">
     <select onchange="afFilters.status=this.value;render()">${opt(['','Pendente','Em Andamento','Concluída','Cancelada'],afFilters.status||'','Status')}</select>
@@ -4124,17 +4130,20 @@ function viewAfazeres(){
     <select onchange="afFilters.prio=this.value;render()">${opt(['','Alta','Média','Baixa'],afFilters.prio||'','Prioridade')}</select>
     <div class="spacer"></div>
     ${P().create?`<button class="btn" onclick="formAfazer()">+ Novo Afazer</button>`:''}
+    ${P().create?`<button class="btn ghost" onclick="afazerSelecionarTodos()">Selecionar todos</button>`:''}
+    ${P().create?`<button class="btn ghost" onclick="afazerAgendarLote()">Agendar selecionados</button>`:''}
   </div>`;
   html+=`<div class="chip-list no-print" style="margin-bottom:12px">
     <span class="badge b-pend">Total: ${list.length}</span>
-    <span class="badge b-atr">Pendentes: ${list.filter(a=>a.status==='Pendente').length}</span>
-    <span class="badge b-conc">Concluídos: ${list.filter(a=>a.status==='Concluída').length}</span>
+    <span class="badge b-atr">Pendentes: ${pendentes}</span>
+    <span class="badge b-conc">Concluídos: ${concluidos}</span>
     <span class="badge b-tag">Sem data · só vira tarefa quando você agendar</span></div>`;
   if(!list.length){
     html+=`<div class="card empty">${ic('list','ico-lg')}<div>Nenhum afazer cadastrado.</div>
       <div class="t-sub" style="margin-top:6px">Use [+ Novo Afazer] para lançar itens sem data. Eles ficam aqui até você decidir quando executar.</div></div>`;
   }else{
     html+=`<div class="tablewrap"><table><thead><tr>
+      <th style="width:24px"><input type="checkbox" id="afSelAll" onchange="afazerToggleTodos(this.checked)"></th>
       <th>Afazer</th><th>Descrição</th><th>Condomínio</th><th>Responsável</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr></thead><tbody>
       ${list.map(a=>`<tr>
         <td><input type="checkbox" class="afSel" value="${a.id}" onchange="afazerMarcar('${a.id}',this.checked)"></td>
@@ -4143,13 +4152,18 @@ function viewAfazeres(){
         <td data-l="Condomínio">${badgeCondo(a.condoId)}</td>
         <td data-l="Responsável">${a.responsavel?esc(a.responsavel):'<span class="badge b-avencer">sem responsável</span>'}</td>
         <td data-l="Prioridade">${badgePrio(a.prioridade||'Média')}</td>
-        <td data-l="Status">${badgeStatus(a.status)}</td>
+        <td data-l="Status">${badgeStatus(a.status)} ${a.status==='Pendente'?`<input type="checkbox" onchange="afazerConcluir1Clique('${a.id}',this.checked)" style="margin-left:6px">`:''}</td>
         <td><div class="rowact no-print nowrap">
           <button class="iconact" title="Ver detalhes" onclick="openAfazer('${a.id}')">${ic('eye')}</button>
           ${P().edit?`<button class="iconact" title="Editar" onclick="formAfazer('${a.id}')">${ic('edit')}</button>`:''}
           ${P().create?`<button class="iconact ok" title="Agendar como tarefa" onclick="afazerParaTarefa('${a.id}')">${ic('calendar')}</button>`:''}
           ${canDelete(a)?`<button class="iconact del" title="Excluir" onclick="delAfazer('${a.id}')">${ic('trash')}</button>`:''}
-        </div></td></tr>`).join('')}</tbody></table></div>`;
+        </div></td></tr>`).join('')}</tbody></table></div>
+    <div class="toolbar no-print" style="margin-top:8px">
+      ${P().create?`<button class="btn ghost" onclick="exportAfazeresCSV()">Exportar CSV</button>`:''}
+      ${P().create?`<input type="file" id="afImportFile" accept=".csv" style="display:none" onchange="importAfazeresCSV(this)">`:''}
+      ${P().create?`<label class="btn ghost sm" for="afImportFile">${ic('upload')} Importar CSV</label>`:''}
+    </div>`;
   }
   $('#content').innerHTML=html;
 }
@@ -4239,6 +4253,102 @@ function afazerParaTarefa(id){
     $('#hjAnexo').value=a.anexo||'';
   },50);
   toast('Preencha a data e salve para criar a tarefa agendada.');
+}
+
+/* -------- Afazer: concluir em 1 clique da lista -------- */
+function afazerConcluir1Clique(id,checked){
+  const a=afazeres.find(x=>x.id===id); if(!a)return;
+  if(!P().complete) return toast('Sem permissão.');
+  a.status=checked?'Concluída':'Pendente';
+  const d=new Date();
+  if(checked){
+    a.concluidoEm=today(); a.concluidoPor=session.nome;
+    a.concluidoHora=pad(d.getHours())+':'+pad(d.getMinutes());
+    a.historico.push({q:session.nome,w:nowStamp(),t:'Concluído em 1 clique da lista de afazeres'});
+  }else{
+    a.concluidoEm=null; a.concluidoPor=null; a.concluidoHora=null;
+    a.historico.push({q:session.nome,w:nowStamp(),t:'Reaberto da lista de afazeres'});
+  }
+  save(); render();
+  toast(checked?'"'+a.titulo+'" concluído.':'"'+a.titulo+'" reaberto.');
+}
+
+/* -------- Seleção em lote -------- */
+let afSelecionados=new Set();
+function afazerMarcar(id,checked){
+  if(checked) afSelecionados.add(id); else afSelecionados.delete(id);
+  atualizarBotoesLote();
+}
+function afazerToggleTodos(checked){
+  document.querySelectorAll('.afSel').forEach(cb=>{cb.checked=checked;});
+  if(checked){afazeres.forEach(a=>afSelecionados.add(a.id));} else {afSelecionados.clear();}
+  atualizarBotoesLote();
+}
+function afazerSelecionarTodos(){
+  afazerToggleTodos(true);
+}
+function atualizarBotoesLote(){
+  const btn=document.querySelector('button[onclick="afazerAgendarLote()"]');
+  if(btn) btn.textContent=afSelecionados.size?'Agendar '+afSelecionados.size+' selecionado'+(afSelecionados.size===1?'':'s'):'Agendar selecionados';
+}
+function afazerAgendarLote(){
+  if(!afSelecionados.size) return toast('Nenhum afazer selecionado.');
+  const data=prompt('Data para agendar os afazeres selecionados (ex.: 2026-11-02):',today());
+  if(!data) return;
+  let n=0;
+  afSelecionados.forEach(id=>{
+    const a=afazeres.find(x=>x.id===id);
+    if(!a)return;
+    const t=mkTask(Object.assign({tipo:a.tipo||'Administrativo',condoId:a.condoId,responsavel:a.responsavel||session.nome,
+      titulo:a.titulo,procedimento:a.procedimento||'',observacao:a.observacao||'',anexo:a.anexo||'',
+      prioridade:a.prioridade||'Média',status:a.status||'Pendente',
+      periodicidade:'Sob Demanda',repetitiva:false,tipoTarefa:'Avulsa do dia',criadoPor:session.nome,
+      dataProgramada:data,vencimento:data,horario:''},{}));
+    t.historico=[{q:session.nome,w:nowStamp(),t:'Criado a partir do afazer "'+a.titulo+'" (agendamento em lote)'}];
+    tasks.push(t); n++;
+  });
+  afSelecionados.clear(); atualizarBotoesLote(); save(); render();
+  toast(n+' afazer(es) agendado(s) para '+fmt(data)+'. Aparecem em Tarefas de Hoje.');
+}
+
+/* -------- Exportar/Importar CSV -------- */
+function exportAfazeresCSV(){
+  var linhas=['id,titulo,procedimento,condoId,responsavel,prioridade,status,observacao,anexo,tipo,tipoTarefa'];
+  afazeres.forEach(function(a){
+    function escC(v){return String(v||'').replace(/"/g,'""');}
+    linhas.push(a.id+',"'+escC(a.titulo)+'","'+escC(a.procedimento)+'","'+escC(a.condoId)+'","'+escC(a.responsavel)+'","'+escC(a.prioridade)+'","'+escC(a.status)+'","'+escC(a.observacao)+'","'+escC(a.anexo)+'","'+escC(a.tipo)+'","'+escC(a.tipoTarefa)+'"');
+  });
+  var blob=new Blob([linhas.join('\n')],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url; a.download='afazeres.csv'; a.click();
+  URL.revokeObjectURL(url);
+  toast('Afazeres exportados para afazeres.csv');
+}
+function importAfazeresCSV(input){
+  var file=input.files[0]; if(!file)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    var texto=e.target.result;
+    var rows=texto.split('\n').filter(function(l){return l.trim();});
+    if(rows.length<2) return toast('CSV vazio ou sem cabeçalho.');
+    var n=0;
+    for(var i=1;i<rows.length;i++){
+      var cols=rows[i].split(',').map(function(c){return c.replace(/^"|"$/g,'').replace(/""/g,'"');});
+      if(cols.length<3) continue;
+      var id=cols[0],titulo=cols[1],procedimento=cols[2],condoId=cols[3],responsavel=cols[4],prioridade=cols[5],status=cols[6],observacao=cols[7],anexo=cols[8],tipo=cols[9],tipoTarefa=cols[10];
+      if(!titulo) continue;
+      var a=Object.assign({id:id||uid('af'),tipo:tipo||'Administrativo',condoId:condoId||'geral',
+        responsavel:responsavel||session.nome,prioridade:prioridade||'Média',status:status||'Pendente',
+        vencimento:null,dataProgramada:null,periodicidade:'Sob Demanda',repetitiva:false,tipoTarefa:'Afazer',
+        concluidoEm:null,concluidoPor:null,criadoPor:session.nome,serieId:null,horario:'',concluidoHora:'',
+        historico:[{q:session.nome,w:nowStamp(),t:'Afazer importado via CSV'}]},{
+        titulo:titulo,procedimento:procedimento||'',observacao:observacao||'',anexo:anexo||''});
+      if(!afazeres.find(function(x){return x.id===a.id;})){afazeres.push(a);n++;}
+    }
+    save(); render();
+    toast(n+' afazer(es) importado(s) do CSV.');
+  };
+  r.readAsText(file);
 }
 window.afFilters={q:'',status:'',resp:'',prio:''};
 let rotinaTab='dia';
@@ -21074,5 +21184,5 @@ window.addEventListener('keydown',e=>{
 });
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a50c0db7eb3ce105',t:'MTc5MzA0NDg5Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
