@@ -94,3 +94,12 @@ test('full backup restores all ten tables including credentials, attachments and
  }finally{target.close()}
  const corrupted=structuredClone(backup);corrupted.tables[0].rows.pop();await assert.rejects(()=>restoreEmptyDatabase(corrupted,db),/corrompido/);
 });
+
+test('a brigadista can resolve an existing shared defect without changing its author, floor, evidence or unrelated fields',async()=>{
+ const create=await get('b2');create.snapshot.brigInsp.push({id:'shared_defect',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-09-01',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária do corredor',sit:'NÃO CONFORME',obs:'Sem acender',fotos:[]}],historico:[]});
+ assert.equal((await put(create.snapshot,create.versao,'b2')).status,200);
+ const view=await get('b1'),row=view.snapshot.brigInsp.find(i=>i.id==='shared_defect');Object.assign(row.pontos[0],{resolvido:true,resolvidoPor:'Anderson',resolvidoEm:'2026-10-30',obsResolucao:'Substituída e conferida'});row.resolvido=true;
+ const result=await put(view.snapshot,view.versao,'b1');assert.equal(result.status,200,JSON.stringify(result.data));
+ const all=await get();const stored=all.snapshot.brigInsp.find(i=>i.id==='shared_defect');assert.equal(stored.userId,'b2');assert.equal(stored.pontos[0].resolvido,true);
+ const attack=await get('b1');attack.snapshot.brigInsp.find(i=>i.id==='shared_defect').pontos[0].obs='Apagar relato do colega';assert.equal((await put(attack.snapshot,attack.versao,'b1')).status,403);
+});
