@@ -10,7 +10,7 @@ function viewInicio(){
     ['hoje','today','Organizar meu dia','Tarefas, prioridades e próximas entregas'];
   const shortcuts=[['hoje','today','Meu dia'],['brigada-inicio','shieldCheck','Check-list'],['brigada-ronda','route','Fazer ronda'],
     ['leituras','water','Leituras'],['apontamentos','wrench','Serviços'],['estoque','box','Estoque'],['pedidos','cart','Materiais'],
-    ['notas','invoice','Notas fiscais'],['ocupacao','building','Ocupação'],['analises','helmet','Projetos']].filter(([k])=>allowed(k));
+    ['notas','invoice','Notas fiscais'],['ocupacao','building','Ocupação'],['analises','helmet','Projetos'],['config','settings','Minha conta']].filter(([k])=>allowed(k)&&k!==primary[0]);
   const done=s=>/Conclu|Resolvido|Cancelad|Registrada/.test(s||'');
   const pending=[];
   if(allowed('leituras')){const n=leituras.filter(l=>!done(l.status)&&l.data<=today()).length;if(n)pending.push(['leituras','water',n+' leitura(s) para registrar','Confira o medidor antes de confirmar']);}
