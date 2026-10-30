@@ -1,5 +1,6 @@
 /* DOM-only mobile improvements: never changes operational records. */
 (function(){
+  const mobileDocument=document;
   let scheduled=false,preparing=false;
   const trail=[];let returning=false;
   const originalGo=window.go;
@@ -112,7 +113,7 @@
     if(preparing)return;preparing=true;
     try{if(typeof fieldWorkTabs==='function')fieldWorkTabs();labelTables();controls();compact();top();keyboard()}finally{preparing=false}
   };
-  function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;window.mobilePrepararPagina()});}
+  function schedule(){if(scheduled||!mobileDocument.defaultView?.document)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;if(!mobileDocument.defaultView?.document)return;window.mobilePrepararPagina()});}
   const observer=new MutationObserver(schedule);
   ['content','modalBody','drawerBody'].forEach(id=>{const node=document.getElementById(id);if(node)observer.observe(node,{childList:true,subtree:true});});
   window.addEventListener('resize',schedule);window.addEventListener('focusin',keyboard);window.addEventListener('focusout',keyboard);
