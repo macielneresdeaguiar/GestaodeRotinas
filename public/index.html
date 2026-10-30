@@ -15,7 +15,6 @@
 <meta name="description" content="Gestão de rotinas condominiais — tarefas, manutenção, estoque e leituras.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230d1b2e'/%3E%3Cg fill='none' stroke='%232563eb' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' transform='translate(2.6 2.6) scale(0.78)'%3E%3Cpath d='M4 21V5.5A1.5 1.5 0 0 1 5.5 4h7A1.5 1.5 0 0 1 14 5.5V21'/%3E%3Cpath d='M14 10h4.5A1.5 1.5 0 0 1 20 11.5V21M2.5 21h19M7 8h4M7 12h4M7 16h4'/%3E%3C/g%3E%3C/svg%3E">
 <title>Gestão de Rotinas Condominiais</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 :root{
   /* superfícies */
@@ -19804,9 +19803,8 @@ function viewOcupacao(){
         passa a se atualizar sozinha conforme as obras aprovadas e as cessões de direitos.</div>
       <div class="rowact" style="justify-content:center">
         ${P().create?`<button class="btn" onclick="ocuRestaurar()">${ic('refresh')}Carregar as ${SALAS_SEED.length} salas do prédio</button>`:''}
-${P().create?`<button class="btn ghost" onclick="ocuImportar()">${ic('upload')}Importar lista</button>`:''}
-${P().create?`<button class="btn ghost" onclick="ocuImportarPdf()">${ic('file')}Importar PDF de Ocupação</button>`:''}
-${P().create?`<button class="btn ghost" onclick="ocuFormSala()">${ic('plus')}Cadastrar uma</button>`:''}
+        ${P().create?`<button class="btn ghost" onclick="ocuImportar()">${ic('upload')}Importar lista</button>`:''}
+        ${P().create?`<button class="btn ghost" onclick="ocuFormSala()">${ic('plus')}Cadastrar uma</button>`:''}
       </div></div>`;
     return;
   }
@@ -19896,7 +19894,6 @@ ${P().create?`<button class="btn ghost" onclick="ocuFormSala()">${ic('plus')}Cad
       <button class="btn ghost" onclick="ocuExportar()">${ic('download')}Exportar Excel</button>
       <button class="btn ghost" onclick="ocuImprimirPdf()">${ic('print')}PDF Compacto</button>
       ${P().create?`<button class="btn ghost" onclick="ocuImportar()">${ic('upload')}Importar lista</button>`:''}
-      ${P().create?`<button class="btn ghost" onclick="ocuImportarPdf()">${ic('file')}Importar PDF de Ocupação</button>`}
       ${session.role==='Gestor'?`<button class="btn ghost" onclick="ocuRestaurar()" title="Recarregar a relação original do prédio">${ic('refresh')}Restaurar relação</button>`:''}
       ${P().create?`<button class="btn" onclick="ocuFormSala()">+ Nova sala</button>`:''}
     </div>
@@ -20050,174 +20047,6 @@ function ocuImportarConf(){
   audit('Importou salas',condoName(cid),novas+' nova(s), '+atu+' atualizada(s)',cid);
   save(); closeModal(); render();
   toast(novas+' sala(s) cadastrada(s)'+(atu?' e '+atu+' atualizada(s)':'')+'.');
-}
-
-/* ============================================================
-   IMPORTAR PDF DE OCUPAÇÃO
-   Lê o PDF da taxa de ocupação e extrai: Sala | Nome da Empresa | Ramo/Atividade
-   Envia os dados para o servidor via API /api/dados
-   ============================================================ */
-function ocuImportarPdf(){
-  openModal('Importar PDF de Ocupação',
-    `<div class=\"t-sub\" style=\"margin-bottom:12px\">
-       Selecione o arquivo PDF da Taxa de Ocupação (ex: \"Taxa de Ocupação — E-Business.pdf\").
-       O sistema vai extrair automaticamente: Sala, Nome da Empresa e Ramo/Atividade de cada sala.
-     </div>
-     <div class=\"field\"><input type=\"file\" id=\"ocuPdfFile\" accept=\".pdf\" style=\"width:100%;padding:10px;border:1px solid #d5deec;border-radius:8px;background:#fff\"></div>
-     <div class=\"t-sub\" style=\"font-size:12px;color:#5c6879\">Formato esperado no PDF: cada linha com <b>número da sala</b>, <b>nome da empresa</b> e <b>ramo/atividade</b>.</div>
-     <div id=\"ocuPdfStatus\" style=\"margin-top:10px;min-height:20px;font-size:13px\"></div>`,
-    `<button class=\"btn ghost\" onclick=\"closeModal()\">Cancelar</button>
-     <button class=\"btn\" id=\"ocuPdfBtnGo\" onclick=\"ocuImportarPdfConf()\">${ic('check')}Importar do PDF</button>`);
-  $('#ocuPdfBtnGo').disabled=true;
-  $('#ocuPdfFile').onchange=function(){
-    $('#ocuPdfBtnGo').disabled=!this.files||!this.files.length;
-    $('#ocuPdfStatus').textContent='';
-  };
-}
-
-async function ocuImportarPdfConf(){
-  const file=$('#ocuPdfFile').files[0]; if(!file)return;
-  const btn=$('#ocuPdfBtnGo'); const status=$('#ocuPdfStatus');
-  btn.disabled=true; btn.textContent='Processando PDF...';
-  status.textContent='Lendo PDF...';
-  try{
-    const arrayBuffer=await file.arrayBuffer();
-    const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
-    const totalPages=pdf.numPages;
-    let textoCompleto='';
-    for(let i=1;i<=totalPages;i++){
-      const page=await pdf.getPage(i);
-      const txt=await page.getTextContent();
-      const linhas=txt.items.map(it=>it.str).join(' ');
-      textoCompleto+='\\n'+linhas;
-    }
-    status.textContent='PDF lido ('+totalPages+' página(s)). Processando salas...';
-    
-    // Processar linhas: extrair Sala, Nome, Ramo
-    // Formato esperado: "309 Clinica Caminhar Neurodesenvolvimento Infantil e Fonoaudiologia"
-    // Ou: "Loja 01 Subway Alimentação"
-    const salasJson=processarTextoOcupacao(textoCompleto);
-    
-    if(!salasJson.length){ status.textContent='Não foi possível extrair salas do PDF.'; btn.disabled=false; btn.textContent='Importar do PDF'; return; }
-    
-    status.textContent='Enviando '+salasJson.length+' sala(s) para o servidor...';
-    
-    // Enviar para a API
-    const cid=condoFilter==='all'?'c1':condoFilter;
-    // Buscar snapshot atual
-    const snapRes=await fetch('/api/dados',{headers:{'Content-Type':'application/json'}});
-    const snapData=await snapRes.json();
-    const snap=snapData.snapshot||{};
-    snap.salas=snap.salas||[];
-    
-    let ok=0,erro=0;
-    for(const s of salasJson){
-      const existente=snap.salas.find(x=>String(x.numero).trim().toLowerCase()===String(s.numero).trim().toLowerCase());
-      if(existente){
-        existente.ocupante=s.nome;
-        existente.nomeEspaco=s.nome;
-        existente.obs=s.ramo;
-        existente.status='Ocupada';
-        existente.tipo='Locatário';
-        existente.manual=true;
-        existente.manualEm=today();
-        (existente.historico=existente.historico||[]).push({q:session.nome,w:nowStamp(),t:'Atualizada pelo PDF de Ocupação'});
-        ok++;
-      }else{
-        snap.salas.push({
-          id:uid('sl'),condoId:cid,numero:s.numero,andar:'',area:null,vagas:0,deposito:'',
-          ocupante:s.nome,nomeEspaco:s.nome,obs:s.ramo,tipo:'Locatário',status:'Ocupada',
-          manual:true,manualEm:today(),
-          historico:[{q:session.nome,w:nowStamp(),t:'Cadastrada pelo PDF de Ocupação'}]
-        });
-        ok++;
-      }
-    }
-    
-    // Enviar snapshot atualizado
-    const payload={snapshot:snap,versaoBase:snapData.versao,autor:'Importação PDF Ocupação',dispositivo:'manual'};
-    const resp=await fetch('/api/dados',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    if(!resp.ok) throw new Error('Erro ao salvar: HTTP '+resp.status);
-    
-    status.innerHTML='<strong style="color:#1d7a4c">✓ '+ok+' sala(s) atualizada(s) com sucesso!</strong>';
-    setTimeout(()=>{closeModal();render();location.reload();},1500);
-  }catch(e){
-    status.textContent='Erro: '+e.message;
-    btn.disabled=false; btn.textContent='Importar do PDF';
-  }
-}
-
-/* Extrai salas do texto do PDF. Tenta identificar padrão: NUMERO NOME RAMO */
-function processarTextoOcupacao(texto){
-  const salas=[];
-  const linhas=texto.split(/\\r?\\n/);
-  // Padrões conhecidos do PDF:
-  // "309 Clinica Caminhar Neurodesenvolvimento Infantil e Fonoaudiologia"
-  // "Loja 01 Subway Alimentação"
-  // "201 LEV Seguros E Planos de Saúde Seguro e Plano de Saúde"
-  const padraoSala=/^(\d{3,4}|Loja\s+\d+|Loja\s+Mez\.\s+\d+)\s+/i;
-  for(const linha of linhas){
-    const l=linha.trim();
-    if(!l) continue;
-    // Pular cabeçalhos
-    if(l.toUpperCase().includes('SALA')&&l.toUpperCase().includes('NOME')) continue;
-    if(l.toUpperCase().includes('TAXA DE OCUPAÇÃO')) continue;
-    if(l.toUpperCase().includes('E-BUSINESS')) continue;
-    if(l.toUpperCase().includes('ABL GESTÃO')) continue;
-    if(l.match(/^\d+[%]/)) continue; // porcentagens
-    
-    const m=l.match(padraoSala);
-    if(!m) continue;
-    const numero=m[1].trim();
-    const restante=l.substring(m[0].length).trim();
-    if(!restante) continue;
-    
-    // Tentar separar nome e ramo: o ramo geralmente vem no final
-    // Estratégia: se houver palavras-chave de ramo, separar lá
-    const palavrasRamo=['advocacia','odontologia','contabilidade','estética','estetica','fisioterapia','psicologia','alimentação','alimentacao','educação','educacao','tecnologia','imobiliária','imobiliaria','saúde','saude','beleza','moda','serviços','servicos','comércio','comercio','indústria','industria','engenharia','arquitetura','design','informática','informatica','comunicação','comunicacao','marketing','música','musica','turismo','viagens','seguros','plano','planos','clinica','clínica','studio','estúdio','academia','instituto','institut','centro','centre','espaço','espaco','lotus','luminus','kanaã','canaã','bem-vie','bem vie','siemens','mind','metrô','metrô df','barinject','rs semi','barbearia','academia','esmalte','unhas','cabelo','barbe','padaria','lanches','restaurante','corretor','corretora','advogado','advogados','psicanálise','psicanalise','massoterapia','nutrição','nutricao','personal','personal trainer','crossfit','pilates','podologia','fonoaudiologia','terapia','terapeuta','psiquiatria','psiquiatra','medicina','médico','medico','enfermagem','enfermeiro','farmácia','farmacia','drogaria','ótica','otica','joalheria','relojoaria','presentes','artigos','presente','floricultura','flores','pet shop','veterinário','veterinario','banho','tosa','adestramento','academia de música','escola de música','curso','cursos','treinamento','consultoria','consultor','assessoria','assessor','representação','representacoes','representante','importação','importacao','exportação','exportacao','distribuição','distribuicao','atacado','varejo','e-commerce','loja virtual','marketing digital','publicidade','propaganda','agência','agencia','eventos','cerimonial','decoração','decoracao','moveis','móveis','decoração de interiores','arquitetura de interiores','paisagismo','jardinagem','limpeza','terceirização','terceirizacao','segurança','seguranca','vigilância','vigilancia','monitoramento','alarme','incêndio','incendio','extintor','hidrante','sistema de som','automação','automacao','solar','energia solar','fotovoltaica','elétrica','eletrica','hidráulica','hidraulica','construção','construcao','reforma','reformas','pintura','pinturas','gesso','drywall','forro','piso','cerâmica','ceramica','granito','mármore','marmore','vidro','esquadria','portão','portao','cancelas','controle de acesso','circuito fechado','cftv','câmera','camera','alarme','interfone','porteiro eletrônico','porteiro','elevador','elevadores','manutenção de elevador','segurança do trabalho','trabalho','nr','norma regulamentadora','laudo','laudos','ppra','pcmso','ltr','adt','análise de risco','ergonomia','acidente','doença ocupacional','doenca ocupacional','sesmt','cipa','brigada','brigadista','bombeiro','bombeiros','prevenção','prevencao','combate','combate a incêndio','combate a incencio','treinamento de brigada','curso de brigada','nr-10','nr-12','nr-13','nr-18','nr-20','nr-33','nr-35','trabalho em altura','espaço confinado','maquinário','maquinario','equipamento de proteção','epa','epc','sinalização','sinalizacao','fita zebrada','placa','placas','sinalização de segurança','marcação','marcacao','piso tátil','piso tactil','rampas','acessibilidade','cadeira de rodas','banheiro adaptado','banheiro adaptável','vaga para idoso','vaga para deficiente','vaga pcd','vaga de gestante','vaga de idoso','vaga de cadeirante'];
-    
-    // Tenta encontrar onde o nome termina e o ramo começa
-    // Se o restante tem mais de uma palavra, tentar separar
-    const palavras=restante.split(/\s+/);
-    let nome=restante;
-    let ramo='';
-    
-    // Se há 3+ palavras, tentar encontrar a divisão nome/ramo
-    if(palavras.length>=3){
-      // Procurar por palavra que indica ramo no final
-      for(let i=palavras.length-1;i>=1;i--){
-        const palavra=palavras[i].toLowerCase().replace(/[^a-záàâãéêíóôõüç]/g,'');
-        if(palavrasRamo.includes(palavra)||palavra.length<=15){
-          // Possível início do ramo
-          nome=palavras.slice(0,i).join(' ');
-          ramo=palavras.slice(i).join(' ');
-          break;
-        }
-      }
-    }
-    
-    // Se não conseguiu separar bem, usar tudo como nome e ramo vazio
-    if(!ramo && palavras.length>=2){
-      // Última palavra como ramo se for curta (provável sigla)
-      const ultima=palavras[palavras.length-1];
-      if(ultima.length<=4 && /^[A-ZÁÀÂÃÉÊÍÓÔÕÜÇ]+$/.test(ultima)){
-        nome=palavras.slice(0,-1).join(' ');
-        ramo=ultima;
-      }
-    }
-    
-    // Limpar
-    nome=nome.replace(/[—–\-]\s*$/,'').trim();
-    ramo=ramo.trim();
-    
-    if(numero && nome){
-      salas.push({numero,nome,ramo});
-    }
-  }
-  // Remover duplicatas mantendo a última
-  const mapa={};
-  for(const s of salas) mapa[s.numero]=s;
-  return Object.values(mapa);
 }
 
 /* ============================================================
@@ -21354,5 +21183,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a51d02c94f23df57',t:'MTc5MzIyMjcwMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<!-- Base funcional: 689712f. Ocupação conferida em 30/10/2026; dados permanecem no Turso; DB_VER=2. -->
+</body>
 </html>
