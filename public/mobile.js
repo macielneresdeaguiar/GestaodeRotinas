@@ -110,7 +110,7 @@
   }
   window.mobilePrepararPagina=function(){
     if(preparing)return;preparing=true;
-    try{labelTables();controls();compact();top();keyboard()}finally{preparing=false}
+    try{if(typeof fieldWorkTabs==='function')fieldWorkTabs();labelTables();controls();compact();top();keyboard()}finally{preparing=false}
   };
   function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;window.mobilePrepararPagina()});}
   const observer=new MutationObserver(schedule);
