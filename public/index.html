@@ -14804,6 +14804,7 @@ function brigAutoConcluirPreenchidos(cid,mesRef,sisFiltro){
     if(!i||i.condoId!==cid||String(i.data||'').slice(0,7)!==mes) return;
     if(sisFiltro&&!_brigMatchSis(i.sistema,sisFiltro)) return;
     if(i.status==='Concluído') return;
+    if((i.pontos||[]).some(p=>p.revisaoPendente))return;
     if((i.historico||[]).some(h=>/reabert/i.test(h.t||''))) return;
     if(!brigRascunhoIntocado(i)){
       const nc=brigNC(i);
@@ -16368,19 +16369,19 @@ function brigFinalizarSessao(){
   const mes=brigMesAtual();
   brigAutoConcluirPreenchidos(s.cid,mes,s.sistemas);
   const ciclo=brigSincronizarCicloMensal(s.cid,mes);
-  const feitos=s.fila.length;
+  const feitos=s.fila.filter(p=>brigInsp.some(i=>i.condoId===s.cid&&i.andar===p.andar&&i.sistema===p.sistema&&String(i.data).slice(0,7)===mes&&i.status==='Concluído')).length;
   const ncs=s.fila.reduce((n,p)=>{
     const i=brigInsp.filter(x=>x.condoId===s.cid&&x.andar===p.andar&&x.sistema===p.sistema&&
       x.status==='Concluído').sort((a,b)=>b.data.localeCompare(a.data))[0];
     return n+(i?brigQtdNC(i):0);
   },0);
   page='brigada'; buildNav(); render();
-  openModal(ciclo.concluido?'Check-list mensal concluído (1x por mês)':'Ronda de check-list concluída',
+  openModal(ciclo.concluido?'Check-list mensal concluído (1x por mês)':'Sequência encerrada — confira as pendências',
     `<div class="bg-fim">
       <div class="bg-fim-n">${ciclo.concluido?`${ciclo.feitos}/${ciclo.total}`:feitos}</div>
       <div class="muted">${ciclo.concluido
         ?`Todos os check-lists do mês de <b>${esc(mesExtenso(mes))}</b> foram concluídos (1 vez por mês)!`
-        :`parada(s) concluída(s) — ${esc(s.sistemas.map(x=>brigSis(x).nome).join(', '))}`}</div>
+        :`de ${s.fila.length} parada(s) concluída(s); as demais continuam em andamento — ${esc(s.sistemas.map(x=>brigSis(x).nome).join(', '))}`}</div>
       ${ciclo.concluido?`<div class="bg-av bg-green" style="margin-top:12px">
         <div class="bg-ic">${ic('checkCircle')}</div>
         <div><div class="bg-tit">Ciclo mensal encerrado automaticamente</div>
@@ -16447,7 +16448,8 @@ function brigBarraSessao(){
 function brigPular(){
   if(!brigSessao) return;
   const iAt=brigAtual?_bi(brigAtual):null;
-  if(iAt&&iAt.status!=='Concluído'&&!brigRascunhoIntocado(iAt)){
+  if(iAt&&(iAt.pontos||[]).some(p=>p.revisaoPendente)){save();}
+  else if(iAt&&iAt.status!=='Concluído'&&!brigRascunhoIntocado(iAt)){
     const nc=brigNC(iAt);
     if(session){ iAt.responsavel=session.nome; iAt.userId=session.id; }
     iAt.status='Concluído'; iAt.data=iAt.data||today(); iAt.concluidoEm=nowStamp();
