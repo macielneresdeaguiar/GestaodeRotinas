@@ -1890,6 +1890,11 @@ const AUTH={ok:false,ready:false,busy:false,userId:null,expiresAt:0,creds:{},tim
 const authFetchOriginal=window.fetch.bind(window);
 window.fetch=async function(input,options){
   const url=typeof input==='string'?input:(input&&input.url)||'';
+  const privada=url.startsWith('/api/')&&!url.startsWith('/api/auth/')&&url!=='/api/saude';
+  if(privada&&(!AUTH.ok||localStorage.getItem('grc.auth.user')!==AUTH.userId)){
+    if(AUTH.ok)authBloquear('Outra conta entrou neste navegador. Entre novamente para continuar.');
+    throw new Error('Entre no sistema para acessar os dados.');
+  }
   const r=await authFetchOriginal(input,options);
   if(url.startsWith('/api/')&&!url.startsWith('/api/auth/')&&r.status===401){
     authBloquear('Sua sessão terminou. Entre novamente para continuar.');
@@ -1906,6 +1911,7 @@ async function authPedido(path,body){
 }
 function authAceitar(d){
   AUTH.ok=true;AUTH.userId=d.userId;AUTH.expiresAt=Date.parse(d.expiresAt);
+  localStorage.setItem('grc.auth.user',d.userId);
   if(d.creds)creds=AUTH.creds=d.creds;
   clearTimeout(AUTH.timer);
   AUTH.timer=setTimeout(()=>authBloquear('O dia virou. Entre com sua senha para continuar.'),Math.max(0,AUTH.expiresAt-Date.now()));
@@ -1946,7 +1952,10 @@ async function authInicializar(){
 }
 window.addEventListener('online',()=>{if(!AUTH.ok)authInicializar()});
 window.addEventListener('focus',()=>{if(AUTH.ok&&Date.now()>=AUTH.expiresAt)authBloquear('Entre novamente: começou um novo dia.');});
-window.addEventListener('storage',e=>{if(e.key==='grc.logout.at')authBloquear('A sessão foi encerrada em outra aba.');});
+window.addEventListener('storage',e=>{
+  if(e.key==='grc.logout.at')authBloquear('A sessão foi encerrada em outra aba.');
+  else if(e.key==='grc.auth.user'&&AUTH.ok&&e.newValue!==AUTH.userId)authBloquear('Outra conta entrou neste navegador. Entre novamente para continuar.');
+});
 
 const PROFILE_UI={u1:{icon:'briefcase'},u2:{icon:'clipboardCheck'},u3:{icon:'helmet'},u4:{icon:'sparkles'},
   b1:{icon:'flame'},b2:{icon:'flame'},b3:{icon:'flame'},b4:{icon:'flame'},
