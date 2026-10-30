@@ -2,7 +2,7 @@
    Objetivo: o app abrir e funcionar sem internet (subsolo, casa de máquinas).
    Os DADOS ficam no localStorage do aparelho; aqui cuidamos só de ter o
    aplicativo em si disponível offline. */
-const VER   = 'grc-v29-pendencias-e-rascunhos';
+const VER   = 'grc-v30-confirmacao-por-registro';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './mobile.css', './mobile.js', './access-client.js', './field-ui.js', './workflow.js',
   './icones/icone-192.png', './icones/icone-512.png',
   './icones/apple-touch-icon.png'];
