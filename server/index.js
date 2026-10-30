@@ -189,7 +189,7 @@ app.post('/api/dados', exigeToken, async (req, res) => {
   }
   try {
     const atual=await lerWorkspace(WS);
-    if(req.get('x-grc-scope')!=='scoped-2026-10-30')return res.status(426).json({erro:'Atualize o aplicativo para continuar.',atualizeApp:true});
+    if(req.get('x-grc-scope')!=='scoped-2026-10-30'||req.get('x-grc-workflow')!=='monthly-review-v1')return res.status(426).json({erro:'Atualize o aplicativo para continuar.',atualizeApp:true});
     if(!Number.isSafeInteger(versaoBase)||versaoBase<0)return res.status(400).json({erro:'versao_base_obrigatoria'});
     if(atual&&versaoBase!==atual.versao)return res.status(409).json({ok:false,conflito:true,versao:atual.versao,atualizado:atual.atualizado,autor:atual.autor,snapshot:await outputSnapshot(atual.snapshot,req)});
     const access=accessFor(req.auth.user_id,atual?.snapshot);
