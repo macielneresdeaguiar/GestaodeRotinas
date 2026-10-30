@@ -137,3 +137,5 @@
 .workflow-delivery[data-pending=true]{color:#946218}.workflow-next{font-size:11px;margin-top:7px;color:#426278;line-height:1.5}
 .workflow-draft{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:10px;background:#edf4fa;border:1px solid #cfdfec;border-radius:10px;margin-bottom:14px;font-size:12px}
 .workflow-draft span{flex:1 1 160px}.workflow-draft button{min-height:44px}.workflow-draft [hidden]{display:none!important}
+
+#content .check>.workflow-delivery,#content .check>.workflow-next{flex:1 0 100%;margin-top:2px}
