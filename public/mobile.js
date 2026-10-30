@@ -78,7 +78,7 @@
       group(tools,'mobile-tools no-print','Ferramentas e exportação');
     });
     if(page==='ocupacao'&&!document.querySelector('#content .mobile-charts')){
-      const nodes=Array.from(new Set(Array.from(document.querySelectorAll('#content .pz-wrap,#content .og-wrap')).map(n=>n.closest('.card')).filter(Boolean)));
+      const nodes=Array.from(new Set(Array.from(document.querySelectorAll('#content .pz-wrap,#content .og-wrap,#content .ia-card')).map(n=>n.closest('.card')).filter(Boolean)));
       group(nodes,'mobile-charts','Ver gráficos de ocupação');
     }
   }

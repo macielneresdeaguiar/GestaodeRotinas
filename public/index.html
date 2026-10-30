@@ -2862,7 +2862,7 @@ function ic(name,cls){
 function itensNavegacao(){
   /* A portaria faz uma coisa so. O painel geral traz tarefas, avisos e
      numeros que nao sao da alcada dela -- fica de fora do menu. */
-  const items=[['inicio','home','Meu espaço'],...(P().leiturasSimples?[]:[['dashboard','dashboard','Painel geral']])];
+  const items=[['inicio','gauge','Meu espaço'],...(P().leiturasSimples?[]:[['dashboard','dashboard','Painel geral']])];
   if(P().tipos.length){
     items.push(['#','','Operação']);
     items.push(['hoje','today','Trabalho da equipe']);
@@ -2889,11 +2889,11 @@ function itensNavegacao(){
     items.push(['leituras','water','Leituras — Água e Energia']);
   }
   if(!P().brigada&&P().ronda) items.push(['brigada-ronda','route','Ronda e Chamados']);
-  if(P().brigada){ if(!P().tipos.length) items.push(['#','','Brigada de Incêndio']);
+  if(P().brigada){ items.push(['#','','Brigada de Incêndio']);
     items.push(['brigada-inicio','play','Iniciar Check-list'],
       ['brigada','flame','Check-list por Andar'],['brigada-ronda','route','Ronda Diária']); }
   if(P().manutencao||P().manutobrig){
-    if(!P().tipos.length&&!P().brigada) items.push(['#','','Predial']);
+    items.push(['#','','Manutenção e materiais']);
     if(P().manutencao) items.push(['apontamentos','wrench','Apontamentos']);
     if(P().manutobrig) items.push(['manutobrig','shieldCheck','Manutenções Obrigatórias']); }
   if(P().estoque) items.push(['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material']);
@@ -12450,22 +12450,22 @@ function tabsDoPerfilBase(){
   if(!session) return [];
   if(!P().tipos.length){
     /* Brigadista: só o que é da brigada */
-    if(P().brigada) return [['inicio','home','Início'],
+    if(P().brigada) return [['inicio','gauge','Início'],
       ['brigada-inicio','play','Check-list'],['brigada','flame','Andares'],
       ['brigada-ronda','route','Ronda'],['menu','menu','Mais']];
     /* Portaria: so a leitura. Sem painel e sem ronda -- a barra de baixo
        precisa refletir o mesmo acesso restrito do menu lateral. */
-    if(P().leiturasSimples) return [['inicio','home','Início'],['leituras','water','Leituras'],
+    if(P().leiturasSimples) return [['inicio','gauge','Início'],['leituras','water','Leituras'],
       ['menu','menu','Mais']];
     /* Limpeza e portaria: leitura e ronda */
-    if(P().leituras||P().ronda) return [['inicio','home','Início'],
+    if(P().leituras||P().ronda) return [['inicio','gauge','Início'],
       ['leituras','water','Leituras'],['brigada-ronda','route','Ronda'],
       ['menu','menu','Mais']];
     /* Manutenção (Cleiton) — fluxo de campo */
-    return [['inicio','home','Início'],['apontamentos','wrench','Serviços'],
+    return [['inicio','gauge','Início'],['apontamentos','wrench','Serviços'],
             ['estoque','box','Estoque'],['pedidos','cart','Pedidos'],['menu','menu','Mais']];
   }
-  const t=[['inicio','home','Início'],['hoje','today','Hoje'],['rotina','route','Rotina']];
+  const t=[['inicio','gauge','Início'],['hoje','today','Hoje'],['rotina','route','Rotina']];
   if(P().manutencao) t.push(['apontamentos','wrench','Serviços']);
   else t.push(['notas','invoice','NFs']);
   t.push(['menu','menu','Mais']);
