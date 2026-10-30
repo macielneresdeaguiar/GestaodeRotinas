@@ -48,3 +48,39 @@ Também foi exercitado o DOM completo da interface com servidor de teste: login,
 Publicar public/index.html, public/sw.js, server/auth.js e server/index.js juntos. O service worker usa grc-v25-auth-diaria. Não publicar apenas a interface ou apenas o servidor.
 
 Existe Deploy Hook no Render mesmo com Auto-Deploy desativado. Conferir o commit efetivamente Live após a publicação. Não usar seed, zerar aparelhos, restaurar relação de salas ou reenviar snapshots antigos para implantar código. A volta a uma versão anterior sem autenticação reabre as APIs e não é uma estratégia segura de recuperação. Os backups anteriores à autenticação não incluem as quatro tabelas novas; novos backups completos do Turso precisam incluí-las, com o devido cuidado por conterem credenciais.
+
+
+## Revisão de retomada e celular
+
+A reabertura usa primeiro a sessão persistente já validada pelo servidor. Com uma cópia operacional no aparelho, a tela volta imediatamente após essa validação e os dados sincronizam em segundo plano. Uma falha de download dos dados não encerra uma sessão válida nem exige senha novamente. Se faltar conexão para verificar a sessão, o app mantém o estado e oferece Tentar novamente; após reconectar, retoma sem novo login. Nenhuma decisão de autorização da API é tomada com base em indicadores do localStorage.
+
+O bloqueio continua à meia-noite, por logout, revogação ou troca de conta. Ele também fecha os avisos críticos e modais para que não permaneçam sobre a tela de entrada. Fechar o aplicativo, mudar de aba ou navegar entre módulos não faz logout. A persistência é por ambiente de armazenamento: navegador privado, limpeza de dados ou uso de outro navegador/app instalado não compartilham automaticamente o mesmo cookie.
+
+public/mobile.css e public/mobile.js concentram os novos ajustes de apresentação. O menu móvel e o desktop usam itensNavegacao(), respeitando o mesmo catálogo por perfil. Cartões recebem rótulos das colunas, campos mantêm o foco após filtros, ferramentas secundárias ficam recolhidas e o estado de sincronização permanece visível. Não foram removidos registros ou módulos de negócio. O cache do service worker é grc-v26-mobile-retomada e inclui os dois novos arquivos.
+
+Executar npm test para os testes de servidor e de interface. O teste de interface usa jsdom como dependência apenas de desenvolvimento e percorre 28 telas e os 14 perfis. Ele cobre reabertura, falha de download, reconexão sem senha, logout, meia-noite, igualdade de menus, rótulos e preservação do foco. Ele não substitui a inspeção visual em navegadores e aparelhos reais.
+
+## Revisão de escopo e uso em campo — 30/10/2026
+
+A política adicional é `scoped-2026-10-30`; `DB_VER` continua 2. Leitura, escrita,
+anexos, histórico e conflitos passam pelo servidor. Maciel e Alef têm visão
+completa; administração de contas permanece exclusiva do Maciel. A carteira
+particular migra atomicamente para `workspace_private`, preservando os IDs.
+Clientes antigos não podem gravar snapshots globais (HTTP 426). Versão-base é
+obrigatória; a tentativa de escrever uma área proibida é recusada (HTTP 403).
+
+Cada cache operacional registra a conta e a assinatura das permissões. Mudança
+de conta ou de escopo exige dados novos da API antes de abrir; logout limpa o
+cache e as fotos locais. Reabrir no mesmo dia usa a sessão do servidor e pode
+retomar o cache autorizado. Nenhuma senha é salva pelo JavaScript.
+
+O início do celular mostra os atalhos da função e a fila de atenção. Tarefas,
+rotinas, sem data e calendário ficam na área de Trabalho. Exportações e gráficos
+secundários são recolhidos; menus, campos e toques têm adaptação móvel. A
+renderização não grava o snapshot por si só. Recorrências mensais respeitam o
+último dia existente no mês de destino; não recalculam lançamentos anteriores.
+
+As versões completas antes de cada gravação ficam em `workspace_backup`. O
+backup integral das dez tabelas e o ensaio em banco separado vazio usam
+`server/backup.js`. Ver `AGENTS.md`; nunca expor os arquivos gerados pelo site
+ou pelo Git. Não foi criado agendamento externo automático de backups.
