@@ -1,0 +1,7 @@
+node_modules/
+*.db
+*.sqlite
+*.sqlite-*
+.env
+.env.*
+backup*.json

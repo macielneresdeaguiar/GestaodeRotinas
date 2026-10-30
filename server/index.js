@@ -1,6 +1,8 @@
 import express from 'express';
 import { initializeAuth, installAuth, publicSnapshot, sanitizeIncoming } from './auth.js';
 import path from 'node:path';
+import { db, isolatePrivate } from './db.js';
+import { accessFor, scopedSnapshot, mergeScoped, attachmentRefs } from './access.js';
 import zlib from 'node:zlib';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -48,6 +50,18 @@ app.disable('x-powered-by');
 
 /* Sessão diária validada no servidor; sem bypass por SITE_TOKEN. */
 installAuth(app);
+async function viewFor(req){
+  const ws=await lerWorkspace(WS);
+  const access=accessFor(req.auth.user_id,ws?.snapshot);
+  return {ws,access,view:scopedSnapshot(ws?.snapshot||{CFG:{}},access)};
+}
+async function outputSnapshot(snapshot,req){return publicSnapshot(scopedSnapshot(snapshot,accessFor(req.auth.user_id,snapshot)));}
+async function canReadPhoto(id,req){
+  const {view}=await viewFor(req);
+  if(attachmentRefs(view).has(id))return true;
+  const owner=(await db.execute({sql:'SELECT user_id FROM foto_owner WHERE id=?',args:[id]})).rows[0];
+  return owner?.user_id===req.auth.user_id;
+}
 function autorizado(req) { return !!req.auth; }
 function exigeToken(req,res,next) {
   if(req.auth) return next();
@@ -67,6 +81,11 @@ app.put('/api/foto/:id', async (req, res) => {
     const aceito = typeof dados === 'string' &&
       (dados.startsWith('data:image/') || dados.startsWith('data:application/pdf'));
     if (!aceito) return res.status(400).json({ erro: 'conteúdo inválido' });
+    const {access}=await viewFor(req);
+    if(!access.fullRead&&!['leituras','brigada','ronda','manutencao','manutobrig'].some(k=>access.perms[k]))return res.status(403).json({erro:'Sem acesso a anexos.'});
+    if(await lerFoto(id)){
+      if(!await canReadPhoto(id,req))return res.status(404).json({erro:'foto não encontrada'});
+    }else await db.execute({sql:'INSERT OR IGNORE INTO foto_owner VALUES(?,?)',args:[id,req.auth.user_id]});
     const r = await gravarFoto(id, dados);
     res.json({ ok: true, ...r });
   } catch (e) {
@@ -78,6 +97,7 @@ app.put('/api/foto/:id', async (req, res) => {
 app.get('/api/foto/:id', async (req, res) => {
   if (!autorizado(req)) return res.status(401).json({ erro: 'não autorizado' });
   try {
+    if(!await canReadPhoto(String(req.params.id||''),req))return res.status(404).json({erro:'foto não encontrada'});
     const dados = await lerFoto(String(req.params.id || ''));
     if (!dados) return res.status(404).json({ erro: 'foto não encontrada' });
     res.set('Cache-Control', 'no-store'); // anexos privados, inclusive após logout
@@ -93,7 +113,10 @@ app.post('/api/fotos/faltam', async (req, res) => {
   if (!autorizado(req)) return res.status(401).json({ erro: 'não autorizado' });
   try {
     const ids = (req.body && req.body.ids) || [];
-    res.json({ ok: true, faltam: await fotosQueFaltam(ids.map(String)) });
+    if(!Array.isArray(ids)||ids.length>1000)return res.status(400).json({erro:'ids_invalidos'});
+    const missing=new Set(await fotosQueFaltam(ids.map(String))),faltam=[];
+    for(const id of ids.map(String))if(missing.has(id)||!await canReadPhoto(id,req))faltam.push(id);
+    res.json({ok:true,faltam});
   } catch (e) {
     console.error('[foto:faltam]', e);
     res.status(500).json({ erro: 'falha ao conferir as fotos' });
@@ -136,13 +159,13 @@ app.get('/api/saude', async (_req, res) => {
 });
 
 // Baixa o estado atual
-app.get('/api/dados', exigeToken, async (_req, res) => {
+app.get('/api/dados', exigeToken, async (req, res) => {
   try {
     const w = await lerWorkspace(WS);
     if (!w) return res.json({ vazio: true, versao: 0 });
-    res.json({ vazio: false, versao: w.versao, atualizado: w.atualizado, autor: w.autor, snapshot: await publicSnapshot(w.snapshot) });
+    res.json({ vazio: false, versao: w.versao, atualizado: w.atualizado, autor: w.autor, snapshot: await outputSnapshot(w.snapshot,req) });
   } catch (e) {
-    res.status(500).json({ erro: e.message });
+    res.status(e.status||500).json({ erro: e.status?e.message:'Falha ao processar a solicitação.' });
   }
 });
 
@@ -166,29 +189,31 @@ app.post('/api/dados', exigeToken, async (req, res) => {
   }
   try {
     const atual=await lerWorkspace(WS);
-    snapshot=sanitizeIncoming(snapshot);
-    // A shared snapshot must not permit a non-manager to grant permissions.
-    if(req.auth.user_id!=='u1') {
-      for(const key of ['permsUsuarios','nomesUsuarios','coordPodeExcluirPrestador']) {
-        if(JSON.stringify(snapshot.CFG?.[key])!==JSON.stringify(atual?.snapshot?.CFG?.[key]))
-          return res.status(403).json({erro:'Somente o gestor altera o acesso da equipe.'});
-      }
-    }
+    if(req.get('x-grc-scope')!=='scoped-2026-10-30')return res.status(426).json({erro:'Atualize o aplicativo para continuar.',atualizeApp:true});
+    if(!Number.isSafeInteger(versaoBase)||versaoBase<0)return res.status(400).json({erro:'versao_base_obrigatoria'});
+    if(atual&&versaoBase!==atual.versao)return res.status(409).json({ok:false,conflito:true,versao:atual.versao,atualizado:atual.atualizado,autor:atual.autor,snapshot:await outputSnapshot(atual.snapshot,req)});
+    const access=accessFor(req.auth.user_id,atual?.snapshot);
+    snapshot=mergeScoped(sanitizeIncoming(snapshot),atual?.snapshot||{v:2,CFG:{}},access);
+    // Attachment IDs confer no authority: every referenced pre-existing file must already be in scope or owned by this account.
+    const oldRefs=attachmentRefs(scopedSnapshot(atual?.snapshot||{CFG:{}},access));
+    const newRefs=attachmentRefs(scopedSnapshot(snapshot,access));
+    for(const id of newRefs)if(!oldRefs.has(id)&&await lerFoto(id)&&!await canReadPhoto(id,req))return res.status(403).json({erro:'Anexo fora da área desta conta.'});
     const names={u1:'Maciel',u2:'Alef',u3:'Cleiton',u4:'Fernanda',b1:'Anderson',b2:'Nilson',b3:'Suelen',b4:'Alana'};
     const autor=atual?.snapshot?.CFG?.nomesUsuarios?.[req.auth.user_id]||names[req.auth.user_id]||req.auth.user_id;
     const r = await gravarWorkspace({ id: WS, snapshot, versaoBase, autor, dispositivo });
-    if (!r.ok && r.conflito) return res.status(409).json({...r,snapshot:await publicSnapshot(r.snapshot)});
+    if (!r.ok && r.conflito) return res.status(409).json({...r,snapshot:await outputSnapshot(r.snapshot,req)});
     res.json(r);
   } catch (e) {
-    res.status(500).json({ erro: e.message });
+    res.status(e.status||500).json({ erro: e.status?e.message:'Falha ao processar a solicitação.' });
   }
 });
 
-app.get('/api/historico', exigeToken, async (_req, res) => {
+app.get('/api/historico', exigeToken, async (req, res) => {
+  if(!['u1','u2'].includes(req.auth.user_id))return res.status(403).json({erro:'Histórico restrito à administração.'});
   try {
     res.json({ eventos: await historico(WS, 30) });
   } catch (e) {
-    res.status(500).json({ erro: e.message });
+    res.status(e.status||500).json({ erro: e.status?e.message:'Falha ao processar a solicitação.' });
   }
 });
 
@@ -286,6 +311,7 @@ app.get('*', (req, res) => {
 
 migrate()
   .then(initializeAuth)
+  .then(isolatePrivate)
   .then(() => {
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`[grc] no ar na porta ${PORT} (sessão diária protegida)`);

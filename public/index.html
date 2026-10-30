@@ -1281,6 +1281,10 @@ body.crit-open{overflow:hidden}
   .content{overflow-x:hidden}
 }
 </style>
+<link rel="stylesheet" href="/mobile.css">
+<script src="/access-client.js"></script>
+<script src="/field-ui.js"></script>
+<script src="/mobile.js" defer></script>
 </head>
 <body>
 
@@ -1327,7 +1331,7 @@ body.crit-open{overflow:hidden}
       <div class="txt" id="brandTxt">Rotinas Condominiais<small>Gestão integrada</small></div>
     </div>
     <nav class="nav" id="nav"></nav>
-    <div class="sideft"><span class="ft-txt">v1.0 · sessão em memória</span></div>
+    <div class="sideft"><span class="ft-txt">Acesso diário · dados sincronizados</span></div>
   </aside>
 
   <div class="main">
@@ -1357,6 +1361,10 @@ body.crit-open{overflow:hidden}
   </div>
 </div>
 
+<div id="sessionResume" class="session-resume" hidden role="status" aria-live="polite"><div>
+  <h2>Retomando seu acesso</h2><p id="sessionResumeText">Você não precisa digitar a senha novamente. Estamos verificando sua sessão.</p>
+  <button id="sessionResumeRetry" class="btn" onclick="authInicializar()" hidden>Tentar novamente</button>
+</div></div>
 <!-- MODAL -->
 <div class="critico" id="critico"></div>
 <div class="modal" id="modal"><div class="modal-box">
@@ -1393,14 +1401,15 @@ function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt
 const PERIODS={'Diária':1,'Semanal':7,'Quinzenal':15,'Mensal':30,'Trimestral':90,'Semestral':180,'Anual':365,'Sob Demanda':0};
 function nextDate(from,per){
   const d=parse(from);
+  const advanceMonths=count=>{const day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+count);const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,last));};
   switch(per){
     case 'Diária': d.setDate(d.getDate()+1);break;
     case 'Semanal': d.setDate(d.getDate()+7);break;
     case 'Quinzenal': d.setDate(d.getDate()+15);break;
-    case 'Mensal': d.setMonth(d.getMonth()+1);break;
-    case 'Trimestral': d.setMonth(d.getMonth()+3);break;
-    case 'Semestral': d.setMonth(d.getMonth()+6);break;
-    case 'Anual': d.setFullYear(d.getFullYear()+1);break;
+    case 'Mensal': advanceMonths(1);break;
+    case 'Trimestral': advanceMonths(3);break;
+    case 'Semestral': advanceMonths(6);break;
+    case 'Anual': advanceMonths(12);break;
     default: return null;
   }
   return iso(d);
@@ -1445,8 +1454,8 @@ const USERS=[
           /* carteira particular do sindico: so o Gestor e o Coordenador Administrativo */
           sindico:true}},
   {id:'u2',nome:'Alef',login:'alef',role:'Coordenador Administrativo',
-   perms:{condos:['c1','c2'],tipos:['Administrativo'],manutencao:false,manutobrig:true,estoque:true,estoqueTotal:false,
-          apontamentos:false,ia:true,create:true,edit:true,complete:true,delete:false,sindico:true}},
+   perms:{condos:['c1','c2'],tipos:['Administrativo','Gestor'],manutencao:true,manutobrig:true,estoque:true,estoqueTotal:false,
+          apontamentos:true,brigada:true,leituras:true,ronda:true,ia:true,create:true,edit:true,complete:true,delete:false,sindico:true}},
   {id:'u3',nome:'Cleiton',login:'cleiton',role:'Oficial de Manutenção',
    perms:{condos:['c1'],tipos:[],manutencao:true,estoque:true,estoqueTotal:true,
           apontamentos:true,create:true,edit:true,complete:true,delete:false}},
@@ -1611,37 +1620,8 @@ function _mk(cid,p,books,concs){
     exigeBook:books.some(b=>p.empresa.startsWith(b)),exigeNf:!conc,concessionaria:conc,ativo:true};
 }
 /* E-BUSINESS — cada contrato/serviço gera sua própria NF, ordenado por dia de vencimento */
-const prestadoresEB=[
-  {empresa:"Evandro",        servico:"Sindicatura",                         dia:5,  insumo:"Pró-labore"},
-  {empresa:"ABL Prime",      servico:"Gerenciamento predial",               dia:15, insumo:"Gerenciamento predial",                    book:true},
-  {empresa:"Total Quality",  servico:"Serviço de Portaria",                 dia:15, insumo:"Equipe residente - Porteiros",             book:true},
-  {empresa:"Total Quality",  servico:"Serviço de Limpeza",                  dia:15, insumo:"Serviço de limpeza",                       book:true},
-  {empresa:"Criativa",       servico:"Brigadista",                          dia:15, insumo:"Equipe residente - Bombeiros",             book:true},
-  {empresa:"Martins Advice", servico:"Honorários advocatícios",             dia:15, insumo:"Honorários advocatícios"},
-  {empresa:"Thyssenkrupp",   servico:"Elevadores",                          dia:15, insumo:"Contrato manutenção preventiva elevador"},
-  {empresa:"MEP",            servico:"Manutenção predial",                  dia:15, insumo:"Contrato de manutenção predial",           book:true},
-  {empresa:"MEP",            servico:"Manutenção ar condicionado",          dia:15, insumo:"Material e mão de obra de ar condicionado"},
-  {empresa:"MEP",            servico:"Manutenção SPK",                      dia:15, insumo:"Manutenção de sistema de incêndio"},
-  {empresa:"MEP",            servico:"Manutenção CCTV e controle de acesso",dia:15, insumo:"Manutenção preventiva de automação"},
-  {empresa:"MEP",            servico:"Manutenção de VRP's",                 dia:15, insumo:"Manutenção de máquinas e equipamentos"},
-  {empresa:"Novo Horizonte", servico:"Manutenção de bombas",                dia:15, insumo:"Manutenção de máquinas e equipamentos"},
-  {empresa:"Potência",       servico:"Manutenção do gerador",               dia:15, insumo:"Manutenção do gerador"},
-  {empresa:"Claro",          servico:"Conta de internet",                   dia:15, insumo:"Internet",            conc:true},
-  {empresa:"Tecnocopy",      servico:"Locação de impressora",               dia:15, insumo:"Locação de equipamentos"},
-  {empresa:"Caesb",          servico:"Conta de água e esgoto",              dia:21, insumo:"Água e esgoto",       conc:true},
-  {empresa:"Neoenergia",     servico:"Conta de energia elétrica",           dia:27, insumo:"Energia elétrica",    conc:true},
-  {empresa:"Tronica",        servico:"Conta de energia elétrica",           dia:27, insumo:"Energia elétrica",    conc:true}
-];
-const prestadoresTL=[
-  {empresa:"ABL Prime",servico:"Gerenciamento predial",dia:15,insumo:"Gerenciamento predial"},
-  {empresa:"Jardinagem",servico:"Paisagismo",dia:15,insumo:"Jardinagem"},
-  {empresa:"Top Service",servico:"Portaria",dia:15,insumo:"Porteiros"},
-  {empresa:"Elevadores Atlas",servico:"Elevadores e Escadas",dia:15,insumo:"Manutenção elevadores"},
-  {empresa:"Caesb",servico:"Água e esgoto",dia:21,insumo:"Água/Esgoto"},
-  {empresa:"Neoenergia",servico:"Energia (Geral e Bombas)",dia:18,insumo:"Energia"},
-
-  {empresa:"Canaã",servico:"Internet",dia:20,insumo:"Internet"}
-];
+const prestadoresEB=[]; // Cadastros reais são entregues somente pela API autorizada.
+const prestadoresTL=[]; // Cadastros reais são entregues somente pela API autorizada.
 let prestadores=[];
 function seedPrestadores(){
   prestadores=[...prestadoresEB.map(p=>_mkLinha('c1',p)),
@@ -1850,6 +1830,7 @@ function mkTask(o){
 function refreshStatuses(){
   const t=today();
   tasks.forEach(x=>{
+    if(session&&!P().tipos.includes(x.tipo)&&!P().manutencao)return;
     if(x.status==='Concluída'||x.status==='Cancelada') return;
     /* Antes, "Sob Demanda" nunca atrasava — a tarefa do dia não concluída
        sumia: não era de hoje nem aparecia como atrasada. Agora, o que tem
@@ -1886,7 +1867,7 @@ function visibleMaints(){ return []; }
 /* ============ LOGIN E SESSÃO AUTOMÁTICA ============ */
 let pickedUser='u1', pickedFunc='adm';
 const SESSION_KEY='grc.session.v1', CREDS_KEY='grc.creds.v1', SAVED_PASS_KEY='grc.savedpass.v1';
-const AUTH={ok:false,ready:false,busy:false,userId:null,expiresAt:0,creds:{},timer:null};
+const AUTH={ok:false,ready:false,busy:false,initializing:false,temCache:false,access:null,cachedAccess:null,userId:null,expiresAt:0,creds:{},timer:null};
 const authFetchOriginal=window.fetch.bind(window);
 window.fetch=async function(input,options){
   const url=typeof input==='string'?input:(input&&input.url)||'';
@@ -1906,17 +1887,20 @@ async function authPedido(path,body){
     credentials:'same-origin',headers:syncHeaders(),
     ...(body===undefined?{}:{body:JSON.stringify(body)})},15000);
   const d=await r.json();
-  if(!r.ok){if(r.status===401&&path!=='/login'&&path!=='/session')authBloquear('Entre novamente.');throw new Error(d.erro||'Não foi possível verificar o acesso.');}
+  if(!r.ok){if(r.status===401&&path!=='/login'&&path!=='/session')authBloquear('Entre novamente.');const e=new Error(d.erro||'Não foi possível verificar o acesso.');e.status=r.status;throw e;}
   return d;
 }
 function authAceitar(d){
   AUTH.ok=true;AUTH.userId=d.userId;AUTH.expiresAt=Date.parse(d.expiresAt);
   localStorage.setItem('grc.auth.user',d.userId);
+  localStorage.setItem('grc.auth.resume',JSON.stringify({userId:d.userId,expiresAt:d.expiresAt}));
   if(d.creds)creds=AUTH.creds=d.creds;
   clearTimeout(AUTH.timer);
   AUTH.timer=setTimeout(()=>authBloquear('O dia virou. Entre com sua senha para continuar.'),Math.max(0,AUTH.expiresAt-Date.now()));
 }
 function authBloquear(mensagem){
+  authOcultarRetomada();
+  try{localStorage.removeItem('grc.auth.resume')}catch(e){}
   if(session){try{salvarLocal()}catch(e){}}
   AUTH.ok=false;AUTH.userId=null;AUTH.expiresAt=0;
   clearTimeout(AUTH.timer);clearInterval(SYNC.autoTimer);clearTimeout(SYNC.timer);
@@ -1924,33 +1908,76 @@ function authBloquear(mensagem){
   session=null;
   if(typeof closeModal==='function')closeModal();
   if(typeof closeDrawer==='function')closeDrawer();
-  document.body.classList.remove('has-tabbar');
+  const critical=$('#critico');if(critical){critical.classList.remove('open');critical.innerHTML='';}
+  document.body.classList.remove('crit-open','has-tabbar');
   $('#app').style.display='none';$('#login').style.display='flex';
   const p=$('#loginPass');if(p)p.value='';
   const p2=$('#loginPass2');if(p2)p2.value='';
   const inv=$('#loginInvite');if(inv)inv.value='';
   if(mensagem){const e=$('#loginErr');e.textContent=mensagem;e.classList.remove('hidden');}
 }
+function authMostrarRetomada(texto,erro){
+  const box=$('#sessionResume');if(!box)return;
+  $('#sessionResumeText').textContent=texto||'Você não precisa digitar a senha novamente. Retomando sua sessão…';
+  $('#sessionResumeRetry').hidden=!erro;box.hidden=false;
+}
+function authOcultarRetomada(){const box=$('#sessionResume');if(box)box.hidden=true;}
+async function authAtualizarPerfis(){
+  const p=await authPedido('/perfis');
+  creds=AUTH.creds=p.creds||{};AUTH.ready=true;
+  localStorage.setItem('grc.auth.profiles',JSON.stringify(p));
+  CFG.nomesUsuarios=Object.assign({},CFG.nomesUsuarios,p.nomes||{});
+  aplicarNomesUsuarios();buildProfiles();
+  if(!session&&!AUTH.busy&&!$('#loginPass').value)pickUser(pickedUser);
+  return p;
+}
+async function authRetomarConfirmada(d,auto){
+  await scopePrepare(d);
+  authAceitar(d);
+  const abrir=()=>{
+    const u=USERS.find(x=>x.id===d.userId);if(!u)return authBloquear('Conta não disponível.');
+    if(!auto||!restaurarSessaoSalva())entrar(u,{auto:!!auto});
+    authOcultarRetomada();
+  };
+  if(AUTH.temCache){
+    abrir();
+    // A data-download failure cannot revoke a valid authenticated session.
+    AUTH.background=ligarSync(true).then(ok=>{if(ok&&session&&AUTH.userId===d.userId&&!appOcupado())render()})
+      .catch(e=>console.warn('[auth] Sincronização será retomada:',e.message));
+    return true;
+  }
+  authMostrarRetomada('Seu acesso foi confirmado. Estamos carregando os dados deste aparelho.');
+  const ok=await ligarSync(true);
+  if(ok&&AUTH.ok){abrir();return true;}
+  if(AUTH.ok)authMostrarRetomada('Seu acesso continua válido. Confira a internet e toque em Tentar novamente; não é necessário redigitar a senha.',true);
+  return false;
+}
 async function authInicializar(){
+  if(AUTH.initializing)return;AUTH.initializing=true;
   try{
     salvarCredsLocal();salvarLocal();
     const c=syncCfg();if(c.token){delete c.token;localStorage.setItem(SYNC_KEY,JSON.stringify(c));}
-    const p=await authPedido('/perfis');
-    creds=AUTH.creds=p.creds||{};AUTH.ready=true;
-    CFG.nomesUsuarios=Object.assign({},CFG.nomesUsuarios,p.nomes||{});aplicarNomesUsuarios();buildProfiles();
-    pickUser(pickedUser);
+    try{const p=JSON.parse(localStorage.getItem('grc.auth.profiles')||'null');if(p){creds=AUTH.creds=p.creds||{};AUTH.ready=true;}}
+    catch(e){}
+    if(!session&&(localStorage.getItem(SESSION_KEY)||localStorage.getItem('grc.auth.resume')))authMostrarRetomada();
+    const profiles=authAtualizarPerfis().catch(()=>null);
     if(localStorage.getItem('grc.logout.pending')){
       await authPedido('/logout',{});localStorage.removeItem('grc.logout.pending');
-      return authBloquear('Entre com sua senha para continuar.');
+      await profiles;return authBloquear('Você saiu da conta. Entre com sua senha para continuar.');
     }
     let d;
-    try{d=await authPedido('/session')}catch(e){return authBloquear('Entre com sua senha. O acesso vale até meia-noite.');}
-    authAceitar(d);
-    if(!await ligarSync())return authBloquear('Não foi possível carregar os dados. Verifique sua conexão e entre novamente.');
-    if(!restaurarSessaoSalva())entrar(USERS.find(u=>u.id===d.userId),{auto:true});
-  }catch(e){console.warn('[auth] Falha ao iniciar:',e.message);AUTH.ready=false;authBloquear('Conecte-se à internet para verificar o acesso.');}
+    try{d=await authPedido('/session')}catch(e){
+      if(e.status===401){await profiles;return authBloquear('Entre com sua senha. O acesso vale até meia-noite.');}
+      throw e;
+    }
+    await authRetomarConfirmada(d,true);
+  }catch(e){
+    console.warn('[auth] Retomada aguardando conexão:',e.message);
+    // Neither clear the cookie nor show a new password challenge on network errors.
+    authMostrarRetomada('Não foi possível verificar a conexão. Sua sessão não foi apagada. Reconecte-se e toque em Tentar novamente.',true);
+  }finally{AUTH.initializing=false;}
 }
-window.addEventListener('online',()=>{if(!AUTH.ok)authInicializar()});
+window.addEventListener('online',()=>{if(!AUTH.ok||!session)authInicializar()});
 window.addEventListener('focus',()=>{if(AUTH.ok&&Date.now()>=AUTH.expiresAt)authBloquear('Entre novamente: começou um novo dia.');});
 window.addEventListener('storage',e=>{
   if(e.key==='grc.logout.at')authBloquear('A sessão foi encerrada em outra aba.');
@@ -2090,17 +2117,17 @@ async function doLogin(){
   const u=USERS.find(x=>x.id===pickedUser),senha=$('#loginPass').value;
   const err=$('#loginErr'),btn=$('#btnEntrar');
   const mostra=m=>{err.textContent=m;err.classList.remove('hidden')};
+  if(AUTH.initializing)return mostra('Estamos verificando se seu acesso já pode ser retomado. Aguarde um instante.');
   if(!AUTH.ready)return mostra('Aguarde a conexão com o servidor.');
   if(!senha)return mostra('Digite a senha para entrar.');
   if(!temSenha(u.id)&&senha!==$('#loginPass2').value)return mostra('As senhas não conferem.');
   AUTH.busy=true;btn.disabled=true;
   try{
     const d=await authPedido('/login',{userId:u.id,password:senha,inviteCode:$('#loginInvite').value});
-    creds=d.creds||{};authAceitar(d);
+    creds=d.creds||{};
     $('#loginPass').value='';$('#loginPass2').value='';$('#loginInvite').value='';
-    if(!await ligarSync())throw new Error('Não foi possível carregar os dados. Tente entrar novamente.');
-    entrar(USERS.find(x=>x.id===d.userId));
-    toast('Bem-vindo, '+session.nome+'! Acesso válido até meia-noite.');
+    const entrou=await authRetomarConfirmada(d,false);
+    if(entrou&&session)toast('Bem-vindo, '+session.nome+'! Acesso válido até meia-noite.');
   }catch(e){mostra(e.message||'Não foi possível entrar. Verifique sua conexão.');}
   finally{AUTH.busy=false;btn.disabled=false;}
 }
@@ -2128,6 +2155,7 @@ function entrar(u,opts){
   if(!opts.auto){
     setTimeout(()=>{
       _filaAlerta=[];
+      if(ehMobile()){alertaCritico();return;} // Demais avisos ficam na fila de atenção do início.
       if(nfCriticas().length) _filaAlerta.push(alertaNF);   // NF entra na fila
       if(alertaCritico()) return;               // manutenção que não pode vencer vem primeiro
       if(avisarTriagem()) return;               // chamados que aguardam meu direcionamento
@@ -2148,7 +2176,7 @@ async function logout(){
     await authPedido('/logout',{});
     localStorage.removeItem('grc.logout.pending');
   }catch(e){ /* A revogação é repetida antes de restaurar qualquer sessão. */ }
-  finally{AUTH.busy=false;authBloquear('Você saiu do sistema.');localStorage.setItem('grc.logout.at',String(Date.now()));}
+  finally{AUTH.busy=false;authBloquear('Você saiu do sistema.');scopeDiscardCache();localStorage.setItem('grc.logout.at',String(Date.now()));}
 }
 
 
@@ -2163,7 +2191,7 @@ function store(){ try{ return (typeof window!=='undefined'&&window.localStorage)
 function dbSnapshot(){
   return {v:DB_VER, savedAt:new Date().toISOString(),
     tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,afazeres,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,brigInsp,brigRondas,salas,unidSind,
-    auditLog, CFG, notifs, notifState};
+    auditLog, CFG, notifs, notifState, _access:AUTH.access};
 }
 /* ============ ONDE O APP GUARDA OS DADOS NO APARELHO ============
    O localStorage tem um teto de ~5 MB POR SITE — e isso não tem relação
@@ -2381,16 +2409,19 @@ function fotosPendentes(){ return _filaFotos.length }
 async function enviarFotos(){
   if(_subindoFotos||!_filaFotos.length) return;
   if(!temServidor()||estaOffline()||!SYNC.ligado) return;
+  const uploadUser=AUTH.userId;
   _subindoFotos=true;
-  while(_filaFotos.length){
+  while(_filaFotos.length&&AUTH.ok&&AUTH.userId===uploadUser){
     const id=_filaFotos[0];
     let dados=_fotoCache.get(FOTO_REF+id)||await fotoLerLocal(id);
+    if(!AUTH.ok||AUTH.userId!==uploadUser)break;
     if(!dados){ _filaFotos.shift(); salvarFilaFotos(); continue }   // sumiu: não trava a fila
     try{
       const r=await fetchPrazo('/api/foto/'+encodeURIComponent(id),
         {method:'PUT',headers:syncHeaders(),body:JSON.stringify({dados})},30000);
       if(r.status===401){ break }
       if(!r.ok) throw new Error('HTTP '+r.status);
+      if(!AUTH.ok||AUTH.userId!==uploadUser)break;
       _filaFotos.shift(); salvarFilaFotos();
       atualizarBadgeConex();
     }catch(e){
@@ -2471,9 +2502,10 @@ function load(d){
     pedidos=d.pedidos||[]; afazeres=d.afazeres||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
     prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
     analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[]; unidSind=d.unidSind||[];
+    if(d._access){AUTH.cachedAccess=d._access;scopeApplyMetadata(d._access);if(d.CFG)CFG=Object.assign(CFG,d.CFG);creds=AUTH.creds||{};notifs=[];notifState={};return true;}
     if(!prestadores.length) seedPrestadores();
     migrarPrestadoresEB();
-    if(d.CFG) CFG=Object.assign(CFG,d.CFG);
+    if(d.CFG) CFG=d._access?Object.assign({nomeEmpresa:'E-Business',slogan:'Gestão Predial',logo:'',notif:{ativo:true},ia:{ativo:true}},d.CFG):Object.assign(CFG,d.CFG);
     creds=AUTH.creds||{};
     salvarCredsLocal();
     notifs=d.notifs||[]; notifState=d.notifState||{};
@@ -2565,7 +2597,7 @@ const PERM_CATALOGO=[
     {k:'leituras',rot:'Leituras de água e energia',d:'Registrar as leituras diárias'},
     {k:'brigada',rot:'Brigada de incêndio',d:'Check-list por andar e ronda da brigada'},
     {k:'ronda',rot:'Ronda diária',d:'Percorrer os andares e abrir chamados'},
-    {k:'ia',rot:'Assistente de IA',d:'Perguntas, análises e resumo semanal'}]},
+    {k:'ia',rot:'Consulta assistida',d:'Perguntas, análises e resumo semanal'}]},
   {g:'O que pode fazer',itens:[
     {k:'create',rot:'Criar registros',d:'Cadastrar novos lançamentos'},
     {k:'edit',rot:'Editar registros',d:'Alterar o que já existe'},
@@ -2827,16 +2859,13 @@ function ic(name,cls){
   return `<svg class="ico ${cls||''}" viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
 }
 
-function buildNav(){
+function itensNavegacao(){
   /* A portaria faz uma coisa so. O painel geral traz tarefas, avisos e
      numeros que nao sao da alcada dela -- fica de fora do menu. */
-  const items=P().leiturasSimples?[]:[['dashboard','dashboard','Dashboard']];
+  const items=[['inicio','home','Meu espaço'],...(P().leiturasSimples?[]:[['dashboard','dashboard','Painel geral']])];
   if(P().tipos.length){
     items.push(['#','','Operação']);
-    items.push(['hoje','today','Tarefas de Hoje'],['rotina','route','Minha Rotina'],
-      ['tarefas-adm','clipboardCheck','Tarefas Administrativas'],['afazeres','list','Afazeres']);
-    if(P().tipos.includes('Gestor')) items.push(['tarefas-gestor','briefcase','Tarefas do Gestor']);
-    items.push(['calendario','calendar','Calendário']);
+    items.push(['hoje','today','Trabalho da equipe']);
     items.push(['#','','Financeiro']);
     items.push(['notas','invoice','Notas Fiscais'],['cessoes','contract','Cessão de Direitos'],['vendascustas','money','Vendas e Custas'],
       ['publicidade','megaphone','Publicidade nos Elevadores'],['emails','mail','Padrões de E-mails']);
@@ -2870,18 +2899,23 @@ function buildNav(){
   if(P().estoque) items.push(['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material']);
   if(P().tipos.length) items.push(['#','','Gestão'],['relatorios','chart','Relatórios'],['relmensal','doc','Relatório Mensal']);
   items.push(['config','settings','Configurações']);
+  return AUTH.access?items.filter(i=>i[0]==='#'||AUTH.access.pages.includes(i[0])):items;
+}
+function buildNav(){
+  const items=itensNavegacao();
   $('#nav').innerHTML=items.map(([k,i,l])=> k==='#'
     ? `<div class="navgroup">${l}</div>`
     : `<button class="${page===k?'active':''}" onclick="go('${k}')" title="${l}"><span class="ic">${ic(i)}</span><span class="lbl">${l}</span></button>`
   ).join('');
 }
 
-function paginaInicial(){ if(P().tipos.length||P().manutencao) return 'dashboard';
+function paginaInicial(){ if(ehMobile()&&AUTH.access?.pages.includes('inicio'))return 'inicio'; if(P().tipos.length||P().manutencao) return 'dashboard';
   if(P().brigada) return 'brigada-inicio';
   if(P().leituras) return 'leituras';
   if(P().ronda) return 'brigada-ronda';
   return 'estoque'; }
 function go(p,filter){
+  if(session&&!scopeAllowed(p)){toast('Esta área não está liberada para sua conta.');p=paginaInicial();}
   apEditId=null; apAtual=null;
   if(p!=='brigada-form' && brigAtual && typeof _bi==='function'){
     const _i=_bi(brigAtual);
@@ -2900,10 +2934,25 @@ function go(p,filter){
   salvarSessaoAtiva();
 }
 function render(){
+  const active=document.activeElement;
+  const editable=active&&active.closest('#content')&&(/TEXTAREA/.test(active.tagName)||active.tagName==='INPUT'&&['text','search','email','tel','url','number'].includes(active.type));
+  const saved=editable?{id:active.id,tag:active.tagName,placeholder:active.getAttribute('placeholder'),type:active.type,
+    index:Array.from(document.querySelectorAll('#content input,#content textarea')).indexOf(active),start:active.selectionStart,end:active.selectionEnd}:null;
+  renderConteudo();
+  if(typeof mobilePrepararPagina==='function')mobilePrepararPagina();
+  if(saved&&!active.isConnected){
+    const fields=Array.from(document.querySelectorAll('#content input,#content textarea'));
+    const target=(saved.id&&document.getElementById(saved.id))||fields.find((el,i)=>i===saved.index&&el.tagName===saved.tag&&el.type===saved.type&&el.getAttribute('placeholder')===saved.placeholder);
+    if(target){target.focus({preventScroll:true});try{target.setSelectionRange(saved.start,saved.end)}catch(e){}}
+  }
+}
+function renderConteudo(){
+  if(session&&!scopeAllowed(page))page=paginaInicial();
+  if(page==='inicio'){$('#pageTitle').textContent='Meu espaço';return viewInicio();}
   { const _sb=document.querySelector('#syncBadge'); if(_sb) _sb.outerHTML=badgeSync(); }
   /* as imagens referenciadas chegam logo depois que a tela aparece */
   if(typeof hidratarFotos==='function') setTimeout(()=>hidratarFotos(),0);
-  save(); if(session)gerarNotificacoes();
+  if(session)gerarNotificacoes();
   if(dayRef&&document.querySelector('#drawer')&&$('#drawer').classList.contains&&$('#drawer').classList.contains('open')){try{renderDay()}catch(e){}}
   const titles={dashboard:'Dashboard',tarefas:'Gerenciador de Tarefas',
     'tarefas-adm':'Tarefas Administrativas','tarefas-gestor':'Tarefas do Gestor',calendario:'Calendário',rotina:'Minha Rotina',
@@ -3242,7 +3291,7 @@ function renderDrill(){
 function viewConfig(){
   /* O brigadista só administra a própria senha — nada de tarifas,
      backup, auditoria ou senhas da equipe. */
-  const soSenha=!P().tipos.length&&!P().manutencao&&!P().estoque;
+  const soSenha=!AUTH.access?.fullRead;
   $('#content').innerHTML=`
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))">
       <div class="card">
@@ -4740,118 +4789,9 @@ function gerarSemana(){
      traz inscricao, area construida e fracao ideal das 261 unidades.
    - Milena e Green: anotacao manual do sindico. Nao ha documento oficial
      conferido, entao o que ficou duvidoso vai marcado com `conferir`. */
-const SIND_NOME='Evandro';
-function seedUnidSind(){
-  const E=(unidade,area,fi,iptu,obs,conferir)=>({id:uid('us'),predio:'E-Business',
-    tipo:'Sala',unidade,area,fi,iptu,obs:obs||'',conferir:!!conferir,
-    historico:[{q:'Sistema',w:nowStamp(),t:'Cadastrada pelo desmembramento do GDF'}]});
-  const O=(predio,tipo,unidade,iptu,obs,conferir)=>({id:uid('us'),predio,tipo,unidade,
-    area:null,fi:null,iptu,obs:obs||'',conferir:!!conferir,
-    historico:[{q:'Sistema',w:nowStamp(),t:'Cadastrada pela anotação do síndico'}]});
-  unidSind=[
-    /* --- E-Business: area e fracao conferidas no desmembramento do GDF --- */
-    E('506' ,70.57 ,0.2980,'52011658'),
-    E('606' ,70.57 ,0.2980,'52011666'),
-    E('801' ,85.83 ,0.3400,'52011984',
-      'A folha do síndico trazia 52011982, que não existe no desmembramento. O oficial da 801 é 52011984 — confirmar.',true),
-    E('812' ,80.64 ,0.3400,'52012107'),
-    E('909' ,80.64 ,0.3400,'52012328','Estava sem número na folha; inscrição obtida no desmembramento.'),
-    E('912' ,80.64 ,0.3400,'52012352','Acrescentada depois; inscrição obtida no desmembramento.'),
-    E('1003',65.38 ,0.2760,'52012387','Não constava na folha; inscrição obtida no desmembramento.'),
-    E('1008',61.55 ,0.2600,'52012433'),
-    E('1201',80.64 ,0.3400,'52012603'),
-    E('1510',69.57 ,0.2940,'52013057'),
-    E('1909',80.64 ,0.3400,'52013529'),
-    E('2402',94.01 ,0.3880,'52013790'),
-    E('2406',70.12 ,0.2940,'52013839'),
-    E('2407',297.73,1.2150,'52013847','Não constava na folha; é a maior unidade da carteira.'),
-    /* --- Residencial Milena --- */
-    O('Milena','Apartamento','303' ,'50674536'),
-    O('Milena','Apartamento','1703','5067577X',
-      'O X no fim é o dígito verificador do GDF, não rasura.'),
-    /* --- Green --- */
-    O('Green','Apartamento','202' ,'50626809'),
-    O('Green','Apartamento','817' ,'50629174'),
-    O('Green','Apartamento','712' ,'50630210'),
-    O('Green','Apartamento','814' ,'50628046',
-      'Na folha o número saiu emendado ("5062 80.46"). Confirmar no carnê.',true),
-    O('Green','Apartamento','1110','50631810'),
-    O('Green','Apartamento','1114','50631160'),
-    O('Green','Apartamento','1414','50631284'),
-    O('Green','Apartamento','—'   ,'50628674',
-      'A unidade foi riscada na folha e não deu para ler. Havia também 50630563 riscado ao lado. Confirmar a qual apartamento pertence.',true),
-    O('Green','Vaga','VG 28','50631229'),
-    O('Green','Vaga','VG 29','',
-      'A folha não traz o número do IPTU desta vaga.',true),
-    O('Green','Vaga','VG 30','50631837'),
-    O('Green','Vaga','VG 31','50631845'),
-  ];
-}
-function migrarUnidSind(){
-  /* Comparacao por numero, nao por igualdade de texto: com `!=='v1'` o passo
-     da carga voltava a rodar quando a versao ja era v3, zerando o marcador a
-     cada abertura. */
-  const ver=+String(CFG.carteiraSindico||'v0').replace('v','')||0;
-  let mudou=false;
-  /* A EXISTENCIA do dado nao pode depender do marcador de versao.
-     Aconteceu em producao: um aparelho ainda com a versao antiga do app
-     devolveu o snapshot sem a colecao `unidSind` (o codigo dele nem conhecia
-     a chave). O dado sumiu, mas o CFG continuou dizendo 'v3' -- entao a carga
-     nunca mais rodava e a tela ficava vazia para sempre. Mesma armadilha do
-     laudo: marcador de concluido no caminho de falha prende o dado.
-     Agora: vazio => recarrega, independente da versao. */
-  if(!unidSind.length&&!CFG.carteiraZerada){
-    seedUnidSind();
-    CFG.carteiraSindico='v3';
-    if(typeof audit==='function')
-      audit('Sistema','Unidades do síndico','carteira recarregada: estava vazia',null,'Recuperação');
-    return true;
-  }
-  if(ver<1){
-    if(!unidSind.length) seedUnidSind();
-    CFG.carteiraSindico='v1'; mudou=true;
-  }
-  /* v2: a inscricao do DF tem 8 digitos. A primeira carga gravou com os
-     zeros a esquerda do desmembramento; aqui tiramos. E a sala 912, que
-     faltou na lista original, entra se ainda nao estiver. */
-  if(ver<2){
-    unidSind.forEach(u=>{
-      const n=usIptuNorm(u.iptu);
-      if(n!==u.iptu){
-        u.iptu=n;
-        u.historico=u.historico||[];
-        u.historico.push({q:'Sistema',w:nowStamp(),t:'Inscrição ajustada para os 8 dígitos'});
-        mudou=true;
-      }
-      if(u.obs) u.obs=u.obs.replace(/\b00(\d{8})\b/g,'$1');
-    });
-    if(!unidSind.some(u=>u.predio==='E-Business'&&u.unidade==='912')){
-      unidSind.push({id:uid('us'),predio:'E-Business',tipo:'Sala',unidade:'912',
-        area:80.64,fi:0.3400,iptu:'52012352',
-        obs:'Acrescentada depois; inscrição obtida no desmembramento.',conferir:false,
-        historico:[{q:'Sistema',w:nowStamp(),t:'Cadastrada pelo desmembramento do GDF'}]});
-      mudou=true;
-    }
-    CFG.carteiraSindico='v2';
-    mudou=true;
-  }
-  /* v3: o "X" no fim da inscricao e o DIGITO VERIFICADOR usado pelo GDF, nao
-     uma rasura. O desmembramento traz 22 unidades assim. Com isso o AP 1703
-     do Milena deixa de ser duvida. */
-  if(ver<3){
-    const ap=unidSind.find(u=>u.predio==='Milena'&&String(u.unidade)==='1703');
-    if(ap){
-      ap.iptu='5067577X'; ap.conferir=false;
-      ap.obs='O X no fim é o dígito verificador do GDF, não rasura.';
-      ap.historico=(ap.historico||[]).concat([{q:'Sistema',w:nowStamp(),
-        t:'Inscrição confirmada: 5067577X (X = dígito verificador)'}]);
-      mudou=true;
-    }
-    CFG.carteiraSindico='v3';
-    mudou=true;
-  }
-  return mudou;
-}
+const SIND_NOME='Síndico';
+function seedUnidSind(){}
+function migrarUnidSind(){return false;}
 function podeSindico(){ return !!(session&&P().sindico) }
 let usBusca='', usPredio='';
 function usPredios(){ return [...new Set(unidSind.map(u=>u.predio))] }
@@ -4876,7 +4816,7 @@ function usIptuNorm(v){
 function usIptuFmt(v){ return usIptuNorm(v)||'—' }
 function viewUnidSind(){
   if(!podeSindico()){ $('#content').innerHTML=cardSemAcesso('Unidades do Síndico',
-    'Esta tela é restrita ao Gestor e ao Coordenador Administrativo.'); return }
+    'Esta tela é restrita a Maciel e Alef.'); return }
   const l=usLista();
   const todas=unidSind;
   const aConferir=todas.filter(u=>u.conferir);
@@ -9245,43 +9185,14 @@ function viewVendasCustas(){
 
 
 /* Cadastro inicial das unidades medidas do E-Business (planilhas de rateio). */
-const VC_SEED_C1=[
-  {servico:'agua',ordem:1,nome:'VANTAGE CAR STUDIO LTDA',unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',tipo:'VENDA'},
-  {servico:'agua',ordem:2,nome:'NANCY CAVALCANTE MEDEIROS NEVES',unidade:'LOJA M01',cnpj:'',tipo:'CUSTA'},
-  {servico:'agua',ordem:3,nome:'GFS ADMINISTRADORA DE CONDOMINIO E TERCEIRIZAÇÃO EIRELI',unidade:'LOJA M02',cnpj:'',tipo:'CUSTA'},
-  {servico:'agua',ordem:4,nome:'ELMO INCORPORAÇÕES',unidade:'LOJA M03',cnpj:'',tipo:'CUSTA'},
-  {servico:'agua',ordem:5,nome:'ELMO INCORPORAÇÕES',unidade:'LOJA M04',cnpj:'',tipo:'CUSTA'},
-  {servico:'agua',ordem:6,nome:'URBANA IMÓVEIS LTDA',unidade:'LOJA M05',cnpj:'',tipo:'CUSTA'},
-  {servico:'agua',ordem:7,nome:'CAPITAL ESPRESSO LTDA',unidade:'CAPITAL ESPRESSO LTDA',cnpj:'54.766.132/0001-58',tipo:'VENDA'},
-  {servico:'energia',ordem:1,nome:'CAPITAL ESPRESSO LTDA',unidade:'CAPITAL ESPRESSO LTDA',cnpj:'54.766.132/0001-58',tipo:'VENDA'},
-  {servico:'energia',ordem:2,nome:'VANTAGE CAR STUDIO LTDA',unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',tipo:'VENDA'}
-];
+const VC_SEED_C1=[]; // Cadastros reais são entregues somente pela API autorizada.
 /* Ciclos já faturados, transcritos das planilhas do condomínio. Servem de ponto de
    partida: a leitura final de cada um vira a "medição anterior" do próximo ciclo. */
-const VC_SEED_CICLOS=[
-  {servico:'agua',competencia:'08/2026',inicio:'2026-07-17',fim:'2026-08-14',
-   valorFatura:29841.10,consumoFatura:721,
-   leituras:{'VANTAGE CAR STUDIO LTDA':[997.37,1021.51],'LOJA M01':[288.65,290.64],
-             'LOJA M02':[544.62,548.90],'LOJA M03':[167.48,167.48],'LOJA M04':[39.20,39.23],
-             'LOJA M05':[101.22,101.25],'CAPITAL ESPRESSO LTDA':[128.55,133.70]}},
-  {servico:'energia',competencia:'05/2026',inicio:'2026-05-18',fim:'2026-06-16',
-   valorFatura:16053.57,consumoFatura:16380,
-   leituras:{'CAPITAL ESPRESSO LTDA':[11571.20,12086.60]}}
-];
+const VC_SEED_CICLOS=[]; // Cadastros reais são entregues somente pela API autorizada.
 
 /* Lançamentos de faturamento do E-Business, conforme a planilha de VENDAS.
    Os fixos repetem todo mês; os de consumo puxam o valor do rateio automaticamente. */
-const VC_SEED_VENDAS=[
-  {ordem:1,unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',motivo:'ALUGUEL DO ESPAÇO',origem:'fixo',valor:1600.00,dia:1,refMeses:3},
-  {ordem:2,unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',motivo:'LOCAÇÃO DE ESPAÇO PARA BANNER - MERCHANDISING',origem:'fixo',valor:70.00,dia:1,refMeses:3},
-  {ordem:3,unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',motivo:'CONSUMO DE AGUA',origem:'agua',valor:0,dia:1,refMeses:3,uni:'VANTAGE CAR STUDIO LTDA'},
-  {ordem:4,unidade:'VANTAGE CAR STUDIO LTDA',cnpj:'30.681.781/0001-58',motivo:'ALUGUEL DE SALA 1º SUBSOLO',origem:'fixo',valor:600.00,dia:1,refMeses:3},
-  {ordem:5,unidade:'GARRA 1608',cnpj:'40.659.807/0001-02',motivo:'MERCHANDISING PORTA DO ELEVADOR E4',origem:'fixo',valor:200.00,dia:1,refMeses:null},
-  {ordem:6,unidade:'EMPRESA BRASILEIRA DE ESTACIONAMENTO',cnpj:'02.212.820/0022-05',motivo:'REPASSE ESTACIONAMENTO',origem:'variavel',valor:0,dia:15,refMeses:null,periodoMeses:1},
-  {ordem:7,unidade:'CAPITAL ESPRESSO LTDA',cnpj:'54.766.132/0001-58',motivo:'LOCAÇÃO DE ESPAÇO MEZANINO REF',origem:'fixo',valor:2000.00,dia:1,refMeses:4,vencMeses:-1},
-  {ordem:8,unidade:'CAPITAL ESPRESSO LTDA',cnpj:'54.766.132/0001-58',motivo:'CONSUMO DE ÁGUA',origem:'agua',valor:0,dia:1,refMeses:4,vencMeses:-1,uni:'CAPITAL ESPRESSO LTDA'},
-  {ordem:9,unidade:'CAPITAL ESPRESSO LTDA',cnpj:'54.766.132/0001-58',motivo:'CONSUMO DE ENERGIA',origem:'energia',valor:0,dia:1,refMeses:4,vencMeses:-1,uni:'CAPITAL ESPRESSO LTDA'}
-];
+const VC_SEED_VENDAS=[]; // Cadastros reais são entregues somente pela API autorizada.
 /* Garante nos lançamentos já gravados os campos de defasagem (base criada antes da regra). */
 function vcAjustarVendas(){
   vcVendas.forEach(v=>{
@@ -9337,39 +9248,7 @@ function migrarVendasCustas(){
   vcAjustarVendas();
   CFG.vcSeed='v3';
 }
-function migrarEnergiaPadrao(forcar){
-  let mudou=false;
-  if(!CFG.vcTaxaEnergia){ CFG.vcTaxaEnergia=0.88; mudou=true; }
-  // Garante na base real (que já possui os ciclos reais 09/2026 ou 10/2026 de água) a medição de energia
-  // de 16/09/2026 a 16/10/2026 da Capital Espresso (13.418,40 -> 14.089,00 = 670,60 × R$ 0,88 = R$ 590,13)
-  const temBaseReal=forcar||vcCiclos.some(c=>c.servico==='agua'&&(c.id==='vc_9s06f0z'||c.id==='vc_lqw0j0e'||c.consumoFatura===565||c.consumoFatura===694));
-  if(CFG.vcEnergia088!=='v1' && temBaseReal){
-    const uCap=vcUnidades.find(u=>u.servico==='energia'&&u.condoId==='c1'&&/CAPITAL ESPRESSO/i.test(u.unidade));
-    const uVan=vcUnidades.find(u=>u.servico==='energia'&&u.condoId==='c1'&&/VANTAGE/i.test(u.unidade));
-    if(uCap){
-      let ce=vcCiclos.find(c=>c.servico==='energia'&&c.condoId==='c1'&&c.competencia==='10/2026');
-      if(!ce){
-        const linhas=[{unidadeId:uCap.id,nome:uCap.nome,unidade:uCap.unidade,cnpj:uCap.cnpj||'',tipo:uCap.tipo||'VENDA',
-          anterior:13418.40,atual:14089.00,foto:null,medidoPor:'Planilha',medidoEm:'histórico',obs:'Medição 16/09/2026 a 16/10/2026 (cobrança boleto 11/2026)'}];
-        if(uVan) linhas.push({unidadeId:uVan.id,nome:uVan.nome,unidade:uVan.unidade,cnpj:uVan.cnpj||'',tipo:uVan.tipo||'VENDA',
-          anterior:null,atual:null,foto:null,medidoPor:null,medidoEm:null,obs:''});
-        ce={id:'vc_en2610',servico:'energia',condoId:'c1',competencia:'10/2026',
-          inicio:'2026-09-16',fim:'2026-10-16',valorFatura:null,consumoFatura:null,taxaFixa:0.88,
-          fechado:true,criadoPor:'Maciel',criadoEm:nowStamp(),
-          historico:[{q:'Sistema',w:nowStamp(),t:'Ciclo de energia registrado com tarifa padrão fixa de R$ 0,88 (16/09/2026 a 16/10/2026 — boleto 11/2026)'}],
-          linhas};
-        vcCiclos.push(ce);
-      }else{
-        ce.inicio='2026-09-16'; ce.fim='2026-10-16'; ce.taxaFixa=0.88;
-        const l=(ce.linhas||[]).find(x=>x.unidadeId===uCap.id);
-        if(l){ l.anterior=13418.40; l.atual=14089.00; }
-      }
-      CFG.vcEnergia088='v1';
-      mudou=true;
-    }
-  }
-  return mudou;
-}
+function migrarEnergiaPadrao(){return false;}
 
 /* ============ PUBLICIDADE NOS ELEVADORES (locação de espaços p/ divulgação) ============ */
 function pubCfg(){
@@ -9729,7 +9608,7 @@ function formMO(id){
     <div class="check" style="margin-top:4px">
       <input type="checkbox" id="moLegal" ${m?(m.obrigLegal?'checked':''):'checked'}>
       <div style="flex:1"><div class="ct">Obrigação legal</div>
-        <div class="t-sub">Marcado, o atraso é sinalizado como risco de autuação.</div></div></div>
+        <div class="t-sub">Marcado, o atraso ganha destaque para conferência dos responsáveis.</div></div></div>
     <div class="check" style="margin-top:8px">
       <input type="checkbox" id="moCritico" ${m?(m.critico?'checked':''):'checked'}>
       <div style="flex:1"><div class="ct">Não pode vencer (alerta em tela cheia)</div>
@@ -9809,31 +9688,7 @@ function pubOcupacao(cid){
 /* ===== FILA DE ESPERA — PUBLICIDADE NOS ELEVADORES =====================
    Importada da planilha "Lista de Espera do Elevador" (posições 15 a 49).
    A ordem original da lista é a ordem de atendimento. */
-const PUB_FILA_SEED=[
-  {pos:15,empresa:'Henrique Guerra',telefone:'(61) 98366-4141',sala:'305',pref:'Térreo',
-   origem:'Solicitado por e-mail em 26/10/2023 às 13:00'},
-  {pos:16,empresa:'Recriar Estética',contato:'Amanda',telefone:'(61) 98369-4390',sala:'507/508',pref:''},
-  {pos:17,empresa:'La Femme',contato:'Erica',telefone:'(61) 99949-3230',sala:'2208',pref:'Térreo e 1º subsolo'},
-  {pos:20,empresa:'Nayane',telefone:'(62) 98525-2925',sala:'1112',pref:'Todos',
-   origem:'Solicitado pessoalmente em 19/12/2023 às 16:00'},
-  {pos:22,empresa:'Josiel',telefone:'(61) 99638-7912',sala:'1902',pref:'E4 — Subsolo'},
-  {pos:23,empresa:'Adriana Neris',telefone:'(61) 98423-6803',sala:'807',pref:'E4 ou E3 — Térreo'},
-  {pos:24,empresa:'Fabiana / Fernando',telefone:'(61) 99811-0950 / (61) 98158-1569',sala:'902',pref:'Qualquer um'},
-  {pos:32,empresa:'Enjoy',contato:'Nathalia',telefone:'(61) 98190-4147 / (61) 99998-9417',sala:'Enjoy',pref:'Menos garagem'},
-  {pos:33,empresa:'Trendbuild',contato:'Seles',telefone:'(61) 98122-2555',sala:'1703',pref:''},
-  {pos:34,empresa:'Judity',telefone:'(61) 98594-8735',sala:'1611',pref:''},
-  {pos:37,empresa:'Samantha',telefone:'',sala:'312',pref:'Qualquer um'},
-  {pos:38,empresa:'Fisio3',contato:'Silvana',telefone:'(61) 98181-8262',sala:'1603',pref:''},
-  {pos:39,empresa:'Clínica Mind',telefone:'(61) 98260-5971',sala:'1205',pref:''},
-  {pos:40,empresa:'Alpha Assessoria',telefone:'',sala:'201',pref:'Qualquer um'},
-  {pos:41,empresa:'Engeteles',telefone:'(61) 98272-5952',sala:'2407',pref:'Qualquer um'},
-  {pos:42,empresa:'BeautyDerm',telefone:'(61) 99977-9219',sala:'303',pref:''},
-  {pos:44,empresa:'Elizandra Gonçalves',telefone:'(61) 99844-5198',sala:'1109',pref:'Qualquer um'},
-  {pos:45,empresa:'Açaí do Ninja',telefone:'',sala:'Loja 08',pref:'Qualquer um'},
-  {pos:47,empresa:'Nice',telefone:'(61) 99178-8912',sala:'1507',pref:''},
-  {pos:48,empresa:'Diego Lima',telefone:'',sala:'403',pref:'Qualquer um'},
-  {pos:49,empresa:'Zulene',telefone:'(91) 99171-0306',sala:'505',pref:'Todas'}
-];
+const PUB_FILA_SEED=[]; // Cadastros reais são entregues somente pela API autorizada.
 /* Carrega a fila uma única vez; depois a ordem passa a ser gerida pelo sistema.
    O marcador sozinho não basta: se ele ficou gravado sem que os registros
    entrassem (limpeza de banco, sincronização parcial), a importação precisa
@@ -9961,7 +9816,7 @@ function viewManutObrig(){
     ${risco?`<div class="alertbar red" style="margin-bottom:14px">
       <div class="fi-ic">${ic('alert')}</div>
       <div style="flex:1"><b>${risco} obrigação legal em atraso</b>
-        <div class="t-sub">Manutenção obrigatória vencida expõe o condomínio a autuação e pode invalidar o seguro.</div></div>
+        <div class="t-sub">Manutenção vencida exige atenção. Confira os prazos, as exigências aplicáveis e as condições da apólice com os responsáveis.</div></div>
       <button class="btn sm danger" onclick="moFiltro='Vencida';render()">Ver pendências</button></div>`:''}
 
     <div class="grid metrics" style="margin-bottom:14px">
@@ -10806,87 +10661,7 @@ function finishNota(id,data,obs,anexo){
 
 /* ============ LEITURAS / ÁGUA E ENERGIA ============ */
 /* Histórico real de água do E-Business (importado das leituras do gestor) */
-const LEITURAS_AGUA_C1=[
-  ['2026-06-15',66107.00,null],
-  ['2026-06-16',66130.00,23.00],
-  ['2026-06-17',66162.00,32.00],
-  ['2026-06-18',66172.00,10.00],
-  ['2026-06-19',66196.00,24.00],
-  ['2026-06-20',66220.00,24.00],
-  ['2026-06-21',66230.00,10.00],
-  ['2026-06-22',66234.00,4.00],
-  ['2026-06-23',66265.00,31.00],
-  ['2026-06-24',66293.00,28.00],
-  ['2026-06-25',66309.00,16.00],
-  ['2026-06-26',66335.00,26.00],
-  ['2026-06-27',66348.00,13.00],
-  ['2026-06-28',66358.00,10.00],
-  ['2026-06-29',66360.00,2.00],
-  ['2026-06-30',66372.00,12.00],
-  ['2026-07-01',66388.00,16.00],
-  ['2026-07-02',66410.00,22.00],
-  ['2026-07-03',66433.00,23.00],
-  ['2026-07-04',66465.00,32.00],
-  ['2026-07-05',66477.00,12.00],
-  ['2026-07-06',66481.00,4.00],
-  ['2026-07-07',66498.00,17.00],
-  ['2026-07-08',66542.00,44.00],
-  ['2026-07-09',66546.00,4.00],
-  ['2026-07-10',66579.00,33.00],
-  ['2026-07-11',66589.00,10.00],
-  ['2026-07-12',66596.00,7.00],
-  ['2026-07-13',66619.00,23.00],
-  ['2026-07-14',66631.00,12.00],
-  ['2026-07-15',66647.00,16.00],
-  ['2026-07-16',66668.00,21.00],
-  ['2026-07-17',66696.00,28.00],
-  ['2026-07-18',66709.00,13.00],
-  ['2026-07-19',66709.00,0.00],
-  ['2026-07-20',66710.00,1.00],
-  ['2026-07-21',66739.00,29.00],
-  ['2026-07-22',66771.00,32.00],
-  ['2026-07-23',66796.00,25.00],
-  ['2026-07-24',66805.00,9.00],
-  ['2026-07-25',66830.00,25.00],
-  ['2026-07-26',66844.00,14.00],
-  ['2026-07-27',66863.00,19.00],
-  ['2026-07-28',66886.00,23.00],
-  ['2026-07-29',66910.00,24.00],
-  ['2026-07-30',66939.00,29.00],
-  ['2026-07-31',66964.00,25.00],
-  ['2026-08-01',66965.00,1.00],
-  ['2026-08-02',66973.00,8.00],
-  ['2026-08-03',66983.00,10.00],
-  ['2026-08-04',66997.00,14.00],
-  ['2026-08-05',67021.00,24.00],
-  ['2026-08-06',67064.00,43.00],
-  ['2026-08-07',67071.00,7.00],
-  ['2026-08-08',67090.00,19.00],
-  ['2026-08-10',67112.00,22.00],
-  ['2026-08-11',67142.00,30.00],
-  ['2026-08-12',67168.00,26.00],
-  ['2026-08-13',67187.00,19.00],
-  ['2026-08-14',67196.00,9.00],
-  ['2026-08-15',67219.00,23.00],
-  ['2026-08-16',67232.00,13.00],
-  ['2026-08-17',67235.00,3.00],
-  ['2026-08-18',67264.00,29.00],
-  ['2026-08-19',67277.00,13.00],
-  ['2026-08-20',67300.00,23.00],
-  ['2026-08-21',67325.00,25.00],
-  ['2026-08-22',67364.00,39.00],
-  ['2026-08-23',67364.00,0.00],
-  ['2026-08-24',67369.00,5.00],
-  ['2026-08-25',67388.00,19.00],
-  ['2026-08-26',67418.00,30.00],
-  ['2026-08-27',67434.00,16.00],
-  ['2026-08-28',67438.00,4.00],
-  ['2026-08-29',67485.00,47.00],
-  ['2026-08-30',67489.00,4.00],
-  ['2026-08-31',67496.00,7.00],
-  ['2026-09-01',67615.00,119.00],
-  ['2026-09-02',67645.00,30.00]
-];
+const LEITURAS_AGUA_C1=[]; // Histórico real exclusivamente na API.
 let vcUnidades=[], vcCiclos=[], vcVendas=[];
 let leituras=[], leitTab='agua', leitMes='', leitStatus='', leitFiltro='', mediaJanela=3, grafJanela=30;
 function seedLeituras(){
@@ -10936,7 +10711,7 @@ function aplicarHistoricoAguaC1(){
     ant=medidor;
   });
   // próxima leitura programada: dia seguinte ao último registro
-  const ult=LEITURAS_AGUA_C1[LEITURAS_AGUA_C1.length-1];
+  const ult=LEITURAS_AGUA_C1[LEITURAS_AGUA_C1.length-1];if(!ult)return;
   const p=new Date(parse(ult[0])); p.setDate(p.getDate()+1);
   leituras.push({id:uid('lt'),tipo:'agua',condoId:'c1',data:iso(p),medidor:null,fator:1,
     leitura:null,anterior:ult[1],consumo:null,status:'Programada',obs:'',anexo:'',responsavel:'Maciel',
@@ -12327,7 +12102,7 @@ function decidirPedido(id,status){
   const motivo=prompt(`${status==='Aprovado'?'Observação da aprovação':'Motivo da recusa'}:`,'')||'—';
   p.status=status; p.decisao=nowStamp(); p.decisor=session.nome; p.motivo=motivo;
   audit(`Pedido ${status.toLowerCase()}`,`Pedido de ${p.solicitante}`,p.itens.map(i=>`${i.nome} x${i.qtd}`).join('; '),p.condoId,motivo);
-  render(); toast(`Pedido ${status.toLowerCase()}.`);
+  save(); render(); toast(`Pedido ${status.toLowerCase()}.`);
 }
 function receberPedido(id){
   const p=pedidos.find(x=>x.id===id);
@@ -12524,7 +12299,7 @@ function saveApont(id){
     a.historico.push({q:session.nome,w:nowStamp(),t:'Apontamento editado'});toast('Apontamento atualizado.')}
   else{apontamentos.push(Object.assign({id:uid('ap'),autor:session.nome,data:today(),
     historico:[{q:session.nome,w:nowStamp(),t:'Apontamento registrado'}]},o));toast('Apontamento registrado.')}
-  closeModal(); render();
+  save(); closeModal(); render();
 }
 function avancarApont(id){
   const a=apontamentos.find(x=>x.id===id);
@@ -12532,7 +12307,7 @@ function avancarApont(id){
   if(a.status==='Em Andamento'&&!a.iniciadoEm) a.iniciadoEm=today();
   if(a.status==='Resolvido') a.resolvidoEm=today();
   a.historico.push({q:session.nome,w:nowStamp(),t:'Status alterado para '+a.status});
-  render(); toast('Apontamento: '+a.status+'.');
+  save(); render(); toast('Apontamento: '+a.status+'.');
 }
 function histApont(id){
   const a=apontamentos.find(x=>x.id===id);
@@ -12550,7 +12325,7 @@ function delApont(id){
   const motivo=prompt('Motivo da exclusão (auditoria):','')||'—';
   if(!confirm('Excluir este apontamento?'))return;
   audit('Exclusão de apontamento',a.titulo,a.local,a.condoId,motivo);
-  apontamentos=apontamentos.filter(x=>x.id!==id); render(); toast('Apontamento excluído.');
+  apontamentos=apontamentos.filter(x=>x.id!==id); save(); render(); toast('Apontamento excluído.');
 }
 
 
@@ -12670,26 +12445,27 @@ function verFoto(apId,i){
 
 /* ============ NAVEGAÇÃO MOBILE ============ */
 function ehMobile(){ return window.innerWidth<=820 }
-function tabsDoPerfil(){
+function tabsDoPerfil(){return tabsDoPerfilBase().filter(([k])=>k==='menu'||scopeAllowed(k));}
+function tabsDoPerfilBase(){
   if(!session) return [];
   if(!P().tipos.length){
     /* Brigadista: só o que é da brigada */
-    if(P().brigada) return [['dashboard','gauge','Início'],
+    if(P().brigada) return [['inicio','home','Início'],
       ['brigada-inicio','play','Check-list'],['brigada','flame','Andares'],
-      ['brigada-ronda','route','Ronda'],['config','settings','Ajustes']];
+      ['brigada-ronda','route','Ronda'],['menu','menu','Mais']];
     /* Portaria: so a leitura. Sem painel e sem ronda -- a barra de baixo
        precisa refletir o mesmo acesso restrito do menu lateral. */
-    if(P().leiturasSimples) return [['leituras','water','Leituras'],
-      ['config','settings','Ajustes']];
+    if(P().leiturasSimples) return [['inicio','home','Início'],['leituras','water','Leituras'],
+      ['menu','menu','Mais']];
     /* Limpeza e portaria: leitura e ronda */
-    if(P().leituras||P().ronda) return [['dashboard','gauge','Início'],
+    if(P().leituras||P().ronda) return [['inicio','home','Início'],
       ['leituras','water','Leituras'],['brigada-ronda','route','Ronda'],
-      ['config','settings','Ajustes']];
+      ['menu','menu','Mais']];
     /* Manutenção (Cleiton) — fluxo de campo */
-    return [['dashboard','gauge','Início'],['apontamentos','wrench','Serviços'],
-            ['estoque','box','Estoque'],['pedidos','cart','Pedidos'],['config','settings','Ajustes']];
+    return [['inicio','home','Início'],['apontamentos','wrench','Serviços'],
+            ['estoque','box','Estoque'],['pedidos','cart','Pedidos'],['menu','menu','Mais']];
   }
-  const t=[['dashboard','gauge','Início'],['hoje','today','Hoje'],['rotina','route','Rotina']];
+  const t=[['inicio','home','Início'],['hoje','today','Hoje'],['rotina','route','Rotina']];
   if(P().manutencao) t.push(['apontamentos','wrench','Serviços']);
   else t.push(['notas','invoice','NFs']);
   t.push(['menu','menu','Mais']);
@@ -12700,39 +12476,31 @@ function buildTabbar(){
   const tabs=tabsDoPerfil();
   document.body.classList.toggle('has-tabbar', ehMobile()&&!!session);
   bar.innerHTML=tabs.map(([k,i,l])=>{
-    const at = k==='menu' ? false : page===k;
+    const at = k==='menu' ? !tabs.some(t=>t[0]===page) : page===k;
     const act = k==='menu' ? 'abrirMaisMenu()' : `go('${k}')`;
-    return `<button class="${at?'active':''}" onclick="${act}">${ic(i)}<span>${l}</span></button>`;
+    return `<button class="${at?'active':''}" ${at?'aria-current="page"':''} onclick="${act}">${ic(i)}<span>${l}</span></button>`;
   }).join('');
   atualizaFab();
 }
 function abrirMaisMenu(){
-  const itens=[['tarefas-adm','clipboardCheck','Tarefas Administrativas'],
-    ['calendario','calendar','Calendário'],['notas','invoice','Notas Fiscais'],
-    ['cessoes','contract','Cessão de Direitos'],['vendascustas','money','Vendas e Custas'],['publicidade','megaphone','Publicidade nos Elevadores'],
-    ['emails','mail','Padrões de E-mails'],
-    ['ocupacao','building','Taxa de Ocupação'],['locacao','door','Salas para Locação'],
-    ['leituras','water','Leituras — Água e Energia'],
-    ['brigada-inicio','play','Iniciar Check-list'],['brigada','flame','Check-list por Andar'],
-    ['brigada-ronda','route','Ronda Diária'],
-    ['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material'],
-    ['relatorios','chart','Relatórios'],['relmensal','doc','Relatório Mensal'],
-    ['config','settings','Configurações']]
-    .filter(([k])=>{
-      if(k==='tarefas-gestor') return P().tipos.includes('Gestor');
-      if(['brigada-inicio','brigada'].includes(k)) return !!P().brigada;
-      if(k==='brigada-ronda') return !!(P().brigada||P().ronda);
-      if(k==='leituras') return !!(P().tipos.length||P().leituras);
-      if(['notas','cessoes','vendascustas','publicidade','emails','calendario','tarefas-adm','relatorios','relmensal'].includes(k)) return P().tipos.length;
-      if(['estoque','pedidos'].includes(k)) return P().estoque;
-      return true;
-    });
+  const items=itensNavegacao();
   openModal('Todos os módulos',
-    itens.map(([k,i,l])=>`<div class="feed-item" style="cursor:pointer" onclick="closeModal();go('${k}')">
-      <div class="fi-ic">${ic(i)}</div><div style="flex:1"><div class="ft">${l}</div></div>${ic('chevR')}</div>`).join('')
-    +`<div class="feed-item red" style="cursor:pointer;margin-top:10px" onclick="closeModal();logout()">
-      <div class="fi-ic">${ic('logout')}</div><div style="flex:1"><div class="ft">Sair do sistema</div></div></div>`,
-    `<button class="btn ghost" onclick="closeModal()">Fechar</button>`);
+    `<div class="module-account"><strong>${esc(session.nome)} · ${esc(session.role)}</strong>Acesso mantido neste aparelho até meia-noite.</div>
+     <input id="moduleSearch" class="module-search" type="search" placeholder="Buscar módulo…" aria-label="Buscar módulo" oninput="filtrarMaisMenu(this.value)">
+     <div id="moduleList">${items.map(([k,i,l])=>k==='#'
+       ?`<h4 class="module-group">${esc(l)}</h4>`
+       :`<button type="button" class="module-link" data-module-search="${esc(l)}" onclick="closeModal();go('${k}')">${ic(i)}<span>${esc(l)}</span>${ic('chevR')}</button>`).join('')}</div>
+     <p id="moduleEmpty" class="module-empty" hidden>Nenhum módulo encontrado.</p>
+     ${P().ia?`<button class="module-link" onclick="closeModal();iaAbrir()">${ic('sparkles')}<span>Assistente</span></button>`:''}
+     <button class="module-link module-logout" onclick="closeModal();logout()">${ic('logout')}<span>Sair da conta</span></button>`,
+     '<button class="btn ghost" onclick="closeModal()">Fechar</button>');
+}
+function filtrarMaisMenu(value){
+  const norm=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const q=norm(value);let found=0;
+  document.querySelectorAll('#moduleList .module-link').forEach(el=>{el.hidden=!norm(el.dataset.moduleSearch).includes(q);if(!el.hidden)found++;});
+  document.querySelectorAll('#moduleList .module-group').forEach(el=>{el.hidden=!!q;});
+  const empty=$('#moduleEmpty');if(empty)empty.hidden=found>0;
 }
 const FAB={apontamentos:['plus','formApont'],estoque:['plus','formItem'],
   pedidos:['plus','novoPedido'],'tarefas-adm':['plus','newTask'],
@@ -13087,7 +12855,7 @@ function alertaCritico(forcar){
             ? (venc.length===1?'1 manutenção obrigatória VENCIDA':venc.length+' manutenções obrigatórias VENCIDAS')
             : (prox.length===1?'1 manutenção crítica a vencer':prox.length+' manutenções críticas a vencer')}</div>
           <div class="crit-h2">${venc.length
-            ? 'O condomínio está exposto a autuação e o seguro pode ser negado em caso de sinistro.'
+            ? 'Confira com os responsáveis técnicos e a seguradora as exigências aplicáveis e os efeitos do atraso.'
             : 'Contrate o serviço agora para não perder o prazo.'}</div>
         </div>
       </div>
@@ -14428,7 +14196,7 @@ function temServidor(){
   return location.protocol==='http:'||location.protocol==='https:';
 }
 function syncHeaders(){
-  return {'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30'};
+  return {'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-User':AUTH.userId||''};
 }
 function nomeDispositivo(){
   let d=syncCfg().dispositivo;
@@ -14484,6 +14252,8 @@ async function syncBaixar(){
       await syncEnviar(true);
       return true;
     }
+    const scopeChanged=AUTH.access&&d.snapshot._access&&AUTH.access.key!==d.snapshot._access.key;
+    if(scopeChanged){await scopePrepare({userId:d.snapshot._access.userId,access:d.snapshot._access});}
     const _foto=_fotoLocal();
     /* Antes de aceitar o que vem do servidor, anota o que foi feito aqui e
        ainda não subiu (trabalho offline). Se acabamos de abrir o app, os sujos
@@ -14509,6 +14279,8 @@ async function syncBaixar(){
     SYNC.ultimo=new Date().toLocaleString('pt-BR');
     salvaSyncCfg({versao:d.versao});
     salvarLocal();
+    AUTH.temCache=true;
+    if(scopeChanged&&session){$('#app').style.display='block';buildNav();buildTabbar();render();}
     syncEstado('ok');
     return true;
   }catch(e){
@@ -19198,269 +18970,7 @@ function ocuExcluirSala(id){
 /* Relação real das salas do E-Business (261 unidades), conforme a planilha
    da administração, com as áreas, vagas e depósitos da Minuta da Convenção (2018).
    Formato: [sala, andar, ocupante, área m², vagas, depósito] — ocupante vazio = vaga. */
-const SALAS_SEED=[
- ["Loja 01","Térreo","Subway",112.39,2,"09"],
- ["Loja 02","Térreo","Odontoclinic",90.36,2,"01"],
- ["Loja 03","Térreo","",83.59,2,"02"],
- ["Loja 04","Térreo","Aredda",93.16,2,"03"],
- ["Loja 05","Térreo","Barbearia & Pub Al Capone",86.49,2,"04"],
- ["Loja 06","Térreo","Mana Poke",104.27,2,"05"],
- ["Loja 07","Térreo","Park Idiomas",106.29,2,"07"],
- ["Loja 08","Térreo","Açai do Ninja",131.31,3,"08"],
- ["Loja 09","Térreo","Instituto Ninar",314.31,4,"06"],
- ["Loja Mez. 01","Mezanino","Study Box",120.91,2,"10"],
- ["Loja Mez. 02","Mezanino","JK Exclusive",186.39,3,"11"],
- ["Loja Mez. 03","Mezanino","",236.49,3,"12"],
- ["Loja Mez. 04","Mezanino","",231.4,3,"13"],
- ["Loja Mez. 05","Mezanino","Café Urbana Imóveis",217.13,2,"15"],
- ["201","2º","",38.55,1,""],
- ["202","2º","Divertidamente Clinicas Integradas",33.09,1,""],
- ["203","2º","Julio Gulyas Kenosis. PSI",31.26,1,""],
- ["204","2º","Comtemplare Psicologia",32.18,1,""],
- ["205","2º","IF Estetica",32.18,1,""],
- ["206","2º","Bio Estetic",31.26,1,""],
- ["207","2º","",33.09,1,""],
- ["208","2º","",38.55,1,""],
- ["209","2º","",38.55,1,""],
- ["210","2º","Estudio 3 Estetica e Micropigmentação",33.26,1,""],
- ["211","2º","Canaã Telecomunicações",33.26,1,""],
- ["212","2º","",38.55,1,""],
- ["301","3º","VS Beauty Hair",38.55,1,""],
- ["302","3º","Clinica Evelyn Antunes",46.07,1,""],
- ["303","3º","Beauty Derm Saúde e Estética",42.4,1,""],
- ["304","3º","Mep Odontologia Integrada",41.71,1,""],
- ["305","3º","Dente In Foco",38.72,1,""],
- ["306","3º","Moa Massoterapia e Estetica",33.74,1,""],
- ["307","3º","Carollina Odontologia",30.41,1,""],
- ["308","3º","Seja Bank",29.43,1,""],
- ["309","3º","Clinica Caminhar",38.55,1,""],
- ["310","3º","Clinica Caminhar",33.26,1,""],
- ["311","3º","Raquel Ciseski Fonoaudiologia",33.26,1,""],
- ["312","3º","Clinic Harmo by Dra. Samanta Souza",38.55,1,""],
- ["401","4º","Bahia Brita Mineração",38.55,1,""],
- ["402","4º","ESSENCE PERSONALIZADOS",46.07,1,""],
- ["403","4º","DW VIAGENS",42.4,1,""],
- ["404","4º","DRS Advocacia",41.71,1,""],
- ["405","4º","Espaço Insight",38.72,1,""],
- ["406","4º","",33.74,1,""],
- ["407","4º","Coworking Center",30.41,1,""],
- ["408","4º","Coworking Center",29.43,1,""],
- ["409","4º","Coworking Center",38.55,1,""],
- ["410","4º","ACP & LP - Advogados",33.26,1,""],
- ["411","4º","Coworking Center",33.26,1,""],
- ["412","4º","Coworking Center",38.55,1,""],
- ["501","5º","",38.55,1,""],
- ["502","5º","NEURO APRENDIZAGEM",46.07,1,""],
- ["503","5º","",42.4,1,""],
- ["504","5º","Amma Contabilidade",41.71,1,""],
- ["505","5º","Zulene Imoveis",38.72,1,""],
- ["506","5º","Instituo Favero",33.74,1,""],
- ["507","5º","Recriar Estetica",30.41,1,""],
- ["508","5º","Recriar Estetica",29.43,1,""],
- ["509","5º","ICN CONCPT",38.55,1,""],
- ["510","5º","ICN CONCPT",33.26,1,""],
- ["511","5º","Conecte Engenharia",33.26,1,""],
- ["512","5º","Conecte Engenharia",38.55,1,""],
- ["601","6º","Intech Soluções em Tecnologia da Informática LTDA",38.55,1,""],
- ["602","6º","Intech Soluções em Tecnologia da Informática LTDA",46.07,1,""],
- ["603","6º","Intech Soluções em Tecnologia da Informática LTDA",42.4,1,""],
- ["604","6º","Casa Espaço Terapeutico",41.71,1,""],
- ["605","6º","",38.72,1,""],
- ["606","6º","JULIANA CANABRAVA ODONTOLOGIA ESPECIALIZADA",33.74,1,""],
- ["607","6º","Clinica Reabilitar",30.41,1,""],
- ["608","6º","Clinica Reabilitar",29.43,1,""],
- ["609","6º","Evolutiva Clinica de Fisioterapia",38.55,1,""],
- ["610","6º","Clinica Reabilitar - Fisioterapia Infantil",33.26,1,""],
- ["611","6º","",33.26,1,""],
- ["612","6º","",38.55,1,""],
- ["701","7º","Nelio Carlos Nutritional Consulting",43.83,1,"14"],
- ["702","7º","Dow Capital",46.07,1,""],
- ["703","7º","Inovazul",31.26,1,""],
- ["704","7º","Inovazul",32.18,1,""],
- ["705","7º","UNIASSELVI",32.18,1,""],
- ["706","7º","CAMARIM / RAPHAELLA GOMES",33.74,1,""],
- ["707","7º","MR2 Serviços Administrativos",30.41,1,""],
- ["708","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia",29.43,1,""],
- ["709","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia",38.55,1,""],
- ["710","7º","Bem-Vie Clínica de Fisioterapia/Pilates/Pscicologia",33.26,1,""],
- ["711","7º","Siemens LTDA",33.26,1,""],
- ["712","7º","Siemens LTDA",38.55,1,""],
- ["801","8º","HARMONIE SAUDE",43.74,1,"16"],
- ["802","8º","Cinge Ginecologia e dermatologia",46.07,1,""],
- ["803","8º","GROWTH",31.26,1,""],
- ["804","8º","",32.18,1,""],
- ["805","8º","STUDIO THEA SAMPAIO",32.18,1,""],
- ["806","8º","Consultorio de Psicologia Nathalia Miranda",33.74,1,""],
- ["807","8º","Adriana Neris",30.41,1,""],
- ["808","8º","Nucleo Evolutiva",29.43,1,""],
- ["809","8º","Nucleo Evolutiva",38.55,1,""],
- ["810","8º","",33.26,1,""],
- ["811","8º","",33.26,1,""],
- ["812","8º","HARMONIE SAUDE",38.55,1,""],
- ["901","9º","FS ALISAMENTO E SAUDE CAPILAR",43.79,1,"19"],
- ["902","9º","Simetri Odontologia Estética",46.07,1,""],
- ["903","9º","Clinica Rafa Duarte",31.26,1,""],
- ["904","9º","Clinica Rafa Duarte",32.18,1,""],
- ["905","9º","",32.18,1,""],
- ["906","9º","Grande Muralha",33.74,1,""],
- ["907","9º","",30.41,1,""],
- ["908","9º","Roseane Barreto Castro - Advocacia",29.43,1,""],
- ["909","9º","Cef Espaço Lobato Engenharia",38.55,1,""],
- ["910","9º","Instituto Ana Alves",33.26,1,""],
- ["911","9º","LIFLEG LTDA",33.26,1,""],
- ["912","9º","Recupera Glosas / Yesc",38.55,1,""],
- ["1001","10º","Instituto Misson Paulin",43.99,1,"20"],
- ["1002","10º","Instituto Misson Paulin",46.07,1,""],
- ["1003","10º","DEAXE",31.26,1,""],
- ["1004","10º","Anny Fernandes Clinic",32.18,1,""],
- ["1005","10º","Ana Claudia de Oliveira Grossi",32.18,1,""],
- ["1006","10º","Maison Lashes",33.74,1,""],
- ["1007","10º","SAKURA CONSOLIDADORA",30.41,1,""],
- ["1008","10º","Dez DB Instituto de Música",29.43,1,""],
- ["1009","10º","Care Reabilitação Oral Integrada",38.55,1,""],
- ["1010","10º","Dez DB Instituto de Música",33.26,1,""],
- ["1011","10º","Instituto Misson Paulin",33.26,1,""],
- ["1012","10º","Instituto Misson Paulin",38.55,1,""],
- ["1101","11º","",44.21,1,"21"],
- ["1102","11º","Bio Ortho Odontologia e Estetica",46.07,1,""],
- ["1103","11º","Bio Ortho Odontologia e Estetica",31.26,1,""],
- ["1104","11º","ROCHA BANDEIRA ADVOCACIA",32.18,1,""],
- ["1105","11º","Cobeauty",32.18,1,""],
- ["1106","11º","Martins Odontologia e Harmonização Facial",33.74,1,""],
- ["1107","11º","Integra Odontologia Especializada LTDA EPP",30.41,1,""],
- ["1108","11º","Integra Odontologia Especializada LTDA EPP",29.43,1,""],
- ["1109","11º","Investimmob",38.55,1,""],
- ["1110","11º","PRESTAMO BSB IMOBILIÁRIA",33.26,1,""],
- ["1111","11º","Esplendor Feminino",33.26,1,""],
- ["1112","11º","LUMINI CLINIC (ENDOCRINOLOGIA E NUTRIÇÃO)",38.55,1,""],
- ["1201","12º","Noa",38.55,1,""],
- ["1202","12º","Tavora Odontologia",46.07,1,""],
- ["1203","12º","4Quality Tecnologia",31.26,1,""],
- ["1204","12º","Brasilia Capital Soluções Imobiliarias",32.18,1,""],
- ["1205","12º","Mind Clínica Médica LTDA-ME",32.18,1,""],
- ["1206","12º","Mind Clínica Médica LTDA-ME",33.74,1,""],
- ["1207","12º","Global JR Representações e Transportes LTDA-ME",30.41,1,""],
- ["1208","12º","JR Representação Global LTDA-ME",29.43,1,""],
- ["1209","12º","Mind Clínica Médica LTDA-ME",38.55,1,""],
- ["1210","12º","Coelho e Arruda Advogados Associados",33.26,1,""],
- ["1211","12º","Mind Clínica Médica LTDA-ME",33.26,1,""],
- ["1212","12º","Mind Clínica Médica LTDA-ME",38.55,1,""],
- ["1301","13º","IBEC - INSTITUTO BRASILEIRO DE EDUCAÇÃO E CULTURA",38.55,1,""],
- ["1302","13º","Enjoy Odontologia",46.07,1,""],
- ["1303","13º","CANUTO HOLDIING",31.26,1,""],
- ["1304","13º","GRUPO HELA",32.18,1,""],
- ["1305","13º","Sobrinho Advogados",32.18,1,""],
- ["1306","13º","Intense Odontologia",33.74,1,""],
- ["1307","13º","Concremat Engenharia e Tecnologia S/A",30.41,1,""],
- ["1308","13º","Concremat Engenharia e Tecnologia S/A",29.43,1,""],
- ["1309","13º","Concremat Engenharia e Tecnologia S/A",38.55,1,""],
- ["1310","13º","Concremat Engenharia e Tecnologia S/A",33.26,1,""],
- ["1311","13º","Sinapsi Clinica de Psicologia",33.26,1,""],
- ["1312","13º","JK Exclusive",38.55,1,""],
- ["1401","14º","Espaço Ink Tatu Art",38.55,1,""],
- ["1402","14º","",46.07,1,""],
- ["1403","14º","NUCLEO BRASIL",31.26,1,""],
- ["1404","14º","Dra. Marília Rafaela Estética Avançada",32.18,1,""],
- ["1405","14º","Venâncio Advocacia",32.18,1,""],
- ["1406","14º","",33.74,1,""],
- ["1407","14º","",30.41,1,""],
- ["1408","14º","",29.43,1,""],
- ["1409","14º","",38.55,1,""],
- ["1410","14º","",33.26,1,""],
- ["1411","14º","Clinica de Psicologia Luize Bonaparte",33.26,1,""],
- ["1412","14º","Clinica Caminhar",38.55,1,""],
- ["1501","15º","Escritório de Advocacia Elisângela e Omar",38.55,1,""],
- ["1502","15º","DR. BRUNO BRUNELLI ODONTOLOGIA",46.07,1,""],
- ["1503","15º","",31.26,1,""],
- ["1504","15º","Baroli Imoveis",32.18,1,""],
- ["1505","15º","",32.18,1,""],
- ["1506","15º","Plena Psicologia",33.74,1,""],
- ["1507","15º","CLINICA INOVAR",30.41,1,""],
- ["1508","15º","",29.43,1,""],
- ["1509","15º","Adriana Diniz Odontologia",38.55,1,""],
- ["1510","15º","SOUD HORIZON ESTUDIO",33.26,1,""],
- ["1511","15º","Clinica Ella",33.26,1,""],
- ["1512","15º","Clinica Ella",38.55,1,""],
- ["1601","16º","JPIB Negócios Imobiliários Eireli",38.55,1,""],
- ["1602","16º","Kézia P. Galdino / Karina Barbosa Dorneles (Psicologia)",46.07,1,""],
- ["1603","16º","Fisio 3",31.26,1,""],
- ["1604","16º","UROFLUX",32.18,1,""],
- ["1605","16º","ALIVE TURISMO",32.18,1,""],
- ["1606","16º","ZS3 INVESTIMENTOS",33.74,1,""],
- ["1607","16º","Roma Engenharia",30.41,1,""],
- ["1608","16º","GARRA CERTIFICAÇÃO",29.43,1,""],
- ["1609","16º","Amaro Tattoo",38.55,1,""],
- ["1610","16º","Luminnus Pscicologia",33.26,1,""],
- ["1611","16º","Atelie Judy Alves",33.26,1,""],
- ["1612","16º","Lucas Neris Odonto",38.55,1,""],
- ["1701","17º","CURUMIN CLINICA DE PEDIATRIA",38.55,1,""],
- ["1702","17º","AMJ Auto Locadora",46.07,1,""],
- ["1703","17º","Trendbuild",31.26,1,""],
- ["1704","17º","Trendbuild",32.18,1,""],
- ["1705","17º","Hello Baby Fotografia",32.18,1,""],
- ["1706","17º","Vanessa Rodrigues Psicologia",33.74,1,""],
- ["1707","17º","Lounge Odontologia",30.41,1,""],
- ["1708","17º","Lounge Odontologia",29.43,1,""],
- ["1709","17º","",38.55,1,""],
- ["1710","17º","JL Odontologia",33.26,1,""],
- ["1711","17º","Consultorio de Psicologia Nathalia Miranda",33.26,1,""],
- ["1712","17º","Helenio Andrade Odontologia / Ortopedia Funcional Dos Maxilares / Ortondontia",38.55,1,""],
- ["1801","18º","",38.55,1,""],
- ["1802","18º","G4 REPRESENTAÇÕES E CONSULTORIA",46.07,1,""],
- ["1803","18º","",31.26,1,""],
- ["1804","18º","SUPLE TECNOLOGIA DA INFORMAÇÃO",32.18,1,""],
- ["1805","18º","Studio Karol Nails",32.18,1,""],
- ["1806","18º","ALEX BARROS",33.74,1,""],
- ["1807","18º","Clever System",30.41,1,""],
- ["1808","18º","CAROL BRESSANE / FOUR FOUND OFFICE",29.43,1,""],
- ["1809","18º","Nossa Psicologia Aplicada",38.55,1,""],
- ["1810","18º","Nossa Psicologia Aplicada",33.26,1,""],
- ["1811","18º","ESPAÇO EVOLVE PSICOLOGIA INFANTO JUVENIL",33.26,1,""],
- ["1812","18º","",38.55,1,""],
- ["1901","19º","Aline Mota - Biomedica Estetica",38.55,1,""],
- ["1902","19º","Intense Sallon",46.07,1,""],
- ["1903","19º","",31.26,1,""],
- ["1904","19º","LAILA FEITOSA",32.18,1,""],
- ["1905","19º","Via Vitae Clinica de Psicologia",32.18,1,""],
- ["1906","19º","THAISA PEREIRA PSICOLOGIA",33.74,1,""],
- ["1907","19º","",30.41,1,""],
- ["1908","19º","Espaço Saúde",29.43,1,""],
- ["1909","19º","",38.55,1,""],
- ["1910","19º","VERITÁ",33.26,1,""],
- ["1911","19º","Intense Sallon",33.26,1,""],
- ["1912","19º","BCP EMPRESARIAL",38.55,1,""],
- ["2001","20º","",59.42,1,"23"],
- ["2002","20º","AZZZ SMART CITIES INNOVATIONS",67.38,1,""],
- ["2003","20º","",66.91,1,""],
- ["2004","20º","",66.99,1,""],
- ["2005","20º","AURUN",64.0,1,""],
- ["2006","20º","Elite Gestão Condominial",58.27,1,""],
- ["2007","20º","",51.7,1,""],
- ["2008","20º","Corazi Imóveis",104.49,2,"17"],
- ["2009","20º","Corazi Imóveis",51.79,1,""],
- ["2010","20º","Bridge & Insight Comunicação",51.81,1,""],
- ["2011","20º","",54.69,1,""],
- ["2201","22º","We Concept",59.69,1,"18"],
- ["2202","22º","Prospectare",67.38,1,""],
- ["2203","22º","Sindmetrô DF",66.91,1,""],
- ["2204","22º","Barinject Clinica de Cirurgia Bariatrica e Soroterapia",66.99,1,""],
- ["2205","22º","RS Semi Joias",64.0,1,""],
- ["2206","22º","Grupo Contato Contabilidade",58.27,1,""],
- ["2207","22º","EPTEL",51.7,1,""],
- ["2208","22º","Clinica La Femme",104.53,2,"22"],
- ["2209","22º","RS Semi Joias",51.79,1,""],
- ["2210","22º","PHYSIO MASTER",51.81,1,""],
- ["2211","22º","B4you",54.69,1,""],
- ["2401","24º","Schon Studio de Arquitetura",38.55,1,""],
- ["2402","24º","",46.07,1,""],
- ["2403","24º","UT2",42.4,1,""],
- ["2404","24º","Playgig",41.71,1,""],
- ["2405","24º","Lab Sharp",38.72,1,""],
- ["2406","24º","BMF ASSESSORIA EMPRESARIAL",33.74,1,""],
- ["2407","24º","Engeteles",147.57,3,"24"],
- ["2408","24º","INF Contabilidade",33.26,1,""],
- ["2409","24º","Schon Studio de Arquitetura",38.55,1,""]
-];
+const SALAS_SEED=[]; // Cadastros reais são entregues somente pela API autorizada.
 const OCU_ANDARES=["Térreo", "Mezanino", "2º", "3º", "4º", "5º", "6º", "7º", "8º", "9º", "10º", "11º", "12º", "13º", "14º", "15º", "16º", "17º", "18º", "19º", "20º", "22º", "24º"];
 /* Carrega o mapa uma única vez; depois a manutenção é pela tela. */
 function migrarSalas(){
@@ -20887,7 +20397,8 @@ function _reaplicarLocal(foto,base){
   return reaplicados;
 }
 function _assina(o){ // hash barato só para detectar mudança real
-  const t=JSON.stringify(o); let h=0;
+  const stable={...o};delete stable.savedAt;delete stable._access;delete stable.notifs;delete stable.notifState;
+  const t=JSON.stringify(stable); let h=0;
   for(let i=0;i<t.length;i++){ h=(h*31+t.charCodeAt(i))|0 }
   return t.length+':'+h;
 }
@@ -20906,6 +20417,7 @@ async function syncEnviar(forcar){
       body:JSON.stringify({snapshot:snap,versaoBase:(forcar&&!SYNC.versao)?null:SYNC.versao,
         autor:session?session.nome:'—',dispositivo:nomeDispositivo()})});
     if(r.status===401){ syncEstado('erro','Entre novamente para sincronizar.'); SYNC.enviando=false; return }
+    if(r.status===403||r.status===426){const denied=await r.json();syncEstado('erro',denied.erro||'Acesso não autorizado.');if(session)toast(denied.erro||'Acesso não autorizado.');SYNC.enviando=false;return;}
     if(r.status===413){
       /* Não é falta de internet: o pacote de fotos ficou grande demais.
          Dizer "sem conexão" aqui faria o usuário procurar o problema no
@@ -20917,6 +20429,8 @@ async function syncEnviar(forcar){
     if(r.status===409){
       // outra pessoa gravou antes: junta os dois lados sem descartar nada daqui
       const d=await r.json();
+      const changedAccess=AUTH.access&&d.snapshot._access&&AUTH.access.key!==d.snapshot._access.key;
+      if(changedAccess)await scopePrepare({userId:d.snapshot._access.userId,access:d.snapshot._access});
       const foto=_fotoLocal();
       aplicarSnapshot(d.snapshot);
       const n=_reaplicarLocal(foto,SYNC.base);
@@ -20929,6 +20443,7 @@ async function syncEnviar(forcar){
       salvarLocal();
       if(n){ SYNC.enviando=false; await syncEnviar(); SYNC.enviando=true }
       if(session){
+        if(changedAccess)$('#app').style.display='block';
         if(appOcupado()){ syncAdiar('modal'); }
         else { render(); toast('Os dados foram atualizados por '+(d.autor||'outro usuário')+'.'); }
       }
@@ -20975,11 +20490,12 @@ function aplicarSnapshot(d){
   pedidos=d.pedidos||[]; leituras=d.leituras||[]; auditLog=d.auditLog||[];
   prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
   analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[]; unidSind=d.unidSind||[]; afazeres=d.afazeres||[];
-  if(d.CFG) CFG=Object.assign(CFG,d.CFG);
+  if(d.CFG) CFG=d._access?Object.assign({nomeEmpresa:'E-Business',slogan:'Gestão Predial',logo:'',notif:{ativo:true},ia:{ativo:true}},d.CFG):Object.assign(CFG,d.CFG);
   creds=AUTH.creds=d.creds||AUTH.creds||{};
   salvarCredsLocal();
   notifs=d.notifs||[]; notifState=d.notifState||{};
   aplicarNomesUsuarios(); aplicarPermsUsuarios();
+  if(d._access){AUTH.cachedAccess=d._access;scopeApplyMetadata(d._access);_booting=false;return;}
   if(!prestadores.length) seedPrestadores();
   migrarPrestadoresEB(); migrarLeiturasAgua(); migrarTarifaCaesb(); migrarManutObrig(); migrarVendasCustas(); migrarFilaPub(); migrarRevisoesAp(); migrarMarcaEbiz(); migrarSalas();
   /* Mesmo motivo do laudo: esta migracao so existia no load(), entao o plano
@@ -21017,7 +20533,8 @@ async function ligarSync(silencioso){
     const d=await r.json();
     SYNC.ligado=true;
 
-    await syncBaixar();
+    if(!await syncBaixar()||!AUTH.ok)throw new Error('Dados ainda não carregados.');
+    AUTH.temCache=true;
     clearInterval(SYNC.autoTimer);
     // busca novidades a cada 45s (leve: só o snapshot quando muda a versão)
     SYNC.autoTimer=setInterval(()=>{ if(!SYNC.enviando) syncVerificar() },45000);
@@ -21149,6 +20666,7 @@ function abrirSync(){
 
 /* ============ INIT ============ */
 function iniciarCom(guardado){
+  AUTH.temCache=!!(guardado&&guardado.v===DB_VER&&Array.isArray(guardado.tasks));
   carregarBaseIdx();      /* o que o servidor já conhecia na última conversa */
   if(guardado && SYNC.baseIdx){
     try{
@@ -21157,7 +20675,7 @@ function iniciarCom(guardado){
       SYNC._bootSujosMarcados=true;
     }catch(e){}
   }
-  if(!load(guardado)) seed();
+  if(!load(guardado)){_booting=true;aplicarSnapshot({v:2,_access:{policy:'pending',userId:'',perms:{},pages:[]},CFG:{}});AUTH.access=null;AUTH.cachedAccess=null;AUTH.temCache=false;}
   /* Atualiza a impressão digital da base com o estado pós-migração para todos os
      registros que NÃO foram editados offline pelo usuário, impedindo que migrações
      de atualização de código marquem dados antigos como sujos e revertam o servidor. */
@@ -21202,6 +20720,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<!-- Base: a368457. Autenticação diária no servidor em 30/10/2026. DB_VER=2; dados no Turso. -->
+<!-- Versão scoped-2026-10-30: acesso por perfil, sessão diária e experiência mobile. DB_VER=2. -->
 </body>
 </html>

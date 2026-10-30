@@ -36,6 +36,9 @@ export async function migrate() {
        criado      TEXT NOT NULL
      )`,
     `CREATE INDEX IF NOT EXISTS idx_evento_ws ON evento(workspace, id DESC)`,
+    `CREATE TABLE IF NOT EXISTS workspace_private (id TEXT PRIMARY KEY, snapshot TEXT NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS workspace_backup (workspace TEXT NOT NULL, versao INTEGER NOT NULL, snapshot TEXT NOT NULL, privado TEXT NOT NULL, criado TEXT NOT NULL, PRIMARY KEY(workspace,versao))`,
+    `CREATE TABLE IF NOT EXISTS foto_owner (id TEXT PRIMARY KEY, user_id TEXT NOT NULL)`,
     // Fotos ficam FORA do snapshot: cada uma sobe uma única vez. Antes elas
     // viajavam juntas a cada sincronização, o que tornava o envio inviável
     // (100 fotos = 36 MB por sincronização) e travava o navegador.
@@ -105,15 +108,18 @@ export async function estatisticaFotos() {
   return { quantidade: Number(r.rows[0].n || 0), bytes: Number(r.rows[0].b || 0) };
 }
 
-export async function lerWorkspace(id = 'default') {
-  const r = await db.execute({
+export async function lerWorkspace(id = 'default', client=db) {
+  const r = await client.execute({
     sql: 'SELECT snapshot, versao, atualizado, autor FROM workspace WHERE id = ?',
     args: [id],
   });
   if (!r.rows.length) return null;
   const row = r.rows[0];
+  const privateRow=await client.execute({sql:'SELECT snapshot FROM workspace_private WHERE id=?',args:[id]});
+  const snapshot=JSON.parse(row.snapshot);
+  if(privateRow.rows.length) snapshot.unidSind=JSON.parse(privateRow.rows[0].snapshot).unidSind||[];
   return {
-    snapshot: JSON.parse(row.snapshot),
+    snapshot,
     versao: Number(row.versao),
     atualizado: row.atualizado,
     autor: row.autor,
@@ -186,54 +192,45 @@ function preservarColecoes(novo, antigo) {
   return novo;
 }
 
+export async function isolatePrivate() {
+  // Copy first, remove second, in one transaction. Existing portfolio IDs stay intact.
+  const tx=await db.transaction('write');
+  try {
+    const row=(await tx.execute("SELECT snapshot,versao FROM workspace WHERE id='default'")).rows[0];
+    if(row){
+      const snapshot=JSON.parse(row.snapshot);
+      if(Object.hasOwn(snapshot,'unidSind')){
+        const previous=(await tx.execute("SELECT snapshot FROM workspace_private WHERE id='default'")).rows[0];
+        if(!previous)await tx.execute({sql:'INSERT INTO workspace_private VALUES(?,?)',args:['default',JSON.stringify({unidSind:snapshot.unidSind||[]})]});
+        delete snapshot.unidSind;
+        await tx.execute({sql:"UPDATE workspace SET snapshot=? WHERE id='default'",args:[JSON.stringify(snapshot)]});
+      }
+    }
+    await tx.commit();
+  }catch(e){await tx.rollback();throw e}finally{tx.close()}
+}
+
 export async function gravarWorkspace({ id = 'default', snapshot, versaoBase, autor, dispositivo }) {
-  const atual = await lerWorkspace(id);
-  if (atual && atual.snapshot) snapshot = preservarColecoes(snapshot, atual.snapshot);
-  const texto = JSON.stringify(snapshot);
-  const agora = new Date().toISOString();
-
-  if (!atual) {
-    await db.execute({
-      sql: `INSERT INTO workspace (id, snapshot, versao, atualizado, autor) VALUES (?, ?, 1, ?, ?)`,
-      args: [id, texto, agora, autor || null],
-    });
-    await registrarEvento({ workspace: id, versao: 1, autor, dispositivo, bytes: texto.length });
-    return { ok: true, versao: 1, atualizado: agora };
-  }
-
-  if (versaoBase != null && Number(versaoBase) !== atual.versao) {
-    return {
-      ok: false,
-      conflito: true,
-      versao: atual.versao,
-      atualizado: atual.atualizado,
-      autor: atual.autor,
-      snapshot: atual.snapshot,
-    };
-  }
-
-  const nova = atual.versao + 1;
-  const up = await db.execute({
-    sql: `UPDATE workspace SET snapshot = ?, versao = ?, atualizado = ?, autor = ? WHERE id = ? AND versao = ?`,
-    args: [texto, nova, agora, autor || null, id, atual.versao],
-  });
-  /* Dois aparelhos podem ler a mesma versão e gravar ao mesmo tempo. Quem chega
-     depois não altera nenhuma linha (o WHERE não casa mais) e, sem esta conferência,
-     recebia "ok" enquanto sua gravação se perdia — junto com o trabalho do usuário.
-     Agora isso vira conflito e o app faz a junção dos dois lados. */
-  if (up.rowsAffected === 0) {
-    const novo = await lerWorkspace(id);
-    return {
-      ok: false,
-      conflito: true,
-      versao: novo ? novo.versao : atual.versao,
-      atualizado: novo ? novo.atualizado : atual.atualizado,
-      autor: novo ? novo.autor : atual.autor,
-      snapshot: novo ? novo.snapshot : atual.snapshot,
-    };
-  }
-  await registrarEvento({ workspace: id, versao: nova, autor, dispositivo, bytes: texto.length });
-  return { ok: true, versao: nova, atualizado: agora };
+  const tx=await db.transaction('write');
+  try {
+    const atual=await lerWorkspace(id,tx);
+    if(atual&&Number(versaoBase)!==atual.versao){
+      await tx.rollback();return {ok:false,conflito:true,...atual};
+    }
+    if(atual?.snapshot)snapshot=preservarColecoes(snapshot,atual.snapshot);
+    const privateData=JSON.stringify({unidSind:snapshot.unidSind||[]});
+    const operational=structuredClone(snapshot);delete operational.unidSind;
+    const texto=JSON.stringify(operational),agora=new Date().toISOString();
+    const nova=(atual?.versao||0)+1;
+    if(atual){
+      const old=structuredClone(atual.snapshot),privateOld=JSON.stringify({unidSind:old.unidSind||[]});delete old.unidSind;
+      await tx.execute({sql:'INSERT OR IGNORE INTO workspace_backup VALUES(?,?,?,?,?)',args:[id,atual.versao,JSON.stringify(old),privateOld,agora]});
+      await tx.execute({sql:'UPDATE workspace SET snapshot=?,versao=?,atualizado=?,autor=? WHERE id=?',args:[texto,nova,agora,autor||null,id]});
+    }else await tx.execute({sql:'INSERT INTO workspace VALUES(?,?,?,?,?)',args:[id,texto,nova,agora,autor||null]});
+    await tx.execute({sql:'INSERT INTO workspace_private VALUES(?,?) ON CONFLICT(id) DO UPDATE SET snapshot=excluded.snapshot',args:[id,privateData]});
+    await tx.execute({sql:'INSERT INTO evento(workspace,versao,autor,dispositivo,bytes,criado) VALUES(?,?,?,?,?,?)',args:[id,nova,autor||null,String(dispositivo||'').slice(0,100),texto.length,agora]});
+    await tx.commit();return {ok:true,versao:nova,atualizado:agora};
+  }catch(e){await tx.rollback();throw e}finally{tx.close()}
 }
 
 async function registrarEvento({ workspace, versao, autor, dispositivo, bytes }) {
