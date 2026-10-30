@@ -180,6 +180,7 @@ test('drafts survive reopening a form, preserve unsent values, exclude passwords
  assert.equal(w.document.getElementById('draftTitle').value,'Lâmpada do corredor');
  w.eval("tasks=[{id:'delivery_fixture',titulo:'Teste'}];SYNC.base={tasks:[]};");assert.match(w.workflowState('tasks','delivery_fixture'),/Salvo neste aparelho/);
  w.eval("SYNC.base={tasks:structuredClone(tasks)};");assert.equal(w.workflowState('tasks','delivery_fixture'),'Enviado ao servidor');
+ w.eval("tasks=[{id:'card_delivery',titulo:'Teste de envio',condoId:'c1',tipo:'Administrativo',tipoTarefa:'Avulsa do dia',status:'Pendente',dataProgramada:today(),vencimento:today(),prioridade:'Média',historico:[],criadoPor:'Maciel'}];SYNC.base={tasks:structuredClone(tasks)};");w.go('hoje');w.workflowRecords();assert.ok(w.document.querySelector('.check .workflow-delivery'));assert.match(w.document.querySelector('.check .workflow-delivery').textContent,/Enviado/);
  w.go('inicio');assert.ok(w.document.querySelector('#fieldPending').compareDocumentPosition(w.document.querySelector('#fieldShortcuts'))&w.Node.DOCUMENT_POSITION_FOLLOWING);
  const labels=Array.from(w.tabsDoPerfil()).map(t=>t[2]);assert.ok(labels.includes('Trabalho'));assert.ok(!labels.includes('Rotina'));
  w.closeModal();w.workflowDraftDiscard();w.workflowDraftClear();assert.equal(w.localStorage.getItem(w.workflowDraftKey()),null);
