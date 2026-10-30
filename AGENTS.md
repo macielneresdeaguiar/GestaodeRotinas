@@ -52,3 +52,19 @@ antes de `node server/backup.js restore-empty /caminho-privado/backup.json`.
 O arquivo contém credenciais e anexos; não anexar a issues, PRs ou repositórios.
 As versões em `workspace_backup` preservam dados anteriores a cada gravação,
 mas não substituem uma cópia fora do banco. Definir retenção e monitorar espaço.
+
+## Check-list e rascunhos
+`public/workflow.js` carrega pontos não conformes ainda abertos na inspeção do
+mês seguinte, preservando observações, itens e evidências. A conferência explícita
+é obrigatória antes de concluir. Confirmar a mesma falha não altera a inspeção
+anterior. Um reparo só encerra a falha mediante confirmação ou resolução
+registrada; nunca voltar todos os pontos a Conforme ao criar um mês.
+
+Uma pendência compartilhada pode ser resolvida por outro brigadista com patch
+restrito no servidor. Isso não autoriza reescrever o relato, autoria ou andar do
+colega. Mantenha testes de três meses, deduplicação, evidências e acesso negado.
+
+Rascunhos locais pertencem à conta e assinatura de permissões, duram até sete
+dias e exigem escolha para retomar. Excluir senhas e limpar no logout/troca de
+conta. Fotos usam referências do acervo; nenhuma confirmação de envio deve
+aparecer antes da resposta de sucesso do servidor e do envio dos anexos.
