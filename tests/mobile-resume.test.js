@@ -155,6 +155,7 @@ test('monthly checklists carry unresolved points across three months, require a 
  const next=w.brigNova('24','iluminacao');next.id='new_review';next.data='2026-09-01';
  assert.equal(next.pontos[0].sit,'NÃO CONFORME');assert.equal(next.pontos[0].obs,i.pontos[0].obs);assert.deepEqual(Array.from(next.pontos[0].fotos),Array.from(i.pontos[0].fotos));assert.equal(next.pontos[0].revisaoPendente,true);
  w.eval('brigInsp.push('+JSON.stringify(next)+');');w.brigConcluir('new_review');assert.equal(w.eval("_bi('new_review').status"),'Em andamento');
+ assert.equal(w.brigAutoConcluirPreenchidos('c1','2026-09'),0,'Automatic session closing must not complete an unreviewed carried defect');
  const original=w.eval("JSON.stringify(_bi('old_defect'))");w.workflowConfirmAll('new_review');w.brigConcluir('new_review');
  assert.equal(w.eval("_bi('new_review').status"),'Concluído');assert.equal(w.eval("JSON.stringify(_bi('old_defect'))"),original,'Confirmation does not rewrite another inspector’s historical report');
  assert.equal(w.brigNCAbertas('c1').length,1);
