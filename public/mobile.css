@@ -131,3 +131,9 @@
   #login .login-card{border-radius:20px}.tabbar{background:#fff;box-shadow:0 -4px 18px #19344a0a}
   .tabbar button.active{border-radius:12px;color:#164f63;background:#e8f2f6}
 }
+.workflow-review{padding:16px;border:1px solid #d5b864;border-left:4px solid #a8690b;background:#fff9e8;border-radius:12px;margin:12px 0}
+.workflow-review p{line-height:1.6;margin:8px 0 12px}.workflow-carried{padding:8px;background:#fff0ce;color:#775214;border-radius:6px;margin-bottom:8px;font-weight:650}
+.workflow-delivery{display:block;font-size:10px;line-height:1.5;font-weight:500;color:#237054;margin-top:7px;white-space:normal}
+.workflow-delivery[data-pending=true]{color:#946218}.workflow-next{font-size:11px;margin-top:7px;color:#426278;line-height:1.5}
+.workflow-draft{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:10px;background:#edf4fa;border:1px solid #cfdfec;border-radius:10px;margin-bottom:14px;font-size:12px}
+.workflow-draft span{flex:1 1 160px}.workflow-draft button{min-height:44px}.workflow-draft [hidden]{display:none!important}
