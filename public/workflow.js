@@ -29,7 +29,8 @@ function workflowCheckNotice(i){
 function workflowState(collection,id){
   const current=(dbSnapshot()[collection]||[]).find(r=>r.id===id);if(!current)return 'Sem registro';
   const base=(SYNC.base?.[collection]||[]).find(r=>r.id===id);
-  const pending=JSON.stringify(current)!==JSON.stringify(base)||refsDe(current).some(ref=>_filaFotos.includes(idDaRef(ref)));
+  const signature=row=>{if(!row)return '';const value={...row};if(collection==='tasks'&&['Pendente','Atrasada'].includes(value.status))value.status='Pendente';return JSON.stringify(value)};
+  const pending=signature(current)!==signature(base)||refsDe(current).some(ref=>_filaFotos.includes(idDaRef(ref)));
   if(pending)return estaOffline()?'Salvo neste aparelho · aguardando conexão':'Salvo neste aparelho · aguardando envio';
   return 'Enviado ao servidor';
 }
@@ -38,7 +39,7 @@ function workflowRecords(){
   document.querySelectorAll('#content [onclick]').forEach(el=>{
     const match=(el.getAttribute('onclick')||'').match(/(openTask|editTask|completeTask|formLeitura|formApont|avancarApont|histApont)\('([^']+)'/);if(!match)return;
     const collection=/Leitura/.test(match[1])?'leituras':/Apont/.test(match[1])?'apontamentos':'tasks';
-    const container=el.closest('tr,.feed-item,.kcard');if(container&&!container.dataset.recordId){container.dataset.recordCollection=collection;container.dataset.recordId=match[2];}
+    const container=el.closest('tr,.feed-item,.kcard,.check');if(container&&!container.dataset.recordId){container.dataset.recordCollection=collection;container.dataset.recordId=match[2];}
   });
   document.querySelectorAll('#content [data-record-collection]').forEach(row=>{
     let badge=row.querySelector('.workflow-delivery');
