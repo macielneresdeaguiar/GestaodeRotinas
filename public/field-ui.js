@@ -22,8 +22,8 @@ function viewInicio(){
   $('#content').innerHTML=`<div class="field-home">
     <section class="field-welcome"><div class="field-eyebrow">${esc(day)}</div><h1>Olá, ${esc(session.nome.split(' ')[0])}.</h1><p>Seu espaço de trabalho · ${esc(session.role)}</p><span class="field-scope">${ic('lock')}${a?.fullRead?'Visão completa da administração':'Somente as áreas liberadas para você'}</span></section>
     ${card(primary,'field-primary')}
-    <section aria-labelledby="fieldShortcuts"><div class="field-section-head"><h2 id="fieldShortcuts">O que você precisa fazer?</h2><button class="btn ghost sm" onclick="abrirMaisMenu()">Ver tudo</button></div><div class="field-shortcuts">${shortcuts.map(x=>card(x)).join('')}</div></section>
     <section aria-labelledby="fieldPending"><div class="field-section-head"><h2 id="fieldPending">Precisa de atenção</h2><button class="btn ghost sm" onclick="abrirNotifs()" aria-label="Ver avisos">${ic('bell')}</button></div>${pending.length?pending.map(x=>card(x,'field-pending')).join(''):'<div class="field-clear">'+ic('checkCircle')+'<div><strong>Tudo certo por aqui</strong><p>Nenhuma pendência de prazo nas suas áreas.</p></div></div>'}</section>
+    <section aria-labelledby="fieldShortcuts"><div class="field-section-head"><h2 id="fieldShortcuts">O que você precisa fazer?</h2><button class="btn ghost sm" onclick="abrirMaisMenu()">Ver tudo</button></div><div class="field-shortcuts">${shortcuts.map(x=>card(x)).join('')}</div></section>
     <button type="button" class="field-help" onclick="abrirSync()">${ic('cloud')}<span><strong>Seus registros ficam neste aparelho até o envio</strong><small>Toque para conferir a sincronização antes de encerrar o turno.</small></span>${ic('chevR')}</button>
   </div>`;
 }

@@ -8,6 +8,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
 
+const allWindows=new Set();
 let base,child,directory,db,html,cookie='',saved={},failure='',lastWindow,requestCounts={};
 const password='Fixture-Only-Password!';
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -29,7 +30,7 @@ before(async()=>{
   for(let i=0;i<100;i++){try{if((await fetch(base+'/api/auth/perfis')).ok)break}catch{}if(child.exitCode!==null)throw new Error(errors);await pause(50)}
   html=await readFile(new URL('../public/index.html',import.meta.url),'utf8');
 });
-after(async()=>{lastWindow?.close();child?.kill();db?.close();if(directory)await rm(directory,{recursive:true,force:true});});
+after(async()=>{for(const window of allWindows)window.close();lastWindow?.close();child?.kill();db?.close();if(directory)await rm(directory,{recursive:true,force:true});});
 async function settle(w){try{await w.eval('AUTH.background||Promise.resolve()');for(let i=0;i<30&&w.eval('SYNC.enviando');i++)await pause(20)}catch(e){}await pause(80)}
 function cache(w){saved={};for(let i=0;i<w.localStorage.length;i++){const k=w.localStorage.key(i);saved[k]=w.localStorage.getItem(k)}}
 async function open(width=390){
@@ -50,7 +51,7 @@ async function open(width=390){
         return r;
       };
     }});
-  lastWindow=dom.window;
+  allWindows.add(dom.window);lastWindow=dom.window;
   await until(()=>typeof dom.window.mobilePrepararPagina==='function','mobile.js did not initialize');
   return {w:dom.window,errors};
 }
@@ -143,4 +144,44 @@ test('changing accounts discards the previous user cache and prevents opening an
   const version=w.eval('SYNC.versao');w.go('config');w.go('inicio');await pause(1200);assert.equal(w.eval('SYNC.versao'),version,'Navigation must not write a new server version');
   await w.logout();assert.equal(w.localStorage.getItem('grc.db.v1'),null);assert.equal(w.localStorage.getItem('grc.base.v1'),null);
   await settle(w);w.close();saved={};
+});
+
+test('monthly checklists carry unresolved points across three months, require a review, keep one open defect and retain evidence',async()=>{
+ saved={};failure='';const {w,errors}=await open();await until(()=>w.eval('AUTH.ready&&!AUTH.initializing'),'Profiles');w.document.querySelector('#loginPass').value=password;await w.doLogin();await settle(w);
+ w.eval("SYNC.ligado=false;brigInsp=[];tasks=[];");
+ const i=w.brigNova('24','iluminacao');assert.ok(i.pontos.length);i.id='old_defect';i.data='2026-08-01';i.status='Concluído';
+ Object.assign(i.pontos[0],{sit:'NÃO CONFORME',obs:'Luminária sem acender',qtd:1,itens:{'Luminária acende no teste':false},fotos:['data:image/png;base64,aGVsbG8=']});
+ w.eval('brigInsp.push('+JSON.stringify(i)+');');
+ const next=w.brigNova('24','iluminacao');next.id='new_review';next.data='2026-09-01';
+ assert.equal(next.pontos[0].sit,'NÃO CONFORME');assert.equal(next.pontos[0].obs,i.pontos[0].obs);assert.deepEqual(Array.from(next.pontos[0].fotos),Array.from(i.pontos[0].fotos));assert.equal(next.pontos[0].revisaoPendente,true);
+ w.eval('brigInsp.push('+JSON.stringify(next)+');');w.brigConcluir('new_review');assert.equal(w.eval("_bi('new_review').status"),'Em andamento');
+ assert.equal(w.brigAutoConcluirPreenchidos('c1','2026-09'),0,'Automatic session closing must not complete an unreviewed carried defect');
+ const original=w.eval("JSON.stringify(_bi('old_defect'))");w.workflowConfirmAll('new_review');w.brigConcluir('new_review');
+ assert.equal(w.eval("_bi('new_review').status"),'Concluído');assert.equal(w.eval("JSON.stringify(_bi('old_defect'))"),original,'Confirmation does not rewrite another inspector’s historical report');
+ assert.equal(w.brigNCAbertas('c1').length,1);
+ const third=w.brigNova('24','iluminacao');third.id='third_review';third.data='2026-10-01';w.eval('brigInsp.push('+JSON.stringify(third)+');');
+ assert.equal(third.pontos[0].sit,'NÃO CONFORME');w.workflowConfirmAll('third_review');w.brigConcluir('third_review');assert.equal(w.brigNCAbertas('c1').length,1);
+ const repair=w.brigNova('24','iluminacao');repair.id='repair_review';repair.data='2026-11-01';w.eval('brigInsp.push('+JSON.stringify(repair)+');');
+ w.confirm=()=>false;w.brigSit('repair_review',0,'CONFORME');assert.equal(w.eval("_bi('repair_review').pontos[0].sit"),'NÃO CONFORME');
+ w.confirm=()=>true;w.brigSit('repair_review',0,'CONFORME');w.brigConcluir('repair_review');assert.equal(w.brigNCAbertas('c1').length,0);
+ const after=w.brigNova('24','iluminacao');assert.equal(after.pontos[0].sit,'CONFORME');
+ assert.deepEqual(errors,[]);await settle(w);w.close();saved={};
+});
+
+test('drafts survive reopening a form, preserve unsent values, exclude passwords, and delivery badges follow acknowledgements',async()=>{
+ saved={};failure='';const {w,errors}=await open();await until(()=>w.eval('AUTH.ready&&!AUTH.initializing'),'Profiles');w.document.querySelector('#loginPass').value=password;await w.doLogin();await settle(w);
+ w.eval('SYNC.ligado=false;');
+ const body='<label for="draftTitle">Título</label><input id="draftTitle"><textarea id="draftDetails"></textarea><input type="password" id="sensitivePassword">';
+ w.openModal('Novo registro de teste',body,'<button onclick="saveFixture()">Salvar</button><button onclick="closeModal()">Fechar</button>');w.workflowPrepareDraft();
+ const field=w.document.getElementById('draftTitle');field.value='Lâmpada do corredor';field.dispatchEvent(new w.Event('input',{bubbles:true}));
+ w.document.getElementById('sensitivePassword').value='NeverPersistPassword';w.workflowDraftSave();
+ assert.ok(!w.localStorage.getItem(w.workflowDraftKey()).includes('NeverPersistPassword'));
+ w.closeModal();w.workflowPrepareDraft();w.openModal('Novo registro de teste',body,'<button onclick="saveFixture()">Salvar</button><button onclick="closeModal()">Fechar</button>');w.workflowPrepareDraft();w.workflowDraftResume();
+ assert.equal(w.document.getElementById('draftTitle').value,'Lâmpada do corredor');
+ w.eval("tasks=[{id:'delivery_fixture',titulo:'Teste'}];SYNC.base={tasks:[]};");assert.match(w.workflowState('tasks','delivery_fixture'),/Salvo neste aparelho/);
+ w.eval("SYNC.base={tasks:structuredClone(tasks)};");assert.equal(w.workflowState('tasks','delivery_fixture'),'Enviado ao servidor');
+ w.go('inicio');assert.ok(w.document.querySelector('#fieldPending').compareDocumentPosition(w.document.querySelector('#fieldShortcuts'))&w.Node.DOCUMENT_POSITION_FOLLOWING);
+ const labels=Array.from(w.tabsDoPerfil()).map(t=>t[2]);assert.ok(labels.includes('Trabalho'));assert.ok(!labels.includes('Rotina'));
+ w.closeModal();w.workflowDraftDiscard();w.workflowDraftClear();assert.equal(w.localStorage.getItem(w.workflowDraftKey()),null);
+ assert.deepEqual(errors,[]);await settle(w);w.close();saved={};
 });

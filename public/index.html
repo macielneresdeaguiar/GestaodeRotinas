@@ -1284,6 +1284,7 @@ body.crit-open{overflow:hidden}
 <link rel="stylesheet" href="/mobile.css">
 <script src="/access-client.js"></script>
 <script src="/field-ui.js"></script>
+<script src="/workflow.js"></script>
 <script src="/mobile.js" defer></script>
 </head>
 <body>
@@ -2476,6 +2477,7 @@ async function migrarFotosEmbutidas(){
 }
 
 function salvarLocal(){
+  if(typeof workflowSchedule==='function')workflowSchedule();
   const snap=dbSnapshot();
   if(_idbOk){ gravarEstadoIdb(snap); checarEspaco(); return }   // espaço de verdade
   const st=store(); if(!st) return;
@@ -3625,7 +3627,7 @@ function tasksTable(list){
   return `<div class="tablewrap"><table><thead><tr>
     <th>Tarefa</th><th>Condomínio</th><th>Tipo</th><th>Responsável</th><th>Periodicidade</th>
     <th>Vencimento</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr></thead><tbody>
-    ${list.map(t=>`<tr>
+    ${list.map(t=>`<tr${workflowRow('tasks',t.id)}>
       <td><div class="t-title">${esc(t.titulo)}</div><div class="t-sub">${esc((t.procedimento||'').slice(0,52))}${(t.procedimento||'').length>52?'…':''}</div></td>
       <td data-l="Condomínio">${badgeCondo(t.condoId)}</td><td data-l="Tipo"><span class="badge b-tag">${t.tipo}</span></td>
       <td data-l="Responsável">${t.responsavel?esc(t.responsavel):'<span class="badge b-avencer">sem responsável</span>'}</td>
@@ -10941,7 +10943,7 @@ function viewLeiturasPortaria(){
       </select></div>
     ${corte.length?`<div class="tablewrap"><table>
       <thead><tr><th>Data</th><th>Tipo</th><th style="text-align:right">Número do relógio</th><th>Quem anotou</th><th></th></tr></thead>
-      <tbody>${corte.map(l=>`<tr>
+      <tbody>${corte.map(l=>`<tr${workflowRow('leituras',l.id)}>
         <td style="white-space:nowrap">${fmt(l.data)}</td>
         <td><span class="badge b-tag">${l.tipo==='agua'?'Água':'Energia'}</span></td>
         <td style="text-align:right;font-weight:700;white-space:nowrap;${leitRegressiva(l)?'color:#c2384a':''}">${ltpNum(l.medidor,l.tipo)}</td>
@@ -11019,7 +11021,7 @@ function viewLeituras(){
       <th>Data</th><th>Condomínio</th><th>Medidor</th>${leitTab==='energia'?'<th>Fator</th>':''}
       <th>Leitura (${unid(leitTab)})</th><th>Anterior</th><th>Consumo</th><th>Média (${mediaJanela})</th>
       <th>Farol</th><th>Status</th><th>Anexo</th><th>Ações</th></tr></thead><tbody>
-      ${l.map(x=>{const f=farol(x),st=leitStatusAuto(x);return `<tr>
+      ${l.map(x=>{const f=farol(x),st=leitStatusAuto(x);return `<tr${workflowRow('leituras',x.id)}>
         <td class="t-title">${fmt(x.data)}</td><td>${badgeCondo(x.condoId)}</td>
         <td>${x.medidor!=null?fmtLeit(x.medidor,x.tipo):'—'}</td>
         ${leitTab==='energia'?`<td>${x.fator}</td>`:''}
@@ -12218,7 +12220,7 @@ function viewApontamentos(){
       ${P().create?`<button class="btn" onclick="formApont()">+ Novo Apontamento</button>`:''}
       ${P().estoque?`<button class="btn ghost" onclick="go('pedidos')">${ic('cart')} Pedir materiais</button>`:''}
     </div>
-    ${l.length?l.map(a=>`<div class="card" style="margin-bottom:12px;border-left:5px solid ${a.prioridade==='Urgente'?'#e03131':a.prioridade==='Alta'?'#f08c00':'#2f80ed'}">
+    ${l.length?l.map(a=>`<div${workflowRow(a.ref==='ch'?'tasks':'apontamentos',a.id)} class="card" style="margin-bottom:12px;border-left:5px solid ${a.prioridade==='Urgente'?'#e03131':a.prioridade==='Alta'?'#f08c00':'#2f80ed'}">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <b style="color:var(--navy)">${esc(a.titulo)}</b>
         ${badgePrio4(a.prioridade)}<span class="badge ${a.status==='Resolvido'?'b-conc':a.status==='Em Andamento'?'b-and':'b-atr'}">${a.status}</span>
@@ -12465,7 +12467,7 @@ function tabsDoPerfilBase(){
     return [['inicio','gauge','Início'],['apontamentos','wrench','Serviços'],
             ['estoque','box','Estoque'],['pedidos','cart','Pedidos'],['menu','menu','Mais']];
   }
-  const t=[['inicio','gauge','Início'],['hoje','today','Hoje'],['rotina','route','Rotina']];
+  const t=[['inicio','gauge','Início'],['hoje','today','Trabalho']];
   if(P().manutencao) t.push(['apontamentos','wrench','Serviços']);
   else t.push(['notas','invoice','NFs']);
   t.push(['menu','menu','Mais']);
@@ -12476,7 +12478,8 @@ function buildTabbar(){
   const tabs=tabsDoPerfil();
   document.body.classList.toggle('has-tabbar', ehMobile()&&!!session);
   bar.innerHTML=tabs.map(([k,i,l])=>{
-    const at = k==='menu' ? !tabs.some(t=>t[0]===page) : page===k;
+    const work=['hoje','rotina','afazeres','calendario','tarefas-adm','tarefas-gestor'];
+    const at = k==='menu' ? !tabs.some(t=>t[0]===page||t[0]==='hoje'&&work.includes(page)) : page===k||k==='hoje'&&work.includes(page);
     const act = k==='menu' ? 'abrirMaisMenu()' : `go('${k}')`;
     return `<button class="${at?'active':''}" ${at?'aria-current="page"':''} onclick="${act}">${ic(i)}<span>${l}</span></button>`;
   }).join('');
@@ -14203,7 +14206,7 @@ function nomeDispositivo(){
   if(!d){ d=(ehMobile()?'Celular':'Computador')+' '+Math.random().toString(36).slice(2,6); salvaSyncCfg({dispositivo:d}); }
   return d;
 }
-function syncEstado(e,erro){
+function syncEstado(e,erro){if(typeof workflowSchedule==='function')workflowSchedule();
   SYNC.estado=e; SYNC.erro=erro||null;
   const el=document.querySelector('#syncBadge');
   if(el) el.outerHTML=badgeSync();
@@ -14681,13 +14684,13 @@ const BRIG_SIT=['CONFORME','NÃO CONFORME','NÃO APLICÁVEL'];
 /* Uma inspeção cobre UM andar e UM sistema, com a situação de cada ponto.
    {id,condoId,andar,sistema,data,hora,responsavel,userId,status,
     pontos:[{idx,desc,sit,itens{},obs,fotos:[],qtd}],obs,historico[]} */
-function brigNova(andar,sistema){
+function brigNova(andar,sistema,cid='c1'){
   const pts=brigPontos(andar,sistema).map((p,i)=>({
     idx:i,desc:p.d,sit:'CONFORME',itens:{},obs:'',fotos:[],qtd:0}));
-  return {id:uid('bi'),condoId:'c1',andar,sistema,data:today(),hora:nowHora(),
+  return workflowCarry({id:uid('bi'),condoId:cid,andar,sistema,data:today(),hora:nowHora(),
     responsavel:session?session.nome:'',userId:session?session.id:'',
     status:'Em andamento',pontos:pts,obs:'',
-    historico:[{q:session?session.nome:'Sistema',w:nowStamp(),t:'Check-list iniciado'}]};
+    historico:[{q:session?session.nome:'Sistema',w:nowStamp(),t:'Check-list iniciado'}]});
 }
 function nowHora(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0') }
 
@@ -14801,6 +14804,7 @@ function brigAutoConcluirPreenchidos(cid,mesRef,sisFiltro){
     if(!i||i.condoId!==cid||String(i.data||'').slice(0,7)!==mes) return;
     if(sisFiltro&&!_brigMatchSis(i.sistema,sisFiltro)) return;
     if(i.status==='Concluído') return;
+    if((i.pontos||[]).some(p=>p.revisaoPendente))return;
     if((i.historico||[]).some(h=>/reabert/i.test(h.t||''))) return;
     if(!brigRascunhoIntocado(i)){
       const nc=brigNC(i);
@@ -14903,7 +14907,7 @@ function brigPendenciaResolvida(insp,ponto){
   const posteriorOk=brigInsp.some(i2=>i2.condoId===insp.condoId&&i2.andar===insp.andar&&
     i2.sistema===insp.sistema&&i2.status==='Concluído'&&i2.id!==insp.id&&
     (String(i2.data||'')+' '+String(i2.hora||''))>dtRef&&
-    (i2.pontos||[]).some(p2=>p2.desc===ponto.desc&&p2.sit==='CONFORME'));
+    (i2.pontos||[]).some(p2=>p2.desc===ponto.desc&&p2.sit==='CONFORME'&&(!p2.repeteDe||p2.reparoConferido===true)));
   return posteriorOk;
 }
 function brigPendenciaInfoResolucao(insp,ponto){
@@ -15407,7 +15411,7 @@ function mesExtenso(m){
 /* ---- Aviso e histórico de pendências no Check-list (igual ao da Ronda) ---- */
 function brigCheckAvisoAndar(i){
   if(!i) return '';
-  const abertas=brigHistoricoPendencias(i.condoId,{andar:i.andar,sistema:i.sistema,excInspId:i.id,apenasAbertas:true});
+  const abertas=brigNCAbertas(i.condoId).filter(h=>String(h.insp.andar)===String(i.andar)&&h.insp.sistema===i.sistema&&h.insp.id!==i.id);
   const outrasAndar=brigHistoricoPendencias(i.condoId,{andar:i.andar,excInspId:i.id,apenasAbertas:true})
     .filter(x=>x.insp.sistema!==i.sistema);
   if(!abertas.length&&!outrasAndar.length) return '';
@@ -15487,7 +15491,7 @@ function brigAbrir(cid,andar,sis){
   let i=brigInsp.filter(x=>x.condoId===cid&&x.andar===andar&&x.sistema===sis&&
     String(x.data).slice(0,7)===brigMesAtual()).sort((a,b)=>b.data.localeCompare(a.data))[0];
   if(!i){
-    i=brigNova(andar,sis); i.condoId=cid; brigInsp.push(i); save();
+    i=brigNova(andar,sis,cid); brigInsp.push(i); save();
   }else if(i.status!=='Concluído'&&session){
     /* Se o check-list ainda está em andamento (ex.: alguém abriu/pulou antes),
        assume automaticamente o nome da pessoa logada que vai preenchê-lo agora. */
@@ -15526,6 +15530,7 @@ function viewBrigForm(){
     const cor=p.sit==='NÃO CONFORME'?'nc':(p.sit==='NÃO APLICÁVEL'?'na':'ok');
     const q=p.qtd>0?p.qtd:brigQtdDesc(p.desc);
     return `<div class="bg-pt ${cor}" id="bgpt_${k}">
+      ${p.revisaoPendente?'<div class="workflow-carried">Pendência anterior · aguardando sua conferência</div>':''}
       <div class="bg-pth">
         <div class="bg-ptd"><b>${esc(p.desc)}</b>${q>1?`<span class="badge" style="margin-left:6px">${q} peças</span>`:''}</div>
         <div class="bg-bt">
@@ -15576,6 +15581,7 @@ function viewBrigForm(){
         Verificar em cada ponto: ${s.itens.join(' · ')}.
       </div>
     </div>
+    ${workflowCheckNotice(i)}
     ${brigCheckAvisoAndar(i)}
     <div class="card" style="margin-bottom:12px"><div style="padding:12px">${pontos}</div></div>
     <div class="card"><div style="padding:12px">
@@ -15599,6 +15605,11 @@ function viewBrigForm(){
 function _bi(id){ return brigInsp.find(x=>x.id===id) }
 function brigSit(id,k,sit){
   const i=_bi(id); if(!i||i.status==='Concluído')return;
+  const p=i.pontos[k];
+  if(p.repeteDe&&sit==='CONFORME'&&!confirm('Você verificou no local que o reparo foi realizado? Ao concluir este check-list, o ponto anterior será considerado resolvido.'))return;
+  if(p.repeteDe&&sit==='NÃO APLICÁVEL')return toast('Uma pendência anterior exige confirmação como pendente ou reparo verificado.');
+  if(p.repeteDe&&sit==='CONFORME')p.reparoConferido=true;
+  p.revisaoPendente=false;p.confirmadoPor=session.nome;p.confirmadoEm=nowStamp();
   i.pontos[k].sit=sit;
   if(sit!=='NÃO CONFORME'){ i.pontos[k].itens={}; i.pontos[k].qtd=0 }
   save(); render();
@@ -15614,6 +15625,7 @@ function brigObs(id,k,v){ const i=_bi(id); if(i){ i.pontos[k].obs=v; save() } }
 function brigObsGeral(id,v){ const i=_bi(id); if(i){ i.obs=v; save() } }
 function brigConcluir(id){
   const i=_bi(id); if(!i)return;
+  if(i.pontos.some(p=>p.revisaoPendente))return toast('Confira as pendências anteriores antes de concluir. Use continua pendente ou confirme o reparo no ponto.');
   const nc=brigNC(i);
   const semFoto=nc.filter(p=>!(p.fotos||[]).length).length;
   let msg='Concluir o check-list de '+brigSis(i.sistema).nome+' — '+brigAndarNome(i.andar)+'?';
@@ -16357,19 +16369,19 @@ function brigFinalizarSessao(){
   const mes=brigMesAtual();
   brigAutoConcluirPreenchidos(s.cid,mes,s.sistemas);
   const ciclo=brigSincronizarCicloMensal(s.cid,mes);
-  const feitos=s.fila.length;
+  const feitos=s.fila.filter(p=>brigInsp.some(i=>i.condoId===s.cid&&i.andar===p.andar&&i.sistema===p.sistema&&String(i.data).slice(0,7)===mes&&i.status==='Concluído')).length;
   const ncs=s.fila.reduce((n,p)=>{
     const i=brigInsp.filter(x=>x.condoId===s.cid&&x.andar===p.andar&&x.sistema===p.sistema&&
       x.status==='Concluído').sort((a,b)=>b.data.localeCompare(a.data))[0];
     return n+(i?brigQtdNC(i):0);
   },0);
   page='brigada'; buildNav(); render();
-  openModal(ciclo.concluido?'Check-list mensal concluído (1x por mês)':'Ronda de check-list concluída',
+  openModal(ciclo.concluido?'Check-list mensal concluído (1x por mês)':'Sequência encerrada — confira as pendências',
     `<div class="bg-fim">
       <div class="bg-fim-n">${ciclo.concluido?`${ciclo.feitos}/${ciclo.total}`:feitos}</div>
       <div class="muted">${ciclo.concluido
         ?`Todos os check-lists do mês de <b>${esc(mesExtenso(mes))}</b> foram concluídos (1 vez por mês)!`
-        :`parada(s) concluída(s) — ${esc(s.sistemas.map(x=>brigSis(x).nome).join(', '))}`}</div>
+        :`de ${s.fila.length} parada(s) concluída(s); as demais continuam em andamento — ${esc(s.sistemas.map(x=>brigSis(x).nome).join(', '))}`}</div>
       ${ciclo.concluido?`<div class="bg-av bg-green" style="margin-top:12px">
         <div class="bg-ic">${ic('checkCircle')}</div>
         <div><div class="bg-tit">Ciclo mensal encerrado automaticamente</div>
@@ -16436,7 +16448,8 @@ function brigBarraSessao(){
 function brigPular(){
   if(!brigSessao) return;
   const iAt=brigAtual?_bi(brigAtual):null;
-  if(iAt&&iAt.status!=='Concluído'&&!brigRascunhoIntocado(iAt)){
+  if(iAt&&(iAt.pontos||[]).some(p=>p.revisaoPendente)){save();}
+  else if(iAt&&iAt.status!=='Concluído'&&!brigRascunhoIntocado(iAt)){
     const nc=brigNC(iAt);
     if(session){ iAt.responsavel=session.nome; iAt.userId=session.id; }
     iAt.status='Concluído'; iAt.data=iAt.data||today(); iAt.concluidoEm=nowStamp();
@@ -17002,21 +17015,8 @@ function brigResolverPendencia(inspId,ptIdx,obsArg){
 function brigCheckConfirmarMesma(inspAtualId,inspAntId,idxAnt,idxAtual){
   const i=_bi(inspAtualId), iAnt=_bi(inspAntId);
   if(!i||!iAnt) return toast('Check-list não encontrado.');
-  const pAnt=iAnt.pontos[idxAnt];
-  if(!pAnt) return toast('Ponto anterior não encontrado.');
-  const k=(idxAtual!==undefined&&idxAtual!==null)?idxAtual:i.pontos.findIndex(x=>x.desc===pAnt.desc);
-  if(k<0||!i.pontos[k]) return toast('Ponto correspondente não encontrado neste andar.');
-  const p=i.pontos[k];
-  p.sit='NÃO CONFORME';
-  p.itens=JSON.parse(JSON.stringify(pAnt.itens||{}));
-  p.qtd=pAnt.qtd>0?pAnt.qtd:brigQtdDesc(pAnt.desc);
-  p.obs=pAnt.obs||'';
-  p.repeteDe=iAnt.id;
-  pAnt.vistoDeNovo=(pAnt.vistoDeNovo||0)+1;
-  pAnt.vistoPorUltimo=today();
-  p.vistoDeNovo=pAnt.vistoDeNovo;
-  save(); render();
-  toast('Pendência anterior carregada no ponto! Ela permanecerá registrada no histórico da brigada.');
+  if(!workflowCheckConfirmed(i,iAnt,idxAnt,idxAtual))return toast('Esta pendência não corresponde ao ponto atual ou já foi resolvida.');
+  save();render();toast('Conferência registrada. A mesma pendência continua em aberto, com os detalhes preservados.');
 }
 
 function chStatusCartao(t){

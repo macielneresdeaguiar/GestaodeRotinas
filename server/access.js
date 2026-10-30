@@ -90,6 +90,23 @@ export function scopedSnapshot(snapshot,a){
 }
 function reject(message){const e=new Error(message);e.status=403;throw e;}
 function owned(row,a){return row.userId===a.userId||row.criadoPorId===a.userId||row.criadoPor===a.name||row.autor===a.name||row.solicitante===a.name||row.responsavel===a.name;}
+function checklistResolutionOnly(old,row,a){
+  if(!a.perms.brigada||!Array.isArray(old.pontos)||!Array.isArray(row.pontos)||old.pontos.length!==row.pontos.length)return false;
+  const allowedTop=new Set(['pontos','historico','resolvido']);
+  if([...new Set([...Object.keys(old),...Object.keys(row)])].some(k=>!allowedTop.has(k)&&!same(old[k],row[k])))return false;
+  let changed=false;
+  for(let n=0;n<old.pontos.length;n++){
+    const prior=old.pontos[n],next=row.pontos[n];if(same(prior,next))continue;
+    const allowed=new Set(['resolvido','resolvidoEm','resolvidoPor','obsResolucao']);
+    if([...new Set([...Object.keys(prior),...Object.keys(next)])].some(k=>!allowed.has(k)&&!same(prior[k],next[k])))return false;
+    if(prior.sit!=='NÃO CONFORME'||next.resolvido!==true||next.resolvidoPor!==a.name||typeof next.obsResolucao!=='string'||next.obsResolucao.length>4000)return false;
+    changed=true;
+  }
+  const before=old.historico||[],after=row.historico||[];
+  if(!Array.isArray(after)||!same(after.slice(0,before.length),before)||after.slice(before.length).some(h=>h.q!==a.name))return false;
+  if(row.resolvido&&!row.pontos.filter(p=>p.sit==='NÃO CONFORME').every(p=>p.resolvido===true))return false;
+  return changed;
+}
 function writeAllowed(k,a,old,row){
   const p=a.perms;
   if(a.userId==='u1')return true;
@@ -97,7 +114,7 @@ function writeAllowed(k,a,old,row){
   if(!old)return p.create;
   if(k==='leituras'&&old.status!=='Registrada')return p.create;
   if(k==='leituras'&&row.status!=='Registrada'&&old.status!=='Registrada')return p.create;
-  if(k==='brigInsp'||k==='brigRondas')return p.edit||owned(old,a);
+  if(k==='brigInsp'||k==='brigRondas')return p.edit||owned(old,a)||(k==='brigInsp'&&checklistResolutionOnly(old,row,a));
   if(['estoque','movEstoque'].includes(k))return p.estoqueTotal;
   if(k==='pedidos')return p.delete||owned(old,a)&&old.status==='Aberto'&&row.status==='Aberto';
   if(k==='tasks'&&!p.manutencao&&!p.tipos.length)return false; // handled as incident confirmation below
