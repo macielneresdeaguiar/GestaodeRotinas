@@ -15,6 +15,7 @@ async function scopePrepare(d){
   const cached=AUTH.cachedAccess;
   if(!cached||cached.userId!==d.userId||cached.key!==d.access.key){
     document.querySelector('#app').style.display='none';document.querySelector('#content').innerHTML='';
+    if(typeof workflowDraftClear==='function')workflowDraftClear();
     AUTH.temCache=false;SYNC.base=null;SYNC.baseIdx=null;SYNC.sujos={};SYNC._bootSujosMarcados=false;
     localStorage.removeItem(BASE_KEY);localStorage.removeItem(FOTOS_FILA_KEY);
     _filaFotos=[];_fotoCache.clear();_fotoBaixando.clear();
@@ -30,7 +31,7 @@ function scopeFilterSnapshot(snap){
   snap._access=a;
   return snap;
 }
-function scopeDiscardCache(){
+function scopeDiscardCache(){if(typeof workflowDraftClear==='function')workflowDraftClear();
   AUTH.temCache=false;AUTH.cachedAccess=null;_pendenteGravar=null;
   try{localStorage.removeItem(DB_KEY);localStorage.removeItem(BASE_KEY);localStorage.removeItem(FOTOS_FILA_KEY);localStorage.removeItem(SESSION_KEY);}catch(e){}
   _filaFotos=[];_fotoCache.clear();_fotoBaixando.clear();SYNC.base=null;SYNC.baseIdx=null;SYNC.sujos={};
