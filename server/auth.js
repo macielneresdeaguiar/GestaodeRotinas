@@ -1,6 +1,7 @@
 import { randomBytes, createHash, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { db, lerWorkspace } from './db.js';
+import { accessFor } from './access.js';
 
 const scrypt = promisify(scryptCallback);
 const COOKIE = '__Host-grc_session';
@@ -134,7 +135,7 @@ async function issueSession(req,res,user) {
   if(previous)await db.execute({sql:'DELETE FROM auth_session WHERE token_hash=?',args:[digest(previous)]});
   await db.execute({sql:'INSERT INTO auth_session VALUES(?,?,?,?)',args:[digest(token),user.id,expiry,user.revision]});
   setCookie(req,res,token,expiry);
-  return {userId:user.id,expiresAt:new Date(expiry).toISOString()};
+  return {userId:user.id,expiresAt:new Date(expiry).toISOString(),access:accessFor(user.id,(await lerWorkspace('default'))?.snapshot)};
 }
 function sameOrigin(req) {
   const origin=req.get('origin');
@@ -176,7 +177,7 @@ export function installAuth(app) {
   app.get('/api/auth/session',wrap(async(req,res)=>{
     const sess=await resolveSession(req);
     if(!sess)return res.status(401).json({erro:'sessao_expirada'});
-    res.json({userId:sess.user_id,expiresAt:new Date(sess.expires_at).toISOString()});
+    res.json({userId:sess.user_id,expiresAt:new Date(sess.expires_at).toISOString(),access:accessFor(sess.user_id,(await lerWorkspace('default'))?.snapshot)});
   }));
   app.post('/api/auth/login',wrap(async(req,res)=>{
     const {userId,password,inviteCode}=req.body||{};
@@ -230,6 +231,8 @@ export function installAuth(app) {
   app.use('/api',wrap(async(req,res,next)=>{
     const sess=await resolveSession(req);
     if(!sess){clearCookie(req,res);return res.status(401).json({erro:'sessao_expirada',atualizeApp:true})}
+    const expected=req.get('x-grc-user');
+    if((expected&&expected!==sess.user_id)||(!['GET','HEAD','OPTIONS'].includes(req.method)&&!expected))return res.status(403).json({erro:'A conta deste aparelho mudou. Reabra o aplicativo.',atualizeApp:true});
     req.auth=sess;next();
   }));
   app.post('/api/auth/password',wrap(async(req,res)=>{
