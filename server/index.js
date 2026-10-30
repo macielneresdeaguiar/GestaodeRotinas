@@ -1,4 +1,5 @@
 import express from 'express';
+import { initializeAuth, installAuth, publicSnapshot, sanitizeIncoming } from './auth.js';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import fs from 'node:fs';
@@ -13,6 +14,7 @@ const PORT = process.env.PORT || 3000;
 const WS = 'default';
 
 // O snapshot com fotos em base64 pode passar de 1 MB.
+app.use('/api/auth',express.json({limit:'8kb'}));
 app.use(express.json({ limit: '60mb' }));   // fotos de ronda/check-list
 
 /* ---------- compressao das respostas da API ----------
@@ -44,18 +46,12 @@ app.use((req, res, next) => {
 });
 app.disable('x-powered-by');
 
-/* ---------- senha única de acesso ao site (opcional) ----------
-   Definida em SITE_TOKEN no Render. Protege apenas a API de dados;
-   as senhas por perfil continuam sendo as do próprio app.        */
-const TOKEN = process.env.SITE_TOKEN || '';
-function autorizado(req) {
-  if (!TOKEN) return true;
-  const h = req.get('x-grc-token') || '';
-  return h === TOKEN;
-}
-function exigeToken(req, res, next) {
-  if (autorizado(req)) return next();
-  res.status(401).json({ erro: 'nao_autorizado' });
+/* Sessão diária validada no servidor; sem bypass por SITE_TOKEN. */
+installAuth(app);
+function autorizado(req) { return !!req.auth; }
+function exigeToken(req,res,next) {
+  if(req.auth) return next();
+  res.status(401).json({erro:'sessao_expirada'});
 }
 
 /* ---------- fotos: sobem uma vez, separadas do snapshot ----------
@@ -84,7 +80,7 @@ app.get('/api/foto/:id', async (req, res) => {
   try {
     const dados = await lerFoto(String(req.params.id || ''));
     if (!dados) return res.status(404).json({ erro: 'foto não encontrada' });
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');  // nunca muda
+    res.set('Cache-Control', 'no-store'); // anexos privados, inclusive após logout
     res.json({ ok: true, dados });
   } catch (e) {
     console.error('[foto:ler]', e);
@@ -108,6 +104,7 @@ app.post('/api/fotos/faltam', async (req, res) => {
    porque e a unica chamada que apaga conteudo de verdade. O app so
    manda ids que ja sairam num backup -- a trava de verdade esta la. */
 app.post('/api/fotos/apagar', exigeToken, async (req, res) => {
+  if(req.auth.user_id!=='u1')return res.status(403).json({erro:'Somente o gestor pode remover anexos.'});
   const ids = (req.body && req.body.ids) || [];
   if (!Array.isArray(ids)) return res.status(400).json({ erro: 'ids_invalidos' });
   const limpos = ids.map(String).filter((x) => /^[A-Za-z0-9_-]{3,80}$/.test(x));
@@ -129,7 +126,8 @@ app.get('/api/saude', async (_req, res) => {
       ok: true,
       versao: w?.versao ?? 0,
       atualizado: w?.atualizado ?? null,
-      protegido: !!TOKEN,
+      protegido: true,
+      autenticacao: 'daily-2026-10-30',
       fotos: await estatisticaFotos(),
     });
   } catch (e) {
@@ -142,7 +140,7 @@ app.get('/api/dados', exigeToken, async (_req, res) => {
   try {
     const w = await lerWorkspace(WS);
     if (!w) return res.json({ vazio: true, versao: 0 });
-    res.json({ vazio: false, versao: w.versao, atualizado: w.atualizado, autor: w.autor, snapshot: w.snapshot });
+    res.json({ vazio: false, versao: w.versao, atualizado: w.atualizado, autor: w.autor, snapshot: await publicSnapshot(w.snapshot) });
   } catch (e) {
     res.status(500).json({ erro: e.message });
   }
@@ -162,13 +160,24 @@ function snapshotValido(s) {
 }
 
 app.post('/api/dados', exigeToken, async (req, res) => {
-  const { snapshot, versaoBase, autor, dispositivo } = req.body || {};
+  let { snapshot, versaoBase, dispositivo } = req.body || {};
   if (!snapshotValido(snapshot)) {
     return res.status(400).json({ erro: 'snapshot_invalido' });
   }
   try {
+    const atual=await lerWorkspace(WS);
+    snapshot=sanitizeIncoming(snapshot);
+    // A shared snapshot must not permit a non-manager to grant permissions.
+    if(req.auth.user_id!=='u1') {
+      for(const key of ['permsUsuarios','nomesUsuarios','coordPodeExcluirPrestador']) {
+        if(JSON.stringify(snapshot.CFG?.[key])!==JSON.stringify(atual?.snapshot?.CFG?.[key]))
+          return res.status(403).json({erro:'Somente o gestor altera o acesso da equipe.'});
+      }
+    }
+    const names={u1:'Maciel',u2:'Alef',u3:'Cleiton',u4:'Fernanda',b1:'Anderson',b2:'Nilson',b3:'Suelen',b4:'Alana'};
+    const autor=atual?.snapshot?.CFG?.nomesUsuarios?.[req.auth.user_id]||names[req.auth.user_id]||req.auth.user_id;
     const r = await gravarWorkspace({ id: WS, snapshot, versaoBase, autor, dispositivo });
-    if (!r.ok && r.conflito) return res.status(409).json(r);
+    if (!r.ok && r.conflito) return res.status(409).json({...r,snapshot:await publicSnapshot(r.snapshot)});
     res.json(r);
   } catch (e) {
     res.status(500).json({ erro: e.message });
@@ -276,9 +285,10 @@ app.get('*', (req, res) => {
 });
 
 migrate()
+  .then(initializeAuth)
   .then(() => {
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`[grc] no ar na porta ${PORT}${TOKEN ? ' (protegido por token)' : ''}`);
+      console.log(`[grc] no ar na porta ${PORT} (sessão diária protegida)`);
     });
   })
   .catch((e) => {

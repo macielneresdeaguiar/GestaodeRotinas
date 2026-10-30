@@ -1302,16 +1302,19 @@ body.crit-open{overflow:hidden}
         <div><div class="ub-nome" id="loginNome">Maciel</div><div class="ub-role" id="loginRole">Gestor</div></div>
         <input id="loginUser" type="hidden"></div></div>
     <div id="firstHint" class="firsthint hidden">
-      <b>Primeiro acesso</b> — defina a senha que você usará daqui em diante.</div>
+      <b>Primeiro acesso</b> — peça um código ao gestor e crie sua senha.</div>
     <div class="field"><label id="lblPass">Senha</label>
       <input id="loginPass" type="password" placeholder="Digite sua senha" autocomplete="current-password"
         onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div class="field hidden" id="fieldPass2"><label>Confirmar senha</label>
       <input id="loginPass2" type="password" placeholder="Repita a nova senha" autocomplete="new-password"
         onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="field hidden" id="fieldInvite"><label>Código liberado pelo gestor</label>
+      <input id="loginInvite" autocomplete="off" placeholder="Código de primeiro acesso"
+        onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div id="loginErr" class="err hidden"></div>
     <button class="btn accent block" id="btnEntrar" onclick="doLogin()">Entrar no sistema</button>
-    <p class="hint">No primeiro acesso você define a própria senha.<br>Seus dados sincronizam entre computador e celular.</p>
+    <p class="hint">Entre uma vez por dia neste aparelho.<br>A sessão termina à meia-noite, no horário de Brasília.</p>
   </div>
 </div>
 
@@ -1883,6 +1886,77 @@ function visibleMaints(){ return []; }
 /* ============ LOGIN E SESSÃO AUTOMÁTICA ============ */
 let pickedUser='u1', pickedFunc='adm';
 const SESSION_KEY='grc.session.v1', CREDS_KEY='grc.creds.v1', SAVED_PASS_KEY='grc.savedpass.v1';
+const AUTH={ok:false,ready:false,busy:false,userId:null,expiresAt:0,creds:{},timer:null};
+const authFetchOriginal=window.fetch.bind(window);
+window.fetch=async function(input,options){
+  const url=typeof input==='string'?input:(input&&input.url)||'';
+  const privada=url.startsWith('/api/')&&!url.startsWith('/api/auth/')&&url!=='/api/saude';
+  if(privada&&(!AUTH.ok||localStorage.getItem('grc.auth.user')!==AUTH.userId)){
+    if(AUTH.ok)authBloquear('Outra conta entrou neste navegador. Entre novamente para continuar.');
+    throw new Error('Entre no sistema para acessar os dados.');
+  }
+  const r=await authFetchOriginal(input,options);
+  if(url.startsWith('/api/')&&!url.startsWith('/api/auth/')&&r.status===401){
+    authBloquear('Sua sessão terminou. Entre novamente para continuar.');
+  }
+  return r;
+};
+async function authPedido(path,body){
+  const r=await fetchPrazo('/api/auth'+path,{method:body===undefined?'GET':'POST',
+    credentials:'same-origin',headers:syncHeaders(),
+    ...(body===undefined?{}:{body:JSON.stringify(body)})},15000);
+  const d=await r.json();
+  if(!r.ok){if(r.status===401&&path!=='/login'&&path!=='/session')authBloquear('Entre novamente.');throw new Error(d.erro||'Não foi possível verificar o acesso.');}
+  return d;
+}
+function authAceitar(d){
+  AUTH.ok=true;AUTH.userId=d.userId;AUTH.expiresAt=Date.parse(d.expiresAt);
+  localStorage.setItem('grc.auth.user',d.userId);
+  if(d.creds)creds=AUTH.creds=d.creds;
+  clearTimeout(AUTH.timer);
+  AUTH.timer=setTimeout(()=>authBloquear('O dia virou. Entre com sua senha para continuar.'),Math.max(0,AUTH.expiresAt-Date.now()));
+}
+function authBloquear(mensagem){
+  if(session){try{salvarLocal()}catch(e){}}
+  AUTH.ok=false;AUTH.userId=null;AUTH.expiresAt=0;
+  clearTimeout(AUTH.timer);clearInterval(SYNC.autoTimer);clearTimeout(SYNC.timer);
+  SYNC.ligado=false;
+  session=null;
+  if(typeof closeModal==='function')closeModal();
+  if(typeof closeDrawer==='function')closeDrawer();
+  document.body.classList.remove('has-tabbar');
+  $('#app').style.display='none';$('#login').style.display='flex';
+  const p=$('#loginPass');if(p)p.value='';
+  const p2=$('#loginPass2');if(p2)p2.value='';
+  const inv=$('#loginInvite');if(inv)inv.value='';
+  if(mensagem){const e=$('#loginErr');e.textContent=mensagem;e.classList.remove('hidden');}
+}
+async function authInicializar(){
+  try{
+    salvarCredsLocal();salvarLocal();
+    const c=syncCfg();if(c.token){delete c.token;localStorage.setItem(SYNC_KEY,JSON.stringify(c));}
+    const p=await authPedido('/perfis');
+    creds=AUTH.creds=p.creds||{};AUTH.ready=true;
+    CFG.nomesUsuarios=Object.assign({},CFG.nomesUsuarios,p.nomes||{});aplicarNomesUsuarios();buildProfiles();
+    pickUser(pickedUser);
+    if(localStorage.getItem('grc.logout.pending')){
+      await authPedido('/logout',{});localStorage.removeItem('grc.logout.pending');
+      return authBloquear('Entre com sua senha para continuar.');
+    }
+    let d;
+    try{d=await authPedido('/session')}catch(e){return authBloquear('Entre com sua senha. O acesso vale até meia-noite.');}
+    authAceitar(d);
+    if(!await ligarSync())return authBloquear('Não foi possível carregar os dados. Verifique sua conexão e entre novamente.');
+    if(!restaurarSessaoSalva())entrar(USERS.find(u=>u.id===d.userId),{auto:true});
+  }catch(e){console.warn('[auth] Falha ao iniciar:',e.message);AUTH.ready=false;authBloquear('Conecte-se à internet para verificar o acesso.');}
+}
+window.addEventListener('online',()=>{if(!AUTH.ok)authInicializar()});
+window.addEventListener('focus',()=>{if(AUTH.ok&&Date.now()>=AUTH.expiresAt)authBloquear('Entre novamente: começou um novo dia.');});
+window.addEventListener('storage',e=>{
+  if(e.key==='grc.logout.at')authBloquear('A sessão foi encerrada em outra aba.');
+  else if(e.key==='grc.auth.user'&&AUTH.ok&&e.newValue!==AUTH.userId)authBloquear('Outra conta entrou neste navegador. Entre novamente para continuar.');
+});
+
 const PROFILE_UI={u1:{icon:'briefcase'},u2:{icon:'clipboardCheck'},u3:{icon:'helmet'},u4:{icon:'sparkles'},
   b1:{icon:'flame'},b2:{icon:'flame'},b3:{icon:'flame'},b4:{icon:'flame'},
   p1:{icon:'water'},p2:{icon:'water'},p3:{icon:'water'},p4:{icon:'water'},p5:{icon:'water'},p6:{icon:'water'}};
@@ -1899,28 +1973,11 @@ function grupoDoUsuario(u){
   return 'adm';
 }
 function salvarCredsLocal(){
-  try{ const st=store(); if(st&&creds&&Object.keys(creds).length) st.setItem(CREDS_KEY,JSON.stringify(creds)) }catch(e){}
+  try{store().removeItem(CREDS_KEY);store().removeItem(SAVED_PASS_KEY)}catch(e){}
 }
-function lerCredsLocal(){
-  try{ const st=store(); const r=st&&st.getItem(CREDS_KEY); return r?JSON.parse(r):{} }catch(e){ return {} }
-}
-function salvarSenhaDispositivo(uid,senha){
-  if(!uid||!senha) return;
-  try{
-    const st=store(); if(!st) return;
-    const m=JSON.parse(st.getItem(SAVED_PASS_KEY)||'{}');
-    m[uid]=String(senha);
-    st.setItem(SAVED_PASS_KEY,JSON.stringify(m));
-  }catch(e){}
-}
-function lerSenhaDispositivo(uid){
-  if(!uid) return '';
-  try{
-    const st=store(); if(!st) return '';
-    const m=JSON.parse(st.getItem(SAVED_PASS_KEY)||'{}');
-    return m[uid]||'';
-  }catch(e){ return '' }
-}
+function lerCredsLocal(){return {}}
+function salvarSenhaDispositivo(){ /* Senhas nunca são persistidas no aparelho. */ }
+function lerSenhaDispositivo(){return ''}
 function salvarSessaoAtiva(){
   if(!session) return;
   try{
@@ -1945,7 +2002,7 @@ function restaurarSessaoSalva(){
     const st=store(); if(!st) return false;
     const raw=st.getItem(SESSION_KEY); if(!raw) return false;
     const s=JSON.parse(raw);
-    if(!s||!s.userId) return false;
+    if(!s||!s.userId||!AUTH.ok||s.userId!==AUTH.userId||Date.now()>=AUTH.expiresAt) return false;
     const u=USERS.find(x=>x.id===s.userId);
     if(!u) return false;
     pickedUser=u.id;
@@ -2014,7 +2071,9 @@ function pickUser(id){
   const set=(sel,v)=>{const el=document.querySelector(sel); if(el){if('value' in el&&el.tagName==='INPUT')el.value=v; else el.textContent=v}};
   set('#loginUser',u.login); set('#loginNome',u.nome); set('#loginRole',u.role); set('#loginAvatar',u.nome[0]);
   const novo=!temSenha(id);
-  const senhaSalva=!novo?lerSenhaDispositivo(id):'';
+  const senhaSalva='';
+  const inv=document.querySelector('#fieldInvite');if(inv)inv.classList.toggle('hidden',!novo);
+  const invInput=document.querySelector('#loginInvite');if(invInput)invInput.value='';
   const p=document.querySelector('#loginPass'); if(p){p.value=senhaSalva||''; if(p.focus)p.focus()}
   const p2=document.querySelector('#loginPass2'); if(p2)p2.value='';
   const e=document.querySelector('#loginErr'); if(e&&e.classList)e.classList.add('hidden');
@@ -2026,27 +2085,24 @@ function pickUser(id){
   if(p) p.placeholder=novo?'Mínimo 6 caracteres':'Digite sua senha';
   if(btn) btn.textContent=novo?'Criar senha e entrar':'Entrar no sistema';
 }
-function doLogin(){
-  const u=USERS.find(x=>x.id===pickedUser);
-  const senha=$('#loginPass').value;
-  const err=$('#loginErr');
+async function doLogin(){
+  if(AUTH.busy)return;
+  const u=USERS.find(x=>x.id===pickedUser),senha=$('#loginPass').value;
+  const err=$('#loginErr'),btn=$('#btnEntrar');
   const mostra=m=>{err.textContent=m;err.classList.remove('hidden')};
-  if(!senha){ mostra('Digite a senha para entrar.'); return }
-  // primeiro acesso: ninguém tem senha ainda -> cadastrar
-  if(!temSenha(u.id)){
-    const c=$('#loginPass2')?$('#loginPass2').value:'';
-    if(senha.length<6){ mostra('A nova senha precisa ter ao menos 6 caracteres.'); return }
-    if(senha!==c){ mostra('As senhas não conferem.'); return }
-    definirSenha(u.id,senha);
-    salvarSenhaDispositivo(u.id,senha);
-    audit('Senha definida (1º acesso)','Usuário: '+u.nome,'',null,'');
-    entrar(u); toast('Senha criada. Bem-vindo, '+u.nome+'!');
-    return;
-  }
-  if(!conferirSenha(u.id,senha)){ mostra('Senha incorreta.'); return }
-  salvarSenhaDispositivo(u.id,senha);
-  entrar(u);
-  toast('Bem-vindo, '+u.nome+'!');
+  if(!AUTH.ready)return mostra('Aguarde a conexão com o servidor.');
+  if(!senha)return mostra('Digite a senha para entrar.');
+  if(!temSenha(u.id)&&senha!==$('#loginPass2').value)return mostra('As senhas não conferem.');
+  AUTH.busy=true;btn.disabled=true;
+  try{
+    const d=await authPedido('/login',{userId:u.id,password:senha,inviteCode:$('#loginInvite').value});
+    creds=d.creds||{};authAceitar(d);
+    $('#loginPass').value='';$('#loginPass2').value='';$('#loginInvite').value='';
+    if(!await ligarSync())throw new Error('Não foi possível carregar os dados. Tente entrar novamente.');
+    entrar(USERS.find(x=>x.id===d.userId));
+    toast('Bem-vindo, '+session.nome+'! Acesso válido até meia-noite.');
+  }catch(e){mostra(e.message||'Não foi possível entrar. Verifique sua conexão.');}
+  finally{AUTH.busy=false;btn.disabled=false;}
 }
 function entrar(u,opts){
   opts=opts||{};
@@ -2083,13 +2139,16 @@ function entrar(u,opts){
     },400);
   }
 }
-function logout(){
-  limparSessaoAtiva();
-  session=null;document.body.classList.remove('has-tabbar');$('#app').style.display='none';$('#login').style.display='flex';
-  buildProfiles();
-  const p=$('#loginPass'); if(p){p.value='';if(p.focus)p.focus()}
-  const p2=$('#loginPass2'); if(p2)p2.value='';
-  if(typeof pickedUser!=='undefined'&&pickedUser)pickUser(pickedUser);
+async function logout(){
+  if(AUTH.busy)return;
+  AUTH.busy=true;
+  try{
+    if(session){salvarLocal();await syncEnviar();}
+    localStorage.setItem('grc.logout.pending','1');
+    await authPedido('/logout',{});
+    localStorage.removeItem('grc.logout.pending');
+  }catch(e){ /* A revogação é repetida antes de restaurar qualquer sessão. */ }
+  finally{AUTH.busy=false;authBloquear('Você saiu do sistema.');localStorage.setItem('grc.logout.at',String(Date.now()));}
 }
 
 
@@ -2104,7 +2163,7 @@ function store(){ try{ return (typeof window!=='undefined'&&window.localStorage)
 function dbSnapshot(){
   return {v:DB_VER, savedAt:new Date().toISOString(),
     tasks,notas,cessoes,apontamentos,estoque,movEstoque,pedidos,afazeres,leituras,prestadores,anuncios,manutObrig,vcUnidades,vcCiclos,vcVendas,analises,brigInsp,brigRondas,salas,unidSind,
-    auditLog, CFG, creds, notifs, notifState};
+    auditLog, CFG, notifs, notifState};
 }
 /* ============ ONDE O APP GUARDA OS DADOS NO APARELHO ============
    O localStorage tem um teto de ~5 MB POR SITE — e isso não tem relação
@@ -2415,7 +2474,7 @@ function load(d){
     if(!prestadores.length) seedPrestadores();
     migrarPrestadoresEB();
     if(d.CFG) CFG=Object.assign(CFG,d.CFG);
-    creds=Object.assign({},lerCredsLocal(),d.creds||{});
+    creds=AUTH.creds||{};
     salvarCredsLocal();
     notifs=d.notifs||[]; notifState=d.notifState||{};
     aplicarNomesUsuarios(); aplicarPermsUsuarios();
@@ -2469,28 +2528,8 @@ function importBackup(input){
 }
 
 /* ============ SENHAS (hash, sem texto puro) ============ */
-let creds={};   // {userId:{hash,salt,trocadaEm}}
-function _hashStr(str){ // FNV-1a 32bit x2 -> string hex de 16 chars
-  let h1=0x811c9dc5,h2=0x01000193;
-  for(let i=0;i<str.length;i++){
-    const c=str.charCodeAt(i);
-    h1=((h1^c)*0x01000193)>>>0;
-    h2=((h2^(c+i))*0x85ebca6b)>>>0;
-  }
-  return (h1>>>0).toString(16).padStart(8,'0')+(h2>>>0).toString(16).padStart(8,'0');
-}
-function hashSenha(senha,salt){ 
-  let out=salt+'|'+senha;
-  for(let i=0;i<600;i++) out=_hashStr(out+'|'+i+'|'+salt);
-  return out;
-}
-function novoSalt(){ return Math.random().toString(36).slice(2)+Date.now().toString(36) }
-function temSenha(uid){ return !!(creds[uid]&&creds[uid].hash) }
-function definirSenha(uid,senha){
-  const salt=novoSalt();
-  creds[uid]={hash:hashSenha(senha,salt),salt,trocadaEm:nowStamp()};
-  salvarCredsLocal(); salvarLocal(); save();
-}
+let creds={}; // Somente indicadores públicos: definida/trocadaEm. Nenhum hash ou senha.
+function temSenha(uid){return !!(creds[uid]&&creds[uid].definida)}
 /* O Gestor pode zerar a senha de um usuário — ele define uma nova no próximo acesso. */
 /* O Gestor nomeia cada conta de brigadista; o nome fica salvo em CFG
    e é reaplicado a cada carga, já que USERS é constante no código. */
@@ -2643,19 +2682,20 @@ function permResumo(u){
 }
 
 function podeResetarSenha(){ return session && session.role==='Gestor' }
-function resetarSenha(uid){
-  if(!podeResetarSenha()) return toast('Somente o Gestor pode redefinir senhas.');
-  const u=USERS.find(x=>x.id===uid); if(!u) return;
-  if(uid===session.id) return toast('Para trocar a sua própria senha use o campo acima.');
-  if(!confirm('Redefinir a senha de '+u.nome+'?\n\nA senha atual será apagada e '+u.nome+' criará uma nova no próximo acesso.')) return;
-  delete creds[uid]; salvarCredsLocal(); save();
-  audit('Senha redefinida',u.nome,'','','Configurações');
-  toast(u.nome+' criará uma nova senha no próximo acesso.');
-  render();
-}
-function conferirSenha(uid,senha){
-  const c=creds[uid]; if(!c||!c.hash) return false;
-  return hashSenha(senha,c.salt)===c.hash;
+async function resetarSenha(uid){
+  if(!podeResetarSenha())return toast('Somente o Gestor pode redefinir senhas.');
+  const u=USERS.find(x=>x.id===uid);if(!u||uid===session.id)return;
+  if(!confirm('Liberar uma nova senha para '+u.nome+'? O acesso atual dessa conta será encerrado.'))return;
+  try{
+    const d=await authPedido('/invite',{userId:uid});
+    creds=AUTH.creds=d.creds||{};
+    audit('Código de acesso emitido',u.nome,'Código válido por 24 horas; sessões anteriores revogadas.','','Configurações');
+    save();render();
+    openModal('Código para '+u.nome,
+      `<p>Entregue este código somente a ${esc(u.nome)}. Ele permite criar uma senha, vale por 24 horas e funciona uma única vez.</p>
+       <div class="field" style="margin-top:12px"><label>Código de primeiro acesso</label><input readonly value="${esc(d.code)}"></div>`,
+      '<button class="btn" onclick="closeModal()">Fechar</button>');
+  }catch(e){toast(e.message);}
 }
 function forcaSenha(s){
   let n=0;
@@ -3351,21 +3391,14 @@ function viewConfig(){
         <div class="t-sub">Afeta: conclusão de recorrentes, "Gerar Rotina da Semana" e as rotinas administrativas.</div>
       </div>
       <div class="card">
-        <div class="section-title" style="margin-top:0"><h3>${ic('shield')}Chave de Acesso do Site</h3></div>
-        <div class="t-sub" style="margin-bottom:10px">Trava extra na porta do servidor: sem a chave, ninguém baixa nem grava os dados, mesmo sabendo o endereço. Cadastre a mesma chave em cada aparelho — precisa ser igual à variável <b>SITE_TOKEN</b> configurada no Render.</div>
-        <div class="field"><label>Chave deste aparelho</label>
-          <input id="cfgToken" type="password" placeholder="deixe vazio se o site não usa chave" value="${esc(syncCfg().token||'')}"></div>
-        <div class="rowact" style="margin-top:10px">
-          <button class="btn" onclick="salvarTokenCfg()">${ic('check')}Salvar chave</button>
-          <button class="btn ghost" onclick="testarToken()">Testar conexão</button>
-        </div>
-        <div id="cfgTokenMsg" class="t-sub" style="margin-top:8px"></div>
+        <div class="section-title" style="margin-top:0"><h3>${ic('lock')}Acesso diário protegido</h3></div>
+        <div class="t-sub">Sua senha é validada no servidor. O acesso deste aparelho vale até meia-noite no horário de Brasília. Sair encerra a sessão imediatamente.</div>
       </div>
 
       <div class="card">
         <div class="section-title" style="margin-top:0"><h3>${ic('lock')}Senhas da Equipe</h3></div>
         ${session.role!=='Gestor' ? `<div class="t-sub">Somente o Gestor redefine a senha de outros usuários.</div>` : `
-        <div class="t-sub" style="margin-bottom:10px">Se alguém esquecer a senha, zere aqui: a pessoa cria uma nova no próximo acesso. Ninguém consegue ver a senha de outro.</div>
+        <div class="t-sub" style="margin-bottom:10px">Libere um código para primeiro acesso ou recuperação. Entregue-o somente ao usuário; ele vale por 24 horas. Ninguém vê a senha de outro.</div>
         ${USERS.map(u=>`
           <div class="feed-item" style="margin-bottom:8px">
             <div class="fi-ic">${ic('user')}</div>
@@ -3382,7 +3415,7 @@ function viewConfig(){
               ? `<span class="badge b-pend">você</span>`
               : (temSenha(u.id)
                   ? `<button class="btn ghost sm" onclick="resetarSenha('${u.id}')">${ic('refresh')}Redefinir</button>`
-                  : `<span class="badge b-and">livre</span>`)}
+                  : `<button class="btn ghost sm" onclick="resetarSenha('${u.id}')">Liberar primeiro acesso</button>`)}
           </div>`).join('')}
         `}
       </div>
@@ -12531,15 +12564,17 @@ function medirSenha(v){
   if(el){ el.style.width=(n*25)+'%'; el.style.background=cores[Math.max(0,n-1)]; }
   if(txt) txt.textContent=v?`Segurança: ${nomes[Math.max(0,n-1)]}`:'Use letras, números e ao menos 1 símbolo.';
 }
-function trocarSenha(){
-  const a=$('#pwOld').value, b=$('#pwNew').value, c=$('#pwNew2').value;
-  if(!conferirSenha(session.id,a)) return toast('A senha atual está incorreta.');
-  if(b.length<6) return toast('A nova senha precisa ter ao menos 6 caracteres.');
-  if(b!==c) return toast('A confirmação não confere.');
-  if(b===a) return toast('A nova senha deve ser diferente da atual.');
-  definirSenha(session.id,b);
-  audit('Senha alterada','Usuário: '+session.nome,'',null,'');
-  render(); toast('Senha alterada com sucesso.');
+async function trocarSenha(){
+  const a=$('#pwOld').value,b=$('#pwNew').value,c=$('#pwNew2').value;
+  if(b.length<6)return toast('A nova senha precisa ter ao menos 6 caracteres.');
+  if(b!==c)return toast('A confirmação não confere.');
+  if(b===a)return toast('A nova senha deve ser diferente da atual.');
+  try{
+    const d=await authPedido('/password',{currentPassword:a,newPassword:b});
+    creds=d.creds||{};authAceitar(d);
+    audit('Senha alterada','Usuário: '+session.nome,'Outras sessões encerradas.',null,'');
+    save();render();toast('Senha alterada. As outras sessões foram encerradas.');
+  }catch(e){toast(e.message);}
 }
 function subirLogo(input){
   const f=input.files&&input.files[0]; if(!f)return;
@@ -14393,10 +14428,7 @@ function temServidor(){
   return location.protocol==='http:'||location.protocol==='https:';
 }
 function syncHeaders(){
-  const h={'Content-Type':'application/json'};
-  const t=syncCfg().token;
-  if(t) h['x-grc-token']=t;
-  return h;
+  return {'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30'};
 }
 function nomeDispositivo(){
   let d=syncCfg().dispositivo;
@@ -14436,7 +14468,7 @@ async function syncBaixar(){
   syncEstado('baixando');
   try{
     const r=await fetchPrazo('/api/dados',{headers:syncHeaders()});
-    if(r.status===401){ syncEstado('erro','Token do site incorreto.'); return false }
+    if(r.status===401){ syncEstado('erro','Entre novamente para sincronizar.'); return false }
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d=await r.json();
     if(d.vazio){
@@ -20860,6 +20892,7 @@ function _assina(o){ // hash barato só para detectar mudança real
   return t.length+':'+h;
 }
 async function syncEnviar(forcar){
+  if(!AUTH.ok||Date.now()>=AUTH.expiresAt)return;
   if(!SYNC.ligado||_booting) return;
   const snap=dbSnapshot();
   if(!snapshotValido(snap)) return;   // não publica estado incompleto
@@ -20872,7 +20905,7 @@ async function syncEnviar(forcar){
     const r=await fetchPrazo('/api/dados',{method:'POST',headers:syncHeaders(),
       body:JSON.stringify({snapshot:snap,versaoBase:(forcar&&!SYNC.versao)?null:SYNC.versao,
         autor:session?session.nome:'—',dispositivo:nomeDispositivo()})});
-    if(r.status===401){ syncEstado('erro','Token do site incorreto.'); SYNC.enviando=false; return }
+    if(r.status===401){ syncEstado('erro','Entre novamente para sincronizar.'); SYNC.enviando=false; return }
     if(r.status===413){
       /* Não é falta de internet: o pacote de fotos ficou grande demais.
          Dizer "sem conexão" aqui faria o usuário procurar o problema no
@@ -20943,11 +20976,7 @@ function aplicarSnapshot(d){
   prestadores=d.prestadores||[]; anuncios=d.anuncios||[]; manutObrig=d.manutObrig||[];
   analises=d.analises||[]; brigInsp=d.brigInsp||[]; brigRondas=d.brigRondas||[]; salas=d.salas||[]; unidSind=d.unidSind||[]; afazeres=d.afazeres||[];
   if(d.CFG) CFG=Object.assign(CFG,d.CFG);
-  const _credsAnt=Object.assign({},lerCredsLocal(),creds||{});
-  creds=Object.assign({},_credsAnt,d.creds||{});
-  Object.keys(_credsAnt).forEach(k=>{
-    if(_credsAnt[k]&&_credsAnt[k].hash&&(!creds[k]||!creds[k].hash)) creds[k]=_credsAnt[k];
-  });
+  creds=AUTH.creds=d.creds||AUTH.creds||{};
   salvarCredsLocal();
   notifs=d.notifs||[]; notifState=d.notifState||{};
   aplicarNomesUsuarios(); aplicarPermsUsuarios();
@@ -20979,6 +21008,7 @@ function agendarSync(){
   SYNC.timer=setTimeout(()=>syncEnviar(),900);
 }
 async function ligarSync(silencioso){
+  if(!AUTH.ok||Date.now()>=AUTH.expiresAt)return false;
   if(!temServidor()) return false;
   try{
     const r=await fetchPrazo('/api/saude',{},8000);
@@ -20986,10 +21016,7 @@ async function ligarSync(silencioso){
     marcarOnline();
     const d=await r.json();
     SYNC.ligado=true;
-    if(d.protegido && !syncCfg().token){
-      if(!silencioso) pedirToken();
-      return false;
-    }
+
     await syncBaixar();
     clearInterval(SYNC.autoTimer);
     // busca novidades a cada 45s (leve: só o snapshot quando muda a versão)
@@ -21150,16 +21177,8 @@ function iniciarCom(guardado){
   _booting=false;
   aplicarMarca();
   buildProfiles();        /* monta a lista de acesso antes de escolher o perfil */
-  if(!restaurarSessaoSalva()){
-    pickUser('u1');
-  }
-  /* Conecta ao servidor depois de pintar a tela: o app abre offline-first */
-  setTimeout(()=>{ ligarSync().then(ok=>{
-    if(ok){
-      if(session) render();
-      else if(typeof pickedUser!=='undefined'&&pickedUser) pickUser(pickedUser);
-    }
-  }); },300);
+  authInicializar();
+
   ligarEscutaConexao();   /* vigia a conexão desde o primeiro segundo */
   setTimeout(()=>{ migrarFotosEmbutidas().catch(()=>{}) },1500);
 }
@@ -21183,6 +21202,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault(); if(session)openSearch()}
 });
 </script>
-<!-- Base funcional: 689712f. Ocupação conferida em 30/10/2026; dados permanecem no Turso; DB_VER=2. -->
+<!-- Base: a368457. Autenticação diária no servidor em 30/10/2026. DB_VER=2; dados no Turso. -->
 </body>
 </html>
