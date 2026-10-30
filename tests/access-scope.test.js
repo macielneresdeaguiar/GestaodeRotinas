@@ -15,7 +15,7 @@ const fixture={v:2,CFG:{permsUsuarios:{},nomesUsuarios:{},pub:{repDoc:'PRIVATE_D
  leituras:[{id:'program',condoId:'c1',tipo:'agua',data:'2026-10-30',status:'Programada',anterior:100},{id:'read',condoId:'c1',tipo:'agua',data:'2026-10-29',status:'Registrada',medidor:100,leitura:100,consumo:5,valor:500,responsavel:'Maciel'}],
  brigInsp:[{id:'check',condoId:'c1',userId:'b2',status:'Em andamento'}],brigRondas:[],apontamentos:[{id:'repair',condoId:'c1',descricao:'Maintenance'}],manutObrig:[{id:'mandatory',condoId:'c1',anexo:'ref:secret_photo'}],estoque:[{id:'stock',nome:'Material',qtd:5}],pedidos:[],auditLog:[],notifs:[]};
 async function req(route,body,id='u1',headers={},method){
- const r=await fetch(base+route,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-User':id,Origin:base,...(cookies[id]?{Cookie:cookies[id]}:{}),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});
+ const r=await fetch(base+route,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-Workflow':'monthly-review-v1','X-GRC-User':id,Origin:base,...(cookies[id]?{Cookie:cookies[id]}:{}),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});
  return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')};
 }
 async function get(id='u1'){return (await req('/api/dados',undefined,id)).data;}
@@ -49,7 +49,7 @@ test('hidden rows, cross-condominium writes, permission escalation and legacy cl
  let s=await get('p1');s.snapshot.tasks=[{id:'admin',condoId:'c1',tipo:'Administrativo',titulo:'tamper'}];assert.equal((await put(s.snapshot,s.versao,'p1')).status,403);
  s=await get('p1');s.snapshot.leituras.push({id:'forbidden',condoId:'c2',tipo:'agua'});assert.equal((await put(s.snapshot,s.versao,'p1')).status,403);
  s=await get('u2');s.snapshot.CFG.permsUsuarios.p1={sindico:true};assert.equal((await put(s.snapshot,s.versao,'u2')).status,403);
- s=await get('u1');assert.equal((await put(s.snapshot,s.versao,'u1',{'X-GRC-Scope':'old'})).status,426);assert.equal((await put(s.snapshot,null,'u1')).status,400);
+ s=await get('u1');assert.equal((await put(s.snapshot,s.versao,'u1',{'X-GRC-Workflow':'old'})).status,426);assert.equal((await put(s.snapshot,s.versao,'u1',{'X-GRC-Scope':'old'})).status,426);assert.equal((await put(s.snapshot,null,'u1')).status,400);
  s=await get('b1');const conflict=await put(s.snapshot,s.versao-1,'b1');assert.equal(conflict.status,409);assert.deepEqual(conflict.data.snapshot.unidSind,[]);assert.ok(!JSON.stringify(conflict.data).includes('SECRET_INVOICE'));
 });
 test('portaria registers a scheduled reading and next one while preserving all other areas and existing financial fields',async()=>{
@@ -96,6 +96,7 @@ test('full backup restores all ten tables including credentials, attachments and
 });
 
 test('a brigadista can resolve an existing shared defect without changing its author, floor, evidence or unrelated fields',async()=>{
+ const forbidden=await get('b1');forbidden.snapshot.brigInsp.push({id:'unreviewed',condoId:'c1',status:'Concluído',pontos:[{sit:'NÃO CONFORME',revisaoPendente:true}]});assert.equal((await put(forbidden.snapshot,forbidden.versao,'b1')).status,403);
  const create=await get('b2');create.snapshot.brigInsp.push({id:'shared_defect',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-09-01',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária do corredor',sit:'NÃO CONFORME',obs:'Sem acender',fotos:[]}],historico:[]});
  assert.equal((await put(create.snapshot,create.versao,'b2')).status,200);
  const view=await get('b1'),row=view.snapshot.brigInsp.find(i=>i.id==='shared_defect');Object.assign(row.pontos[0],{resolvido:true,resolvidoPor:'Anderson',resolvidoEm:'2026-10-30',obsResolucao:'Substituída e conferida'});row.resolvido=true;

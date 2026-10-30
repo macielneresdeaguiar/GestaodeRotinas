@@ -151,6 +151,7 @@ export function mergeScoped(incoming,current,a){
         if(!repeats.length)reject('Confirmação sem registro de ronda.');
         updates.set(row.id,{...old,vistoDeNovo:Number(old.vistoDeNovo||0)+repeats.length,vistoPorUltimo:row.vistoPorUltimo,historico:[...(old.historico||[]),...(row.historico||[]).slice((shown.historico||[]).length).map(h=>({...h,q:a.name}))]});continue;
       }
+      if(k==='brigInsp'&&row.status==='Concluído'&&(row.pontos||[]).some(p=>p.revisaoPendente))reject('Confira as pendências anteriores antes de concluir o check-list.');
       if(!writeAllowed(k,a,old,row))reject('Esta conta não pode alterar este registro de '+k+'.');
       const clean={...(old||{}),...clone(row)};
       if(k==='leituras'&&a.perms.leiturasSimples){for(const key of ['valor','custo','tarifa','valorAgua','valorEnergia','total'])if(key in row&&!same(row[key],shown?.[key]))reject('Valores financeiros não são permitidos neste perfil.');}

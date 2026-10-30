@@ -8,7 +8,7 @@ import net from 'node:net';
 
 let directory,db,child,base,managerCookie,userCookie;
 const password='Fixture-Only-Password!';
-const headers=()=>({'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30',Origin:base});
+const headers=()=>({'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-Workflow':'monthly-review-v1',Origin:base});
 async function request(route,body,cookie,extra={}) {
   const r=await fetch(base+route,{method:body===undefined?'GET':'POST',headers:{...headers(),'X-GRC-User':cookie===userCookie?'u2':'u1',...(cookie?{Cookie:cookie}:{}),...extra},...(body===undefined?{}:{body:JSON.stringify(body)})});
   return {status:r.status,body:await r.json(),cookie:r.headers.get('set-cookie'),headers:r.headers};

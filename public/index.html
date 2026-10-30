@@ -14199,7 +14199,7 @@ function temServidor(){
   return location.protocol==='http:'||location.protocol==='https:';
 }
 function syncHeaders(){
-  return {'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-User':AUTH.userId||''};
+  return {'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-Workflow':'monthly-review-v1','X-GRC-User':AUTH.userId||''};
 }
 function nomeDispositivo(){
   let d=syncCfg().dispositivo;
