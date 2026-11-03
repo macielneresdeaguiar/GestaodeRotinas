@@ -1285,8 +1285,6 @@ body.crit-open{overflow:hidden}
 <script src="/access-client.js"></script>
 <script src="/field-ui.js"></script>
 <script src="/workflow.js"></script>
-<link rel="stylesheet" href="/service-desk.css">
-<script src="/service-desk.js"></script>
 <script src="/mobile.js" defer></script>
 </head>
 <body>
@@ -2895,14 +2893,14 @@ function itensNavegacao(){
   if(!P().brigada&&P().ronda) items.push(['brigada-ronda','route','Ronda e Chamados']);
   if(P().brigada){ items.push(['#','','Brigada de Incêndio']);
     items.push(['brigada-inicio','play','Iniciar Check-list'],
-      ['brigada','flame','Check-list por Andar'],['brigada-ronda','route','Ronda Diária']); }
+      ['brigada','flame','Check-list por Andar']);
+    if(P().ronda)items.push(['brigada-ronda','route','Ronda Diária']); }
   if(P().manutencao||P().manutobrig){
     items.push(['#','','Manutenção e materiais']);
     if(P().manutencao) items.push(['apontamentos','wrench','Apontamentos']);
     if(P().manutobrig) items.push(['manutobrig','shieldCheck','Manutenções Obrigatórias']); }
   if(P().estoque) items.push(['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material']);
   if(P().tipos.length) items.push(['#','','Gestão'],['relatorios','chart','Relatórios'],['relmensal','doc','Relatório Mensal']);
-  if(P().brigada||P().manutencao)items.push(['atendimentos','wrench','Brigada e manutenção']);
   items.push(['config','settings','Configurações']);
   return AUTH.access?items.filter(i=>i[0]==='#'||AUTH.access.pages.includes(i[0])):items;
 }
@@ -2952,7 +2950,6 @@ function render(){
   }
 }
 function renderConteudo(){
-  if(page==='atendimentos'&&scopeAllowed('atendimentos')){$('#pageTitle').textContent='Brigada e manutenção';viewServiceDesk();return;}
   if(session&&!scopeAllowed(page))page=paginaInicial();
   if(page==='inicio'){$('#pageTitle').textContent='Meu espaço';return viewInicio();}
   { const _sb=document.querySelector('#syncBadge'); if(_sb) _sb.outerHTML=badgeSync(); }
@@ -12458,7 +12455,7 @@ function tabsDoPerfilBase(){
     /* Brigadista: só o que é da brigada */
     if(P().brigada) return [['inicio','gauge','Início'],
       ['brigada-inicio','play','Check-list'],['brigada','flame','Andares'],
-      ['brigada-ronda','route','Ronda'],['menu','menu','Mais']];
+      ['menu','menu','Mais']];
     /* Portaria: so a leitura. Sem painel e sem ronda -- a barra de baixo
        precisa refletir o mesmo acesso restrito do menu lateral. */
     if(P().leiturasSimples) return [['inicio','gauge','Início'],['leituras','water','Leituras'],
@@ -14203,7 +14200,7 @@ function temServidor(){
   return location.protocol==='http:'||location.protocol==='https:';
 }
 function syncHeaders(){
-  return {'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-Workflow':'monthly-review-v1','X-GRC-User':AUTH.userId||''};
+  return {'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-Workflow':'manager-review-v2','X-GRC-User':AUTH.userId||''};
 }
 function nomeDispositivo(){
   let d=syncCfg().dispositivo;
@@ -14825,76 +14822,7 @@ function brigAutoConcluirPreenchidos(cid,mesRef,sisFiltro){
   }
   return concluiu;
 }
-function migrarBrigadaCicloMensal(){
-  let mudou=false;
-  /* Remove da lista de Tarefas do Gestor (tasks) quaisquer demandas abertas automaticamente
-     pelo check-list da Brigada (origem === 'brigada'), preservando no próprio brigInsp
-     eventuais resoluções já concluídas. */
-  if(Array.isArray(tasks)){
-    const _brigTasks=tasks.filter(t=>t&&t.origem==='brigada');
-    if(_brigTasks.length){
-      _brigTasks.forEach(t=>{
-        if(t.status==='Concluída'&&Array.isArray(brigInsp)){
-          const ids=[...(Array.isArray(t.brigInspIds)?t.brigInspIds:[]),t.brigInspId].filter(Boolean);
-          brigInsp.forEach(i=>{
-            if(ids.includes(i.id)||(i.chamadoId&&i.chamadoId===t.id)){
-              i.resolvido=true;
-              (i.pontos||[]).forEach(p=>{
-                if(p.sit==='NÃO CONFORME'&&!p.resolvido){
-                  p.resolvido=true;
-                  p.resolvidoEm=t.concluidoEm||i.data;
-                  p.resolvidoPor=t.concluidoPor||t.responsavel||'Gestão';
-                  p.obsResolucao=t.obsConclusao||'Resolvido';
-                }
-              });
-            }
-          });
-        }
-      });
-      tasks=tasks.filter(t=>!t||t.origem!=='brigada');
-      if(Array.isArray(brigInsp)){
-        brigInsp.forEach(i=>{ if(i&&i.chamadoId&&!tasks.some(t=>t.id===i.chamadoId)) delete i.chamadoId; });
-      }
-      mudou=true;
-    }
-  }
-  if(!Array.isArray(brigInsp)||brigInsp.length<20) return mudou;
-  const doOut=brigInsp.filter(i=>i&&i.condoId==='c1'&&String(i.data||'').slice(0,7)==='2026-10');
-  const pcfOut=doOut.filter(i=>i.sistema==='pcf');
-  /* Em 10/2026, se a ronda de Portas Corta-Fogo já percorreu os andares do prédio,
-     finaliza os registros preenchidos por Nilson que ficaram como "Em andamento" e garante
-     o 20º andar (descartado pelo botão Pular) para fechar o ciclo mensal 1x/mês. */
-  if(pcfOut.length>=25){
-    pcfOut.forEach(i=>{
-      if(i.status!=='Concluído'&&!(i.historico||[]).some(h=>/reabert/i.test(h.t||''))){
-        const nc=brigNC(i);
-        i.status='Concluído';
-        i.concluidoEm=i.concluidoEm||nowStamp();
-        (i.historico=i.historico||[]).push({q:i.responsavel||'Nilson',w:nowStamp(),t:'Check-list concluído — '+nc.length+' não conformidade(s)'});
-        brigGerarAlerta(i);
-        mudou=true;
-      }
-    });
-    if(!pcfOut.some(i=>i.andar==='20')){
-      const i20=brigNova('20','pcf');
-      i20.condoId='c1'; i20.data='2026-10-20'; i20.hora='11:48';
-      i20.responsavel='Nilson'; i20.userId='b2'; i20.status='Concluído'; i20.concluidoEm='20/10/2026 11:48';
-      i20.historico=[
-        {q:'Nilson',w:'20/10/2026 11:47',t:'Check-list iniciado'},
-        {q:'Nilson',w:'20/10/2026 11:48',t:'Check-list concluído — 0 não conformidade(s)'}
-      ];
-      brigInsp.push(i20);
-      mudou=true;
-    }
-  }
-  const meses=[...new Set(brigInsp.map(i=>String(i&&i.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))];
-  meses.forEach(m=>{
-    const antes=JSON.stringify((CFG&&CFG.brigCicloMensal)||{});
-    brigSincronizarCicloMensal('c1',m);
-    if(JSON.stringify((CFG&&CFG.brigCicloMensal)||{})!==antes) mudou=true;
-  });
-  return mudou;
-}
+function migrarBrigadaCicloMensal(){return false;}
 /* Verifica se uma não conformidade (pendência) do check-list já foi resolvida.
    Uma pendência permanece ATIVA (não resolvida) até que:
    1) Seja marcada como resolvida diretamente (p.resolvido === true ou insp.resolvido === true), OU
@@ -15351,7 +15279,7 @@ function viewBrigada(){
         <td class="muted">${esc(h.insp.responsavel||'—')}</td>
         <td style="text-align:right"><div class="rowact" style="justify-content:flex-end">
           <button class="btn ghost sm" onclick="brigAcompanharInsp('${h.insp.id}')" title="Ver detalhes e andamento">${ic('search')}Como ficou</button>
-          ${!h.resolvida?`${serviceDeskLink(h.insp.id,h.idx)}<button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})" title="Marcar pendência como resolvida">${ic('check')}Resolver</button>`:''}
+          ${!h.resolvida?`${session?.id==='u1'?`<button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})" title="Marcar pendência como resolvida">${ic('check')}Resolver</button>`:'<span class="muted">Conferência e solução: Maciel</span>'}`:''}
         </div></td>
       </tr>`).join('')||`<tr><td colspan="7" class="muted">Nenhuma pendência ${brigHistFiltro==='abertas'?'em aberto':(brigHistFiltro==='resolvidas'?'resolvida':'registrada')} no histórico.</td></tr>`}
     </tbody></table></div>
@@ -15382,7 +15310,7 @@ function viewBrigada(){
     return;
   }
 
-  $('#content').innerHTML=bannerRetomar+cards+ia+resumo+cardPorAndar+cardHistorico+`
+  $('#content').innerHTML=(session?.id==='u1'?'<div class="card" style="padding:16px;margin-bottom:14px"><b>Pendências sob gestão de Maciel</b><p>A brigada faz o check-list mensal. Você define o atendimento, confere o serviço no local e registra a solução no histórico abaixo.</p></div>':'')+bannerRetomar+cards+ia+resumo+(session?.id==='u1'?cardHistorico+cardPorAndar:cardPorAndar+cardHistorico)+`
     <div class="card">
       <div class="ap-faixa">${ic('doc')} RELATÓRIOS DO CHECK-LIST (SEPARADOS POR SISTEMA / ANDAR OU GERAL)</div>
       <div style="padding:12px">
@@ -15440,7 +15368,7 @@ function brigCheckAvisoAndar(i){
           ${i.status!=='Concluído'?`<button class="btn sm" onclick="brigCheckConfirmarMesma('${i.id}','${h.insp.id}',${h.idx})">
             ${ic('checkCircle')} É essa mesma — continua pendente</button>`:''}
           <button class="btn ghost sm" onclick="brigAcompanharInsp('${h.insp.id}')">${ic('search')} Como ficou</button>
-          ${serviceDeskLink(h.insp.id,h.idx)}<button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})">${ic('check')} Já foi resolvido</button>
+          ${session?.id==='u1'?`<button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})">${ic('check')} Já foi resolvido</button>`:'<span class="muted">Conferência e solução: Maciel</span>'}
         </div>
       </div>`;
     }).join('')}
@@ -15481,8 +15409,8 @@ function brigCheckHistPontoHtml(i,k){
         ${!h.resolvida&&i.status!=='Concluído'?`<div class="rowact" style="margin-top:6px;gap:6px">
           <button class="btn sm" onclick="brigCheckConfirmarMesma('${i.id}','${h.insp.id}',${h.idx},${k})">
             ${ic('checkCircle')} É essa mesma — continua assim</button>
-          ${serviceDeskLink(h.insp.id,h.idx)}<button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})">
-            ${ic('check')} Marcar anterior como resolvida</button>
+          ${session?.id==='u1'?`<button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})">
+            ${ic('check')} Marcar anterior como resolvida</button>`:'<span class="muted">Conferência e solução: Maciel</span>'}
         </div>`:''}
       </div>`;
     }).join('')}
@@ -15610,9 +15538,10 @@ function _bi(id){ return brigInsp.find(x=>x.id===id) }
 function brigSit(id,k,sit){
   const i=_bi(id); if(!i||i.status==='Concluído')return;
   const p=i.pontos[k];
-  if(p.repeteDe&&sit==='CONFORME'&&!confirm('Você verificou no local que o reparo foi realizado? Ao concluir este check-list, o ponto anterior será considerado resolvido.'))return;
+  if(p.repeteDe&&sit==='CONFORME'&&!p.resolvido&&session?.id!=='u1')return toast('A conferência do serviço é de Maciel. Registre a revisão mensal mantendo a pendência.');
+  if(p.repeteDe&&sit==='CONFORME'&&session?.id==='u1'&&!confirm('Você verificou no local que o reparo foi realizado? Ao concluir este check-list, o ponto anterior será considerado resolvido.'))return;
   if(p.repeteDe&&sit==='NÃO APLICÁVEL')return toast('Uma pendência anterior exige confirmação como pendente ou reparo verificado.');
-  if(p.repeteDe&&sit==='CONFORME')p.reparoConferido=true;
+  if(p.repeteDe&&sit==='CONFORME'&&session?.id==='u1'){p.reparoConferido=true;p.reparoConferidoPorId='u1';}
   p.revisaoPendente=false;p.confirmadoPor=session.nome;p.confirmadoEm=nowStamp();
   i.pontos[k].sit=sit;
   if(sit!=='NÃO CONFORME'){ i.pontos[k].itens={}; i.pontos[k].qtd=0 }
@@ -15629,7 +15558,7 @@ function brigObs(id,k,v){ const i=_bi(id); if(i){ i.pontos[k].obs=v; save() } }
 function brigObsGeral(id,v){ const i=_bi(id); if(i){ i.obs=v; save() } }
 function brigConcluir(id){
   const i=_bi(id); if(!i)return;
-  if(i.pontos.some(p=>p.revisaoPendente))return toast('Confira as pendências anteriores antes de concluir. Use continua pendente ou confirme o reparo no ponto.');
+  if(i.pontos.some(p=>p.revisaoPendente))return toast('Confira as pendências anteriores antes de concluir. Registre a revisão mensal; somente Maciel confirma o reparo.');
   const nc=brigNC(i);
   const semFoto=nc.filter(p=>!(p.fotos||[]).length).length;
   let msg='Concluir o check-list de '+brigSis(i.sistema).nome+' — '+brigAndarNome(i.andar)+'?';
@@ -16965,13 +16894,16 @@ function chamadosDaInspecao(id){
   return tasks.filter(t=>t.brigInspId===id || (Array.isArray(t.brigInspIds)&&t.brigInspIds.includes(id)) || (i&&i.chamadoId&&t.id===i.chamadoId));
 }
 function brigResolverPendencia(inspId,ptIdx,obsArg){
+  if(session?.id!=='u1')return toast('Somente Maciel confere o serviço e encerra a pendência.');
   const i=brigInsp.find(x=>x.id===inspId); if(!i) return;
-  const obs=obsArg!==undefined?obsArg:(prompt('O que foi feito para resolver esta pendência? (opcional)')??null);
+  const obs=obsArg!==undefined?obsArg:(prompt('Descreva o serviço que você conferiu no local:')??null);
   if(obs===null) return;
+  if(String(obs).trim().length<5)return toast('Descreva o serviço conferido antes de encerrar.');
+  if(!confirm('Você conferiu no local que o serviço foi resolvido?'))return;
   const alvos=(ptIdx!==undefined&&ptIdx!==null&&i.pontos[ptIdx])?[i.pontos[ptIdx]]:brigNC(i);
   const descsResolvidos=new Set();
   alvos.forEach(p=>{
-    p.resolvido=true;
+    p.resolvido=true;p.resolvidoPorId='u1';p.revisaoPendente=false;
     p.resolvidoEm=today();
     p.resolvidoPor=session?session.nome:'Sistema';
     p.obsResolucao=String(obs||'').trim();
@@ -16984,7 +16916,7 @@ function brigResolverPendencia(inspId,ptIdx,obsArg){
     let mexeu=false;
     (iAnt.pontos||[]).forEach(pAnt=>{
       if(pAnt.sit==='NÃO CONFORME'&&!pAnt.resolvido&&descsResolvidos.has(pAnt.desc)){
-        pAnt.resolvido=true;
+        pAnt.resolvido=true;pAnt.resolvidoPorId='u1';pAnt.revisaoPendente=false;
         pAnt.resolvidoEm=today();
         pAnt.resolvidoPor=session?session.nome:'Sistema';
         pAnt.obsResolucao=String(obs||'').trim();
@@ -17129,12 +17061,12 @@ function brigAcompanharInsp(inspId){
            ${fts.length?`<div class="bg-fotos" style="margin-top:6px">${fts.map((f,fi)=>
              `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" alt="Foto ${fi+1}"
                style="cursor:zoom-in" onclick="chAmpliar('${f}')">`).join('')}</div>`:''}
-           ${!res?`<div style="margin-top:8px">${serviceDeskLink(i.id,idxPt)}<button class="btn green sm" onclick="brigResolverPendencia('${i.id}',${idxPt})">${ic('check')} Marcar ponto como resolvido</button></div>`:''}
+           ${!res?`<div style="margin-top:8px">${session?.id==='u1'?`<button class="btn green sm" onclick="brigResolverPendencia('${i.id}',${idxPt})">${ic('check')} Marcar ponto como resolvido</button>`:'<span class="muted">Conferência e solução: Maciel</span>'}</div>`:''}
          </div></div>`}).join('')}
      <div id="chZoom"></div>
      ${ts.length===1?chLinhaTempo(ts[0]):''}`,
     `<button class="btn ghost" onclick="closeModal()">Fechar</button>
-     ${temPendente?`<button class="btn green" onclick="brigResolverPendencia('${i.id}',null)">${ic('checkCircle')} Resolver todas deste check-list</button>`:''}`);
+     ${temPendente?`${session?.id==='u1'?`<button class="btn green" onclick="brigResolverPendencia('${i.id}',null)">${ic('checkCircle')} Resolver todas deste check-list</button>`:'<span class="muted">Conferência e solução: Maciel</span>'}`:''}`);
   if(typeof hidratarFotos==='function') setTimeout(()=>hidratarFotos(),0);
 }
 
