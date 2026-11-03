@@ -31,7 +31,7 @@ não são a aplicação publicada, nem devem ser usados para novas alterações.
 - `server/auth.js`: contas, cookie e autenticação.
 - `server/access.js`: regras de leitura/escrita e anexos.
 - `server/db.js`: persistência, concorrência, carteira separada e versões.
-- `server/backup.js`: backup privado completo das dez tabelas e restauração
+- `server/backup.js`: backup privado completo das doze tabelas e restauração
   somente em banco vazio separado. Nunca guardar seus resultados no Git.
 
 ## Antes de publicar
