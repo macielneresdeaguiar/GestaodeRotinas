@@ -69,10 +69,13 @@ dias e exigem escolha para retomar. Excluir senhas e limpar no logout/troca de
 conta. Fotos usam referências do acervo; nenhuma confirmação de envio deve
 aparecer antes da resposta de sucesso do servidor e do envio dos anexos.
 
-## Atendimento integrado (2026-11-03)
-- /api/atendimentos usa sessão, perfil e condomínio no servidor. Portaria/leitura sem acesso.
-- maintenance_case e maintenance_event guardam encaminhamento e histórico; existe no máximo um atendimento aberto por ponto.
-- Manutenção registra reparo; brigada/administração confere antes de encerrar a pendência. O snapshot comum não pode encerrar ponto com atendimento aberto.
-- public/service-desk.js e .css são os ativos do módulo. Cache v31.
-- Backup completo agora inclui 12 tabelas. Destino externo automatizado ainda depende de configuração privada.
-- CI executa npm ci e npm test com fixtures artificiais antes da publicação.
+## Conferência exclusiva de Maciel — 03/11/2026
+- O módulo Brigada e manutenção foi retirado por solicitação do gestor. Não recriar menu, encaminhamento ou conferência para a brigada.
+- Brigadistas b1–b4 usam somente check-list mensal (início, andares e formulário), além da conta; não recebem ronda, tarefas nem manutenção.
+- Maciel vê as pendências no Meu espaço e no Check-list por Andar, define o atendimento e confere a execução no local antes de resolver.
+- Somente u1 altera resolução, conferência do reparo ou encerra chamado legado vinculado a uma pendência aberta. A API impede outros perfis, inclusive o próprio autor e Alef, de encerrar falhas por alteração direta, remoção do ponto ou Conforme em mês posterior.
+- Protocolo de gravação X-GRC-Workflow: manager-review-v2. Clientes antigos recebem 426.
+- server/maintenance.js mantém apenas recuperação do acervo antigo para u1. Novos encaminhamentos e ações retornam 410; outros perfis recebem 403.
+- As tabelas maintenance_case/maintenance_event e seus anexos são preservados, mantendo backup integral de 12 tabelas.
+- Ativos do módulo antigo continuam somente como histórico de código, sem carregamento no app nem inclusão no cache.
+- Cache: grc-v32-conferencia-maciel. Validar as permissões no servidor, fluxo mensal e interface móvel antes da publicação.
