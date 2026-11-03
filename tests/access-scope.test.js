@@ -15,7 +15,7 @@ const fixture={v:2,CFG:{permsUsuarios:{},nomesUsuarios:{},pub:{repDoc:'PRIVATE_D
  leituras:[{id:'program',condoId:'c1',tipo:'agua',data:'2026-10-30',status:'Programada',anterior:100},{id:'read',condoId:'c1',tipo:'agua',data:'2026-10-29',status:'Registrada',medidor:100,leitura:100,consumo:5,valor:500,responsavel:'Maciel'}],
  brigInsp:[{id:'check',condoId:'c1',userId:'b2',status:'Em andamento'}],brigRondas:[],apontamentos:[{id:'repair',condoId:'c1',descricao:'Maintenance'}],manutObrig:[{id:'mandatory',condoId:'c1',anexo:'ref:secret_photo'}],estoque:[{id:'stock',nome:'Material',qtd:5}],pedidos:[],auditLog:[],notifs:[]};
 async function req(route,body,id='u1',headers={},method){
- const r=await fetch(base+route,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-Workflow':'monthly-review-v1','X-GRC-User':id,Origin:base,...(cookies[id]?{Cookie:cookies[id]}:{}),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});
+ const r=await fetch(base+route,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json','X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-Workflow':'manager-review-v2','X-GRC-User':id,Origin:base,...(cookies[id]?{Cookie:cookies[id]}:{}),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});
  return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')};
 }
 async function get(id='u1'){return (await req('/api/dados',undefined,id)).data;}
@@ -95,45 +95,49 @@ test('full backup restores all twelve tables including credentials, attachments 
  const corrupted=structuredClone(backup);corrupted.tables[0].rows.pop();await assert.rejects(()=>restoreEmptyDatabase(corrupted,db),/corrompido/);
 });
 
-test('a brigadista can resolve an existing shared defect without changing its author, floor, evidence or unrelated fields',async()=>{
- const forbidden=await get('b1');forbidden.snapshot.brigInsp.push({id:'unreviewed',condoId:'c1',status:'Concluído',pontos:[{sit:'NÃO CONFORME',revisaoPendente:true}]});assert.equal((await put(forbidden.snapshot,forbidden.versao,'b1')).status,403);
- const create=await get('b2');create.snapshot.brigInsp.push({id:'shared_defect',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-09-01',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária do corredor',sit:'NÃO CONFORME',obs:'Sem acender',fotos:[]}],historico:[]});
- assert.equal((await put(create.snapshot,create.versao,'b2')).status,200);
- const view=await get('b1'),row=view.snapshot.brigInsp.find(i=>i.id==='shared_defect');Object.assign(row.pontos[0],{resolvido:true,resolvidoPor:'Anderson',resolvidoEm:'2026-10-30',obsResolucao:'Substituída e conferida'});row.resolvido=true;
- const result=await put(view.snapshot,view.versao,'b1');assert.equal(result.status,200,JSON.stringify(result.data));
- const all=await get();const stored=all.snapshot.brigInsp.find(i=>i.id==='shared_defect');assert.equal(stored.userId,'b2');assert.equal(stored.pontos[0].resolvido,true);
- const attack=await get('b1');attack.snapshot.brigInsp.find(i=>i.id==='shared_defect').pontos[0].obs='Apagar relato do colega';assert.equal((await put(attack.snapshot,attack.versao,'b1')).status,403);
-});
 
-test('maintenance handoff deduplicates, scopes photos, enforces repair then verification and preserves recurrence history',async()=>{
- const s=await get('b2');
- s.snapshot.brigInsp.push({id:'handoff',condoId:'c1',andar:'23',sistema:'iluminacao',data:'2026-09-01',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária da escada',sit:'NÃO CONFORME',obs:'Não acende',fotos:['ref:b1_upload']}],historico:[]});
- assert.equal((await put(s.snapshot,s.versao,'b2')).status,200);
- assert.equal((await req('/api/atendimentos',undefined,'p1')).status,403);
- assert.equal((await req('/api/atendimentos',{inspectionId:'handoff',pointIndex:0},'u3')).status,403);
- const first=await req('/api/atendimentos',{inspectionId:'handoff',pointIndex:0},'b1');
- assert.equal(first.status,200,JSON.stringify(first.data));let c=first.data.atendimento;
- assert.equal(c.descricao,'Não acende');assert.equal(c.estado,'Encaminhado');
- const twice=await req('/api/atendimentos',{inspectionId:'handoff',pointIndex:0},'b2');
- assert.equal(twice.data.existente,true);assert.equal(twice.data.atendimento.id,c.id);
- assert.equal((await req('/api/atendimentos/'+c.id,undefined,'p1')).status,403);
- assert.equal((await req('/api/foto/b1_upload',undefined,'u3')).status,200);
- const wrong=await get('b1');wrong.snapshot.brigInsp.find(i=>i.id==='handoff').pontos[0].resolvido=true;
- assert.equal((await put(wrong.snapshot,wrong.versao,'b1')).status,403);
- const act=(acao,id,extra={})=>req('/api/atendimentos/'+c.id+'/acao',{acao,versao:c.versao,...extra},id);
- assert.equal((await act('confirmar','b1')).status,409);
- assert.equal((await act('concluir','b1',{descricao:'Substituída'})).status,403);
- assert.equal((await act('concluir','u3',{descricao:'Substituída',fotos:['ref:secret_photo']})).status,403);
- let r=await act('concluir','u3',{descricao:'Luminária substituída e testada',fotos:[]});assert.equal(r.status,200,JSON.stringify(r.data));c=r.data.atendimento;
- assert.equal(c.estado,'Aguardando conferência');
- assert.equal((await act('confirmar','u3')).status,403);
- r=await act('devolver','b1',{descricao:'Ainda falha no teste local'});assert.equal(r.status,200);c=r.data.atendimento;assert.equal(c.estado,'Em atendimento');
- r=await act('concluir','u3',{descricao:'Circuito corrigido e testado novamente',fotos:[]});assert.equal(r.status,200);c=r.data.atendimento;
- r=await act('confirmar','b1',{descricao:'Conferida no local, funcionando'});assert.equal(r.status,200,JSON.stringify(r.data));c=r.data.atendimento;
- assert.equal(c.estado,'Resolvido');const all=await get();assert.equal(all.snapshot.brigInsp.find(i=>i.id==='handoff').pontos[0].resolvido,true);
- assert.equal(all.snapshot.unidSind[0].iptu,'SECRET_TAX');
- const detail=await req('/api/atendimentos/'+c.id,undefined,'u3');assert.equal(detail.data.historico.length,5);
- const recur=await get('b2');recur.snapshot.brigInsp.push({id:'handoff-recur',condoId:'c1',andar:'23',sistema:'iluminacao',data:'2026-11-03',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária da escada',sit:'NÃO CONFORME',obs:'Voltou a falhar',fotos:[]}],historico:[]});assert.equal((await put(recur.snapshot,recur.versao,'b2')).status,200);
- r=await req('/api/atendimentos',{inspectionId:'handoff-recur',pointIndex:0},'b1');assert.equal(r.status,200);assert.notEqual(r.data.atendimento.id,c.id);
- assert.equal((await req('/api/atendimentos/'+r.data.atendimento.id,undefined,'b1')).data.mesmoPonto.length,2);
+test('brigada has only the monthly checklist; the retired service desk stays unavailable',async()=>{
+ for(const id of ids){
+  const s=await get(id);assert.ok(!s.snapshot._access.pages.includes('atendimentos'),id);
+  if(id.startsWith('b')){
+   assert.deepEqual(s.snapshot._access.pages,['inicio','config','brigada-inicio','brigada','brigada-form']);
+   assert.deepEqual(s.snapshot.brigRondas,[]);assert.deepEqual(s.snapshot.tasks,[]);
+  }
+  if(id!=='u1'){assert.equal((await req('/api/atendimentos',undefined,id)).status,403);assert.equal((await req('/api/atendimentos',{inspectionId:'check',pointIndex:0},id)).status,403);}
+ }
+ const archive=await req('/api/atendimentos',undefined,'u1');assert.equal(archive.status,200);assert.equal(archive.data.desativado,true);
+ assert.equal((await req('/api/atendimentos',{inspectionId:'check',pointIndex:0},'u1')).status,410);
+ const attempt=await get('b1');attempt.snapshot.brigRondas=[{id:'denied-round',condoId:'c1',userId:'b1',ok:true}];assert.equal((await put(attempt.snapshot,attempt.versao,'b1')).status,403);
+});
+test('only Maciel can verify and close checklist defects, including own reports, monthly carryovers and linked legacy tasks',async()=>{
+ const create=await get('b2');
+ create.snapshot.brigInsp.push({id:'manager_defect',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-09-01',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária do corredor',sit:'NÃO CONFORME',obs:'Sem acender',fotos:[]}],historico:[]});
+ assert.equal((await put(create.snapshot,create.versao,'b2')).status,200);
+ for(const id of ['b1','b2','u2']){
+  let s=await get(id),row=s.snapshot.brigInsp.find(i=>i.id==='manager_defect');
+  Object.assign(row.pontos[0],{resolvido:true,resolvidoPor:id,obsResolucao:'Serviço conferido'});row.resolvido=true;
+  assert.equal((await put(s.snapshot,s.versao,id)).status,403,id);
+ }
+ let bad=await get('b2');bad.snapshot.brigInsp.find(i=>i.id==='manager_defect').pontos=[];assert.equal((await put(bad.snapshot,bad.versao,'b2')).status,403);
+ bad=await get('b2');bad.snapshot.brigInsp.find(i=>i.id==='manager_defect').pontos[0].sit='CONFORME';assert.equal((await put(bad.snapshot,bad.versao,'b2')).status,403);
+ bad=await get('b2');bad.snapshot.brigInsp.push({id:'false-month',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-10-01',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária do corredor',sit:'CONFORME'}]});assert.equal((await put(bad.snapshot,bad.versao,'b2')).status,403);
+ const next=await get('b2');next.snapshot.brigInsp.push({id:'manager_review',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-10-01',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária do corredor',sit:'NÃO CONFORME',obs:'Sem acender',fotos:[],repeteDe:'manager_defect',revisaoPendente:false,confirmadoPor:'Nilson'}]});assert.equal((await put(next.snapshot,next.versao,'b2')).status,200);
+ const link=await get();link.snapshot.tasks.push({id:'linked-checklist',condoId:'c1',tipo:'Manutencao',origem:'brigada',brigInspId:'manager_defect',titulo:'Trocar luminária',status:'Pendente',responsavel:'Cleiton'});assert.equal((await put(link.snapshot,link.versao)).status,200);
+ const bypass=await get('u3');bypass.snapshot.tasks.find(t=>t.id==='linked-checklist').status='Concluída';assert.equal((await put(bypass.snapshot,bypass.versao,'u3')).status,403);
+ const manager=await get();for(const i of manager.snapshot.brigInsp.filter(i=>['manager_defect','manager_review'].includes(i.id))){Object.assign(i.pontos[0],{resolvido:true,resolvidoPor:'Maciel',obsResolucao:'Luminária substituída e conferida no local'});i.resolvido=true;}
+ assert.equal((await put(manager.snapshot,manager.versao)).status,200);
+ const all=await get();for(const i of all.snapshot.brigInsp.filter(i=>['manager_defect','manager_review'].includes(i.id))){assert.equal(i.pontos[0].resolvidoPorId,'u1');assert.equal(i.userId,'b2');}
+ const after=await get('b2');after.snapshot.brigInsp.push({id:'after-manager-review',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-11-01',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária do corredor',sit:'CONFORME'}]});assert.equal((await put(after.snapshot,after.versao,'b2')).status,200);
+ assert.equal((await get()).snapshot.unidSind[0].iptu,'SECRET_TAX');
+ const legacy=await get('b2');assert.equal((await put(legacy.snapshot,legacy.versao,'b2',{'X-GRC-Workflow':'monthly-review-v1'})).status,426);
+});
+test('retired maintenance records and evidence are preserved for Maciel without reopening access to the team',async()=>{
+ const c={id:'archived_case',key:'fixture_key',condoId:'c1',ponto:'Histórico preservado',fotos:['ref:archive_evidence'],reparoFotos:[]};
+ await db.execute({sql:'INSERT INTO maintenance_case VALUES(?,?,?,?,?,?,?)',args:[c.id,c.key,c.key,'c1','Encaminhado',1,JSON.stringify(c)]});
+ await db.execute({sql:'INSERT INTO maintenance_event VALUES(?,?,?,?,?,?,?)',args:['event_fixture',c.id,new Date().toISOString(),'b1','Anderson','Encaminhado','Histórico original']});
+ assert.equal((await req('/api/foto/archive_evidence',{dados:'data:image/png;base64,aGVsbG8='},'u1',{},'PUT')).status,200);
+ assert.equal((await req('/api/atendimentos/'+c.id,undefined,'u1')).data.historico[0].note,'Histórico original');
+ for(const id of ['b1','u2','u3','p1']){assert.equal((await req('/api/atendimentos/'+c.id,undefined,id)).status,403);assert.equal((await req('/api/foto/archive_evidence',undefined,id)).status,404);}
+ assert.equal((await req('/api/atendimentos/'+c.id+'/acao',{acao:'confirmar',versao:1},'u1')).status,410);
+ assert.equal((await db.execute({sql:'SELECT state FROM maintenance_case WHERE id=?',args:[c.id]})).rows[0].state,'Encaminhado');
 });
