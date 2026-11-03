@@ -24,7 +24,7 @@ function workflowConfirmAll(id){
 }
 function workflowCheckNotice(i){
   const n=i.pontos.filter(p=>p.revisaoPendente).length;if(!n||i.status==='Concluído')return '';
-  return `<section class="workflow-review" aria-label="Pendências de meses anteriores"><strong>${n} pendência(s) anterior(es) carregada(s)</strong><p>Descrição, falhas e fotos foram mantidas. Confira no local: confirme que continuam ou marque Conforme após verificar o reparo. Elas não se encerram apenas porque o mês virou.</p><button class="btn" onclick="workflowConfirmAll('${i.id}')">Conferi: todas continuam pendentes</button></section>`;
+  return `<section class="workflow-review" aria-label="Pendências de meses anteriores"><strong>${n} pendência(s) anterior(es) carregada(s)</strong><p>Descrição, falhas e fotos foram mantidas. Revise os pontos no check-list mensal e mantenha as evidências. O atendimento e a conferência do serviço são de Maciel; a virada do mês não encerra a pendência.</p><button class="btn" onclick="workflowConfirmAll('${i.id}')">Conferi: todas continuam pendentes</button></section>`;
 }
 function workflowState(collection,id){
   const current=(dbSnapshot()[collection]||[]).find(r=>r.id===id);if(!current)return 'Sem registro';
@@ -83,7 +83,6 @@ function workflowDraftSave(){
   const forms=workflowDrafts();const action=workflowDraftContext.key;const attachments={};
   if(/saveApont/i.test(action))attachments.apontamentos=_fotosTmp.filter(ehRef);
   if(/brigRondaSalvar/i.test(action))attachments.ronda=_rondaFotos.filter(ehRef);
-  if(/serviceDeskSave/i.test(action))attachments.reparo=serviceDeskRepairPhotos.filter(ehRef);
   forms[workflowDraftContext.key]={values,attachments,updatedAt:Date.now()};workflowDraftWrite(forms);
   const label=document.querySelector('#workflowDraftStatus');if(label)label.textContent='Rascunho salvo neste aparelho';
 }
@@ -96,7 +95,6 @@ function workflowDraftResume(){
     if(draft.attachments?.apontamentos){_fotosTmp=draft.attachments.apontamentos.slice();const box=document.querySelector('#apFotos');if(box)box.innerHTML=_fotosTmp.map((f,n)=>thumbFoto(f,n)).join('');}
     if(draft.attachments?.ronda){_rondaFotos=draft.attachments.ronda.slice();brigRondaFotosBox();}
     if(document.querySelector('#ltMedidor')){calcLeit();leitAvaliarObs();}
-    if(draft.attachments?.reparo){serviceDeskRepairPhotos=draft.attachments.reparo.slice();const box=document.querySelector('#deskPhotoStatus');if(box)box.textContent=serviceDeskRepairPhotos.length+' foto(s) recuperada(s).';}
     document.querySelector('#workflowDraftStatus').textContent='Rascunho recuperado · confira antes de salvar';
     document.querySelector('#workflowDraftResume').hidden=true;
   }finally{workflowDraftRestoring=false}
