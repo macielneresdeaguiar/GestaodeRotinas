@@ -2,7 +2,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 const clone=x=>structuredClone(x);
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
-const all=['atendimentos','inicio','dashboard','hoje','rotina','tarefas-adm','tarefas-gestor','afazeres','calendario','notas','cessoes','vendascustas','publicidade','emails','leituras','analises','unidades','ocupacao','locacao','unidsind','brigada-inicio','brigada','brigada-form','brigada-ronda','apontamentos','manutobrig','estoque','pedidos','relatorios','relmensal','config'];
+const all=['inicio','dashboard','hoje','rotina','tarefas-adm','tarefas-gestor','afazeres','calendario','notas','cessoes','vendascustas','publicidade','emails','leituras','analises','unidades','ocupacao','locacao','unidsind','brigada-inicio','brigada','brigada-form','brigada-ronda','apontamentos','manutobrig','estoque','pedidos','relatorios','relmensal','config'];
 export const COLLECTIONS=['tasks','afazeres','notas','cessoes','vcUnidades','vcCiclos','vcVendas','anuncios','leituras','analises','salas','unidSind','brigInsp','brigRondas','apontamentos','manutObrig','estoque','movEstoque','pedidos','prestadores','auditLog','notifs'];
 const names={u1:'Maciel',u2:'Alef',u3:'Cleiton',u4:'Fernanda',b1:'Anderson',b2:'Nilson',b3:'Suelen',b4:'Alana',p1:'Portaria 1',p2:'Portaria 2',p3:'Portaria 3',p4:'Portaria 4',p5:'Portaria 5',p6:'Portaria 6'};
 export const FULL_READ=new Set(['u1','u2']);
@@ -24,13 +24,13 @@ export function accessFor(id,snapshot){
   // Explicit owner requirement: these two accounts always see every module.
   if(FULL_READ.has(id))Object.assign(p,defaults(id));
   if(!FULL_READ.has(id))p.sindico=false;
+  if(/^b[1-4]$/.test(id)){Object.assign(p,{ronda:false,manutencao:false,apontamentos:false,manutobrig:false,estoque:false,estoqueTotal:false,leituras:false,leiturasSimples:false,ia:false,edit:false,complete:false,delete:false});p.tipos=[];}
   const pages=new Set(['inicio','config']);
-  if(!p.leiturasSimples)pages.add('dashboard');
+  if(!p.leiturasSimples&&!/^b[1-4]$/.test(id))pages.add('dashboard');
   if(p.tipos.length)for(const k of ['hoje','rotina','tarefas-adm','afazeres','calendario','notas','cessoes','vendascustas','publicidade','emails','leituras','analises','unidades','ocupacao','locacao','relatorios','relmensal'])pages.add(k);
   if(p.tipos.includes('Gestor'))pages.add('tarefas-gestor');
-  if(p.brigada)for(const k of ['brigada-inicio','brigada','brigada-form','brigada-ronda'])pages.add(k);
+  if(p.brigada)for(const k of ['brigada-inicio','brigada','brigada-form'])pages.add(k);
   if(p.ronda)pages.add('brigada-ronda');
-  if(p.brigada||p.manutencao)pages.add('atendimentos');
   if(p.leituras)pages.add('leituras');
   if(p.manutencao)pages.add('apontamentos');if(p.manutobrig)pages.add('manutobrig');
   if(p.estoque){pages.add('estoque');pages.add('pedidos');}
@@ -48,11 +48,11 @@ function inCondo(row,a,k){
 function allowedCollection(k,a){
   if(a.fullRead)return true;
   const p=a.perms;
-  if(['tasks','afazeres'].includes(k))return p.tipos.length||p.manutencao||p.brigada||p.ronda;
+  if(['tasks','afazeres'].includes(k))return p.tipos.length||p.manutencao||p.ronda;
   if(['notas','cessoes','vcUnidades','vcCiclos','vcVendas','anuncios','analises','salas','prestadores'].includes(k))return !!p.tipos.length;
   if(k==='leituras')return p.leituras||!!p.tipos.length;
   if(k==='brigInsp')return p.brigada;
-  if(k==='brigRondas')return p.brigada||p.ronda||p.manutencao;
+  if(k==='brigRondas')return p.ronda||p.manutencao;
   if(k==='apontamentos')return p.manutencao;
   if(k==='manutObrig')return p.manutobrig;
   if(['estoque','movEstoque','pedidos'].includes(k))return p.estoque;
@@ -91,23 +91,6 @@ export function scopedSnapshot(snapshot,a){
 }
 function reject(message){const e=new Error(message);e.status=403;throw e;}
 function owned(row,a){return row.userId===a.userId||row.criadoPorId===a.userId||row.criadoPor===a.name||row.autor===a.name||row.solicitante===a.name||row.responsavel===a.name;}
-function checklistResolutionOnly(old,row,a){
-  if(!a.perms.brigada||!Array.isArray(old.pontos)||!Array.isArray(row.pontos)||old.pontos.length!==row.pontos.length)return false;
-  const allowedTop=new Set(['pontos','historico','resolvido']);
-  if([...new Set([...Object.keys(old),...Object.keys(row)])].some(k=>!allowedTop.has(k)&&!same(old[k],row[k])))return false;
-  let changed=false;
-  for(let n=0;n<old.pontos.length;n++){
-    const prior=old.pontos[n],next=row.pontos[n];if(same(prior,next))continue;
-    const allowed=new Set(['resolvido','resolvidoEm','resolvidoPor','obsResolucao']);
-    if([...new Set([...Object.keys(prior),...Object.keys(next)])].some(k=>!allowed.has(k)&&!same(prior[k],next[k])))return false;
-    if(prior.sit!=='NÃO CONFORME'||next.resolvido!==true||next.resolvidoPor!==a.name||typeof next.obsResolucao!=='string'||next.obsResolucao.length>4000)return false;
-    changed=true;
-  }
-  const before=old.historico||[],after=row.historico||[];
-  if(!Array.isArray(after)||!same(after.slice(0,before.length),before)||after.slice(before.length).some(h=>h.q!==a.name))return false;
-  if(row.resolvido&&!row.pontos.filter(p=>p.sit==='NÃO CONFORME').every(p=>p.resolvido===true))return false;
-  return changed;
-}
 function writeAllowed(k,a,old,row){
   const p=a.perms;
   if(a.userId==='u1')return true;
@@ -115,14 +98,52 @@ function writeAllowed(k,a,old,row){
   if(!old)return p.create;
   if(k==='leituras'&&old.status!=='Registrada')return p.create;
   if(k==='leituras'&&row.status!=='Registrada'&&old.status!=='Registrada')return p.create;
-  if(k==='brigInsp'||k==='brigRondas')return p.edit||owned(old,a)||(k==='brigInsp'&&checklistResolutionOnly(old,row,a));
+  if(k==='brigInsp'||k==='brigRondas')return p.edit||owned(old,a);
   if(['estoque','movEstoque'].includes(k))return p.estoqueTotal;
   if(k==='pedidos')return p.delete||owned(old,a)&&old.status==='Aberto'&&row.status==='Aberto';
   if(k==='tasks'&&!p.manutencao&&!p.tipos.length)return false; // handled as incident confirmation below
   return p.edit;
 }
+
+const checklistKey=(i,p)=>JSON.stringify([i.condoId||'c1',String(i.andar),i.sistema,String(p.desc||'').normalize('NFC').trim().replace(/\s+/g,' ').toLowerCase()]);
+function unresolvedChecklist(s,i,p){
+ if(p.sit!=='NÃO CONFORME'||p.resolvido||i.resolvido)return false;
+ const linked=(s.tasks||[]).filter(t=>t.brigInspId===i.id||t.brigInspIds?.includes(i.id)||i.chamadoId===t.id);
+ if(linked.length)return !linked.every(t=>t.status==='Concluída'||t.arquivada);
+ return !(s.brigInsp||[]).some(n=>n.id!==i.id&&n.status==='Concluído'&&n.condoId===i.condoId&&String(n.andar)===String(i.andar)&&n.sistema===i.sistema&&
+ String(n.data+' '+(n.hora||''))>String(i.data+' '+(i.hora||''))&&(n.pontos||[]).some(q=>q.desc===p.desc&&q.sit==='CONFORME'&&(!q.repeteDe||q.reparoConferido)));
+}
+function assertManagerChecklist(incoming,current,a){
+ if(a.userId==='u1')return;
+ const protectedPoint=['resolvido','resolvidoEm','resolvidoPor','resolvidoPorId','obsResolucao','reparoConferido','reparoConferidoPorId','atendimentoId'];
+ const oldMap=new Map((current.brigInsp||[]).map(i=>[i.id,i]));
+ const open=new Set();
+ for(const i of current.brigInsp||[])for(const p of i.pontos||[])if(unresolvedChecklist(current,i,p))open.add(checklistKey(i,p));
+ for(const i of Array.isArray(incoming.brigInsp)?incoming.brigInsp:[]){
+  const old=oldMap.get(i.id);
+  if(!same(i.resolvido,old?.resolvido))reject('Somente Maciel confere e encerra pendências do check-list.');
+  for(const [idx,p] of (i.pontos||[]).entries()){
+   const prior=old?.pontos?.[idx];
+   for(const key of protectedPoint)if(!same(p[key],prior?.[key]))reject('Somente Maciel registra a conferência e a resolução do serviço.');
+   if(p.sit!=='NÃO CONFORME'&&open.has(checklistKey(i,p)))reject('Esta pendência aguarda a conferência de Maciel. Registre a revisão mensal sem encerrá-la.');
+  }
+  for(const [idx,p]of (old?.pontos||[]).entries())if(unresolvedChecklist(current,old,p)){
+   const next=i.pontos?.[idx];
+   if(!next||next.desc!==p.desc||next.sit!=='NÃO CONFORME'||i.condoId!==old.condoId||String(i.andar)!==String(old.andar)||i.sistema!==old.sistema)reject('A pendência anterior deve ser preservada até a conferência de Maciel.');
+  }
+ }
+ for(const t of Array.isArray(incoming.tasks)?incoming.tasks:[]){
+  const old=(current.tasks||[]).find(x=>x.id===t.id);if(!old)continue;
+  if((t.status==='Concluída'&&old.status!=='Concluída')||(t.arquivada&&!old.arquivada)){
+   const related=(current.brigInsp||[]).filter(i=>t.brigInspId===i.id||t.brigInspIds?.includes(i.id)||i.chamadoId===t.id);
+   if(related.some(i=>(i.pontos||[]).some(p=>unresolvedChecklist(current,i,p))))reject('Somente Maciel confere o serviço vinculado ao check-list.');
+  }
+ }
+}
+
 export function mergeScoped(incoming,current,a){
   if(!incoming||incoming.v!==2||!incoming.CFG)throw Object.assign(new Error('snapshot_invalido'),{status:400});
+  assertManagerChecklist(incoming,current,a);
   const result=clone(current),view=scopedSnapshot(current,a);
   for(const k of COLLECTIONS){
     if(['notifs','auditLog'].includes(k))continue;
@@ -155,6 +176,11 @@ export function mergeScoped(incoming,current,a){
       if(k==='brigInsp'&&row.status==='Concluído'&&(row.pontos||[]).some(p=>p.revisaoPendente))reject('Confira as pendências anteriores antes de concluir o check-list.');
       if(!writeAllowed(k,a,old,row))reject('Esta conta não pode alterar este registro de '+k+'.');
       const clean={...(old||{}),...clone(row)};
+      if(k==='brigInsp'&&a.userId==='u1')for(const [idx,p]of (clean.pontos||[]).entries()){
+        const prior=old?.pontos?.[idx];
+        if(p.resolvido&&!prior?.resolvido){p.resolvidoPor=a.name;p.resolvidoPorId='u1';}
+        if(p.reparoConferido&&!prior?.reparoConferido)p.reparoConferidoPorId='u1';
+      }
       if(k==='leituras'&&a.perms.leiturasSimples){for(const key of ['valor','custo','tarifa','valorAgua','valorEnergia','total'])if(key in row&&!same(row[key],shown?.[key]))reject('Valores financeiros não são permitidos neste perfil.');}
       if(k==='pedidos'&&!old)Object.assign(clean,{status:'Aberto',decisao:null,decisor:null,motivo:'',solicitante:a.name});
       if(k==='leituras'&&!a.fullRead&&row.status==='Registrada'&&old?.status!=='Registrada')clean.responsavel=a.name;
