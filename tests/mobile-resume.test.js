@@ -199,7 +199,7 @@ test('mobile service desk renders a real linked case, keeps repair drafts and co
  assert.equal(c.estado,'Encaminhado');
  w.serviceDeskActionForm(c.id,'concluir',c.versao);w.workflowPrepareDraft();w.document.querySelector('#deskNote').value='Luminária substituída e testada';w.eval("serviceDeskRepairPhotos=['ref:fixture_repair'];");w.workflowDraftSave();w.closeModal();w.workflowPrepareDraft();
  w.serviceDeskActionForm(c.id,'concluir',c.versao);w.workflowPrepareDraft();w.workflowDraftResume();assert.equal(w.document.querySelector('#deskNote').value,'Luminária substituída e testada');assert.equal(w.eval('serviceDeskRepairPhotos[0]'),'ref:fixture_repair');
- w.eval('serviceDeskRepairPhotos=[];');await w.serviceDeskSave(c.id,'concluir',c.versao);assert.match(w.document.querySelector('#content').textContent,/Aguardando conferência/,w.document.body.textContent.slice(-2500));
+ w.eval('serviceDeskRepairPhotos=[];');await w.serviceDeskSave(c.id,'concluir',c.versao);assert.match(w.document.querySelector('#content').textContent,/Aguardando conferência/,JSON.stringify({toast:w.document.querySelector('#toast').textContent,modal:w.document.querySelector('#modalBody').textContent,busy:w.eval('serviceDeskBusy'),requests:requestCounts}));
  c=w.eval('serviceDeskData.atendimentos[0]');await w.serviceDeskOpen(c.id);assert.match(w.document.querySelector('#modalFoot').textContent,/Conferi no local/);
  w.serviceDeskActionForm(c.id,'confirmar',c.versao);w.document.querySelector('#deskNote').value='Conferido presencialmente';await w.serviceDeskSave(c.id,'confirmar',c.versao);
  assert.equal(w.eval('serviceDeskData.atendimentos[0].estado'),'Resolvido');
