@@ -14,7 +14,15 @@ Política `scoped-2026-10-30`, banco `DB_VER=2`.
 - API filtra leitura, gravação, anexos e respostas de conflito.
 - Carteira particular em tabela separada; cache por conta e permissões.
 - Início móvel por função, botões maiores, área de Trabalho, tabelas identificadas.
-- Versões anteriores recuperáveis e backup integral privado das dez tabelas.
+- Versões anteriores recuperáveis e backup integral privado das doze tabelas.
+
+## Brigada e manutenção — 03/11/2026
+- Menu “Brigada e manutenção”: encaminhamento sem duplicar, descrição e fotos do ponto.
+- Manutenção registra o reparo; brigada confere no local ou devolve para nova atuação.
+- Responsável, prazo, pendências antigas e histórico de recorrências por ponto.
+- Servidor restringe perfis, condomínios e fotos; atendimentos em duas tabelas próprias.
+- Check-list mensal mantém a pendência aberta até a conferência.
+- Ativos: public/service-desk.js e .css; cache grc-v31-manutencao-integrada.
 
 ## Executar
 
