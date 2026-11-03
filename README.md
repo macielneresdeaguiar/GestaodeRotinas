@@ -16,13 +16,13 @@ Política `scoped-2026-10-30`, banco `DB_VER=2`.
 - Início móvel por função, botões maiores, área de Trabalho, tabelas identificadas.
 - Versões anteriores recuperáveis e backup integral privado das doze tabelas.
 
-## Brigada e manutenção — 03/11/2026
-- Menu “Brigada e manutenção”: encaminhamento sem duplicar, descrição e fotos do ponto.
-- Manutenção registra o reparo; brigada confere no local ou devolve para nova atuação.
-- Responsável, prazo, pendências antigas e histórico de recorrências por ponto.
-- Servidor restringe perfis, condomínios e fotos; atendimentos em duas tabelas próprias.
-- Check-list mensal mantém a pendência aberta até a conferência.
-- Ativos: public/service-desk.js e .css; cache grc-v31-manutencao-integrada.
+## Brigada mensal e gestão de Maciel — 03/11/2026
+- A brigada registra somente o check-list mensal e mantém evidências das falhas.
+- Maciel recebe as pendências no Meu espaço e no Check-list por Andar; somente ele confere e registra a solução.
+- O módulo separado Brigada e manutenção foi retirado. Seus registros antigos são preservados em arquivo somente para Maciel, sem novas ações.
+- A API protege resolução e conferência contra alterações por outros perfis e clientes antigos (manager-review-v2).
+- As pendências permanecem nos meses seguintes até a conferência de Maciel.
+- Cache grc-v32-conferencia-maciel; backup integral mantém 12 tabelas.
 
 ## Executar
 
