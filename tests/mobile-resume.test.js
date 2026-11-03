@@ -187,22 +187,29 @@ test('drafts survive reopening a form, preserve unsent values, exclude passwords
  assert.deepEqual(errors,[]);await settle(w);w.close();saved={};
 });
 
-test('mobile service desk renders a real linked case, keeps repair drafts and completes the verification cycle',async()=>{
+
+test('the mobile app removes service desk and brigade repair controls while Maciel receives checklist defects',async()=>{
  saved={};failure='';const {w,errors}=await open();await until(()=>w.eval('AUTH.ready&&!AUTH.initializing'),'Profiles');w.document.querySelector('#loginPass').value=password;await w.doLogin();await settle(w);
- const headers={'Content-Type':'application/json',Cookie:cookie,Origin:base,'X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-Workflow':'monthly-review-v1','X-GRC-User':'u1'};
+ const headers={'Content-Type':'application/json',Cookie:cookie,Origin:base,'X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-Workflow':'manager-review-v2','X-GRC-User':'u1'};
  const d=await (await fetch(base+'/api/dados',{headers})).json();
- d.snapshot.brigInsp=[{id:'desk_mobile',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-09-01',status:'Concluído',userId:'b1',pontos:[{desc:'Luminária do corredor',sit:'NÃO CONFORME',obs:'Falha de iluminação',fotos:[]}]}];
- const save=await fetch(base+'/api/dados',{method:'POST',headers,body:JSON.stringify({snapshot:d.snapshot,versaoBase:d.versao})});assert.equal(save.status,200);
- w.go('atendimentos');await w.viewServiceDesk();assert.match(w.document.querySelector('#content').textContent,/ainda sem encaminhamento/);
- await w.serviceDeskCreate('desk_mobile',0);assert.match(w.document.querySelector('#modalBody').textContent,/Falha de iluminação/);
- let c=w.eval('serviceDeskData.atendimentos[0]');if(!c){await w.viewServiceDesk();c=w.eval('serviceDeskData.atendimentos[0]');}
- assert.equal(c.estado,'Encaminhado');
- w.serviceDeskActionForm(c.id,'concluir',c.versao);w.workflowPrepareDraft();w.document.querySelector('#deskNote').value='Luminária substituída e testada';w.eval("serviceDeskRepairPhotos=['ref:fixture_repair'];");w.workflowDraftSave();w.closeModal();w.workflowPrepareDraft();
- w.serviceDeskActionForm(c.id,'concluir',c.versao);w.workflowPrepareDraft();w.workflowDraftResume();assert.equal(w.document.querySelector('#deskNote').value,'Luminária substituída e testada');assert.equal(w.eval('serviceDeskRepairPhotos[0]'),'ref:fixture_repair');
- w.eval('serviceDeskRepairPhotos=[];');await w.serviceDeskSave(c.id,'concluir',c.versao);assert.match(w.document.querySelector('#content').textContent,/Aguardando conferência/,JSON.stringify({toast:w.document.querySelector('#toast').textContent,modal:w.document.querySelector('#modalBody').textContent,busy:w.eval('serviceDeskBusy'),requests:requestCounts}));
- c=w.eval('serviceDeskData.atendimentos[0]');await w.serviceDeskOpen(c.id);assert.match(w.document.querySelector('#modalFoot').textContent,/Conferi no local/);
- w.serviceDeskActionForm(c.id,'confirmar',c.versao);w.document.querySelector('#deskNote').value='Conferido presencialmente';await w.serviceDeskSave(c.id,'confirmar',c.versao);
- assert.equal(w.eval('serviceDeskData.atendimentos[0].estado'),'Resolvido');
- w.serviceDeskHistoryList();assert.match(w.document.querySelector('#modalBody').textContent,/Luminária do corredor/);
+ d.snapshot.brigInsp=[{id:'owner_mobile',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-09-01',status:'Concluído',userId:'b1',pontos:[{desc:'Luminária do corredor',sit:'NÃO CONFORME',obs:'Falha de iluminação',fotos:[]}],historico:[]}];
+ const sent=await fetch(base+'/api/dados',{method:'POST',headers,body:JSON.stringify({snapshot:d.snapshot,versaoBase:d.versao})});assert.equal(sent.status,200);
+ await w.syncBaixar();await settle(w);w.eval('SYNC.ligado=false;');
+ w.go('inicio');assert.match(w.document.querySelector('#content').textContent,/pendência\(s\) do check-list para sua gestão/);
+ assert.ok(!w.itensNavegacao().some(i=>i[0]==='atendimentos'));assert.equal(typeof w.serviceDeskOpen,'undefined');
+ w.go('brigada');assert.match(w.document.querySelector('#content').textContent,/Pendências sob gestão de Maciel/);
+ w.brigAcompanharInsp('owner_mobile');assert.ok(w.document.querySelector('#modalFoot [onclick*="brigResolverPendencia"]'));w.closeModal();
+ const {accessFor}=await import('../server/access.js');const a=accessFor('b1',{CFG:{}});
+ w.eval('scopeApplyMetadata('+JSON.stringify(a)+');session=USERS.find(u=>u.id==="b1");');
+ assert.ok(!w.itensNavegacao().some(i=>['atendimentos','brigada-ronda','dashboard'].includes(i[0])));
+ assert.ok(!w.tabsDoPerfil().some(i=>i[0]==='brigada-ronda'));
+ w.go('brigada-ronda');assert.notEqual(w.eval('page'),'brigada-ronda');w.go('atendimentos');assert.notEqual(w.eval('page'),'atendimentos');
+ const before=w.eval('JSON.stringify(_bi("owner_mobile"))');w.brigResolverPendencia('owner_mobile',0,'Tentativa sem autoridade');assert.equal(w.eval('JSON.stringify(_bi("owner_mobile"))'),before);
+ const next=w.brigNova('24','iluminacao');next.id='brigade-monthly';next.data='2026-11-03';w.eval('brigInsp.push('+JSON.stringify(next)+');');
+ w.brigSit(next.id,0,'CONFORME');assert.equal(w.eval('_bi("brigade-monthly").pontos[0].sit'),'NÃO CONFORME');
+ w.workflowConfirmAll(next.id);w.brigConcluir(next.id);assert.equal(w.eval('_bi("brigade-monthly").status'),'Concluído');assert.equal(w.brigNCAbertas('c1').length,1);
+ w.brigAcompanharInsp('owner_mobile');assert.equal(w.document.querySelectorAll('#modal [onclick*="brigResolverPendencia"]').length,0);w.closeModal();
+ w.eval('scopeApplyMetadata('+JSON.stringify(accessFor('u1',{CFG:{}}))+');session=USERS.find(u=>u.id==="u1");');
+ w.prompt=()=> 'Serviço executado e conferido presencialmente';w.confirm=()=>true;w.brigResolverPendencia('owner_mobile',0);assert.equal(w.brigNCAbertas('c1').length,0);assert.equal(w.eval('_bi("owner_mobile").pontos[0].resolvidoPorId'),'u1');
  assert.deepEqual(errors,[]);await settle(w);w.close();saved={};
 });
