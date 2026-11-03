@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFile,writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { db } from './db.js';
-export const BACKUP_TABLES=['workspace','workspace_private','workspace_backup','evento','foto','foto_owner','auth_user','auth_session','auth_meta','auth_throttle'];
+export const BACKUP_TABLES=['workspace','workspace_private','workspace_backup','evento','foto','foto_owner','auth_user','auth_session','auth_meta','auth_throttle','maintenance_case','maintenance_event'];
 const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 export async function exportDatabase(client=db){
  const tx=await client.transaction('read');

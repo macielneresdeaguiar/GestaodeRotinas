@@ -2,7 +2,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 const clone=x=>structuredClone(x);
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
-const all=['inicio','dashboard','hoje','rotina','tarefas-adm','tarefas-gestor','afazeres','calendario','notas','cessoes','vendascustas','publicidade','emails','leituras','analises','unidades','ocupacao','locacao','unidsind','brigada-inicio','brigada','brigada-form','brigada-ronda','apontamentos','manutobrig','estoque','pedidos','relatorios','relmensal','config'];
+const all=['atendimentos','inicio','dashboard','hoje','rotina','tarefas-adm','tarefas-gestor','afazeres','calendario','notas','cessoes','vendascustas','publicidade','emails','leituras','analises','unidades','ocupacao','locacao','unidsind','brigada-inicio','brigada','brigada-form','brigada-ronda','apontamentos','manutobrig','estoque','pedidos','relatorios','relmensal','config'];
 export const COLLECTIONS=['tasks','afazeres','notas','cessoes','vcUnidades','vcCiclos','vcVendas','anuncios','leituras','analises','salas','unidSind','brigInsp','brigRondas','apontamentos','manutObrig','estoque','movEstoque','pedidos','prestadores','auditLog','notifs'];
 const names={u1:'Maciel',u2:'Alef',u3:'Cleiton',u4:'Fernanda',b1:'Anderson',b2:'Nilson',b3:'Suelen',b4:'Alana',p1:'Portaria 1',p2:'Portaria 2',p3:'Portaria 3',p4:'Portaria 4',p5:'Portaria 5',p6:'Portaria 6'};
 export const FULL_READ=new Set(['u1','u2']);
@@ -30,6 +30,7 @@ export function accessFor(id,snapshot){
   if(p.tipos.includes('Gestor'))pages.add('tarefas-gestor');
   if(p.brigada)for(const k of ['brigada-inicio','brigada','brigada-form','brigada-ronda'])pages.add(k);
   if(p.ronda)pages.add('brigada-ronda');
+  if(p.brigada||p.manutencao)pages.add('atendimentos');
   if(p.leituras)pages.add('leituras');
   if(p.manutencao)pages.add('apontamentos');if(p.manutobrig)pages.add('manutobrig');
   if(p.estoque){pages.add('estoque');pages.add('pedidos');}

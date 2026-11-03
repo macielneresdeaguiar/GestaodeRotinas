@@ -80,13 +80,13 @@ test('ronda creates its linked maintenance incident without granting administrat
  const backups=await db.execute('SELECT snapshot,privado FROM workspace_backup ORDER BY versao');assert.ok(backups.rows.length>=3);assert.equal(JSON.parse(backups.rows[0].snapshot).tasks[0].titulo,'SECRET_ADMIN');assert.equal(JSON.parse(backups.rows[0].privado).unidSind[0].iptu,'SECRET_TAX');
 });
 
-test('full backup restores all ten tables including credentials, attachments and private portfolio into a separate empty database',async()=>{
+test('full backup restores all twelve tables including credentials, attachments and private portfolio into a separate empty database',async()=>{
  process.env.TURSO_DATABASE_URL='file:'+path.join(dir,'test.sqlite');
  const {exportDatabase,restoreEmptyDatabase,BACKUP_TABLES}=await import('../server/backup.js');
- const backup=await exportDatabase(db);assert.equal(backup.tables.length,10);
+ const backup=await exportDatabase(db);assert.equal(backup.tables.length,12);
  const target=createClient({url:'file:'+path.join(dir,'restored.sqlite')});
  try{
-  const result=await restoreEmptyDatabase(backup,target);assert.equal(result.tables,10);
+  const result=await restoreEmptyDatabase(backup,target);assert.equal(result.tables,12);
   for(const name of BACKUP_TABLES){const a=await db.execute('SELECT COUNT(*) n FROM '+name),b=await target.execute('SELECT COUNT(*) n FROM '+name);assert.equal(b.rows[0].n,a.rows[0].n,name);}
   assert.equal(JSON.parse((await target.execute('SELECT snapshot FROM workspace_private')).rows[0].snapshot).unidSind[0].iptu,'SECRET_TAX');
   assert.equal((await target.execute("SELECT scheme FROM auth_user WHERE id='u1'")).rows[0].scheme,'scrypt-v1');
@@ -103,4 +103,37 @@ test('a brigadista can resolve an existing shared defect without changing its au
  const result=await put(view.snapshot,view.versao,'b1');assert.equal(result.status,200,JSON.stringify(result.data));
  const all=await get();const stored=all.snapshot.brigInsp.find(i=>i.id==='shared_defect');assert.equal(stored.userId,'b2');assert.equal(stored.pontos[0].resolvido,true);
  const attack=await get('b1');attack.snapshot.brigInsp.find(i=>i.id==='shared_defect').pontos[0].obs='Apagar relato do colega';assert.equal((await put(attack.snapshot,attack.versao,'b1')).status,403);
+});
+
+test('maintenance handoff deduplicates, scopes photos, enforces repair then verification and preserves recurrence history',async()=>{
+ const s=await get('b2');
+ s.snapshot.brigInsp.push({id:'handoff',condoId:'c1',andar:'23',sistema:'iluminacao',data:'2026-09-01',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária da escada',sit:'NÃO CONFORME',obs:'Não acende',fotos:['ref:b1_upload']}],historico:[]});
+ assert.equal((await put(s.snapshot,s.versao,'b2')).status,200);
+ assert.equal((await req('/api/atendimentos',undefined,'p1')).status,403);
+ assert.equal((await req('/api/atendimentos',{inspectionId:'handoff',pointIndex:0},'u3')).status,403);
+ const first=await req('/api/atendimentos',{inspectionId:'handoff',pointIndex:0},'b1');
+ assert.equal(first.status,200,JSON.stringify(first.data));let c=first.data.atendimento;
+ assert.equal(c.descricao,'Não acende');assert.equal(c.estado,'Encaminhado');
+ const twice=await req('/api/atendimentos',{inspectionId:'handoff',pointIndex:0},'b2');
+ assert.equal(twice.data.existente,true);assert.equal(twice.data.atendimento.id,c.id);
+ assert.equal((await req('/api/atendimentos/'+c.id,undefined,'p1')).status,403);
+ assert.equal((await req('/api/foto/b1_upload',undefined,'u3')).status,200);
+ const wrong=await get('b1');wrong.snapshot.brigInsp.find(i=>i.id==='handoff').pontos[0].resolvido=true;
+ assert.equal((await put(wrong.snapshot,wrong.versao,'b1')).status,403);
+ const act=(acao,id,extra={})=>req('/api/atendimentos/'+c.id+'/acao',{acao,versao:c.versao,...extra},id);
+ assert.equal((await act('confirmar','b1')).status,409);
+ assert.equal((await act('concluir','b1',{descricao:'Substituída'})).status,403);
+ assert.equal((await act('concluir','u3',{descricao:'Substituída',fotos:['ref:secret_photo']})).status,403);
+ let r=await act('concluir','u3',{descricao:'Luminária substituída e testada',fotos:[]});assert.equal(r.status,200,JSON.stringify(r.data));c=r.data.atendimento;
+ assert.equal(c.estado,'Aguardando conferência');
+ assert.equal((await act('confirmar','u3')).status,403);
+ r=await act('devolver','b1',{descricao:'Ainda falha no teste local'});assert.equal(r.status,200);c=r.data.atendimento;assert.equal(c.estado,'Em atendimento');
+ r=await act('concluir','u3',{descricao:'Circuito corrigido e testado novamente',fotos:[]});assert.equal(r.status,200);c=r.data.atendimento;
+ r=await act('confirmar','b1',{descricao:'Conferida no local, funcionando'});assert.equal(r.status,200,JSON.stringify(r.data));c=r.data.atendimento;
+ assert.equal(c.estado,'Resolvido');const all=await get();assert.equal(all.snapshot.brigInsp.find(i=>i.id==='handoff').pontos[0].resolvido,true);
+ assert.equal(all.snapshot.unidSind[0].iptu,'SECRET_TAX');
+ const detail=await req('/api/atendimentos/'+c.id,undefined,'u3');assert.equal(detail.data.historico.length,5);
+ const recur=await get('b2');recur.snapshot.brigInsp.push({id:'handoff-recur',condoId:'c1',andar:'23',sistema:'iluminacao',data:'2026-11-03',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária da escada',sit:'NÃO CONFORME',obs:'Voltou a falhar',fotos:[]}],historico:[]});assert.equal((await put(recur.snapshot,recur.versao,'b2')).status,200);
+ r=await req('/api/atendimentos',{inspectionId:'handoff-recur',pointIndex:0},'b1');assert.equal(r.status,200);assert.notEqual(r.data.atendimento.id,c.id);
+ assert.equal((await req('/api/atendimentos/'+r.data.atendimento.id,undefined,'b1')).data.mesmoPonto.length,2);
 });

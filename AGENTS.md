@@ -31,7 +31,7 @@ não são a aplicação publicada, nem devem ser usados para novas alterações.
 - `server/auth.js`: contas, cookie e autenticação.
 - `server/access.js`: regras de leitura/escrita e anexos.
 - `server/db.js`: persistência, concorrência, carteira separada e versões.
-- `server/backup.js`: backup privado completo das dez tabelas e restauração
+- `server/backup.js`: backup privado completo das doze tabelas e restauração
   somente em banco vazio separado. Nunca guardar seus resultados no Git.
 
 ## Antes de publicar
@@ -68,3 +68,11 @@ Rascunhos locais pertencem à conta e assinatura de permissões, duram até sete
 dias e exigem escolha para retomar. Excluir senhas e limpar no logout/troca de
 conta. Fotos usam referências do acervo; nenhuma confirmação de envio deve
 aparecer antes da resposta de sucesso do servidor e do envio dos anexos.
+
+## Atendimento integrado (2026-11-03)
+- /api/atendimentos usa sessão, perfil e condomínio no servidor. Portaria/leitura sem acesso.
+- maintenance_case e maintenance_event guardam encaminhamento e histórico; existe no máximo um atendimento aberto por ponto.
+- Manutenção registra reparo; brigada/administração confere antes de encerrar a pendência. O snapshot comum não pode encerrar ponto com atendimento aberto.
+- public/service-desk.js e .css são os ativos do módulo. Cache v31.
+- Backup completo agora inclui 12 tabelas. Destino externo automatizado ainda depende de configuração privada.
+- CI executa npm ci e npm test com fixtures artificiais antes da publicação.

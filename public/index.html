@@ -1285,6 +1285,8 @@ body.crit-open{overflow:hidden}
 <script src="/access-client.js"></script>
 <script src="/field-ui.js"></script>
 <script src="/workflow.js"></script>
+<link rel="stylesheet" href="/service-desk.css">
+<script src="/service-desk.js"></script>
 <script src="/mobile.js" defer></script>
 </head>
 <body>
@@ -2900,6 +2902,7 @@ function itensNavegacao(){
     if(P().manutobrig) items.push(['manutobrig','shieldCheck','Manutenções Obrigatórias']); }
   if(P().estoque) items.push(['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material']);
   if(P().tipos.length) items.push(['#','','Gestão'],['relatorios','chart','Relatórios'],['relmensal','doc','Relatório Mensal']);
+  if(P().brigada||P().manutencao)items.push(['atendimentos','wrench','Brigada e manutenção']);
   items.push(['config','settings','Configurações']);
   return AUTH.access?items.filter(i=>i[0]==='#'||AUTH.access.pages.includes(i[0])):items;
 }
@@ -2949,6 +2952,7 @@ function render(){
   }
 }
 function renderConteudo(){
+  if(page==='atendimentos'&&scopeAllowed('atendimentos')){$('#pageTitle').textContent='Brigada e manutenção';viewServiceDesk();return;}
   if(session&&!scopeAllowed(page))page=paginaInicial();
   if(page==='inicio'){$('#pageTitle').textContent='Meu espaço';return viewInicio();}
   { const _sb=document.querySelector('#syncBadge'); if(_sb) _sb.outerHTML=badgeSync(); }
@@ -15347,7 +15351,7 @@ function viewBrigada(){
         <td class="muted">${esc(h.insp.responsavel||'—')}</td>
         <td style="text-align:right"><div class="rowact" style="justify-content:flex-end">
           <button class="btn ghost sm" onclick="brigAcompanharInsp('${h.insp.id}')" title="Ver detalhes e andamento">${ic('search')}Como ficou</button>
-          ${!h.resolvida?`<button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})" title="Marcar pendência como resolvida">${ic('check')}Resolver</button>`:''}
+          ${!h.resolvida?`${serviceDeskLink(h.insp.id,h.idx)}<button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})" title="Marcar pendência como resolvida">${ic('check')}Resolver</button>`:''}
         </div></td>
       </tr>`).join('')||`<tr><td colspan="7" class="muted">Nenhuma pendência ${brigHistFiltro==='abertas'?'em aberto':(brigHistFiltro==='resolvidas'?'resolvida':'registrada')} no histórico.</td></tr>`}
     </tbody></table></div>
@@ -15436,7 +15440,7 @@ function brigCheckAvisoAndar(i){
           ${i.status!=='Concluído'?`<button class="btn sm" onclick="brigCheckConfirmarMesma('${i.id}','${h.insp.id}',${h.idx})">
             ${ic('checkCircle')} É essa mesma — continua pendente</button>`:''}
           <button class="btn ghost sm" onclick="brigAcompanharInsp('${h.insp.id}')">${ic('search')} Como ficou</button>
-          <button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})">${ic('check')} Já foi resolvido</button>
+          ${serviceDeskLink(h.insp.id,h.idx)}<button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})">${ic('check')} Já foi resolvido</button>
         </div>
       </div>`;
     }).join('')}
@@ -15477,7 +15481,7 @@ function brigCheckHistPontoHtml(i,k){
         ${!h.resolvida&&i.status!=='Concluído'?`<div class="rowact" style="margin-top:6px;gap:6px">
           <button class="btn sm" onclick="brigCheckConfirmarMesma('${i.id}','${h.insp.id}',${h.idx},${k})">
             ${ic('checkCircle')} É essa mesma — continua assim</button>
-          <button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})">
+          ${serviceDeskLink(h.insp.id,h.idx)}<button class="btn green sm" onclick="brigResolverPendencia('${h.insp.id}',${h.idx})">
             ${ic('check')} Marcar anterior como resolvida</button>
         </div>`:''}
       </div>`;
@@ -17125,7 +17129,7 @@ function brigAcompanharInsp(inspId){
            ${fts.length?`<div class="bg-fotos" style="margin-top:6px">${fts.map((f,fi)=>
              `<img src="${srcFoto(f)}"${attrFoto(f)} class="fthumb" alt="Foto ${fi+1}"
                style="cursor:zoom-in" onclick="chAmpliar('${f}')">`).join('')}</div>`:''}
-           ${!res?`<div style="margin-top:8px"><button class="btn green sm" onclick="brigResolverPendencia('${i.id}',${idxPt})">${ic('check')} Marcar ponto como resolvido</button></div>`:''}
+           ${!res?`<div style="margin-top:8px">${serviceDeskLink(i.id,idxPt)}<button class="btn green sm" onclick="brigResolverPendencia('${i.id}',${idxPt})">${ic('check')} Marcar ponto como resolvido</button></div>`:''}
          </div></div>`}).join('')}
      <div id="chZoom"></div>
      ${ts.length===1?chLinhaTempo(ts[0]):''}`,
