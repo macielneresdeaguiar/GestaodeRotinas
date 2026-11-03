@@ -31,7 +31,7 @@ function scopeFilterSnapshot(snap){
   snap._access=a;
   return snap;
 }
-function scopeDiscardCache(){if(typeof serviceDeskData!=='undefined'){serviceDeskData=null;serviceDeskAccount=null;serviceDeskRepairPhotos=[];}if(typeof workflowDraftClear==='function')workflowDraftClear();
+function scopeDiscardCache(){if(typeof workflowDraftClear==='function')workflowDraftClear();
   AUTH.temCache=false;AUTH.cachedAccess=null;_pendenteGravar=null;
   try{localStorage.removeItem(DB_KEY);localStorage.removeItem(BASE_KEY);localStorage.removeItem(FOTOS_FILA_KEY);localStorage.removeItem(SESSION_KEY);}catch(e){}
   _filaFotos=[];_fotoCache.clear();_fotoBaixando.clear();SYNC.base=null;SYNC.baseIdx=null;SYNC.sujos={};

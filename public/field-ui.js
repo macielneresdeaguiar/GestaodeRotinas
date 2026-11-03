@@ -18,6 +18,7 @@ function viewInicio(){
   if(allowed('hoje')){const n=tasks.filter(t=>!t.arquivada&&!done(t.status)&&t.vencimento&&t.vencimento<=today()).length;if(n)pending.push(['hoje','today',n+' tarefa(s) até hoje','Abra o dia para executar ou reagendar']);}
   if(allowed('manutobrig')){const n=manutObrig.filter(m=>m.proxima&&m.proxima<=today()).length;if(n)pending.push(['manutobrig','shieldCheck',n+' manutenção(ões) no prazo ou vencida(s)','Confira os laudos e responsáveis']);}
   if(allowed('notas')){const n=notas.filter(n=>nfStatus(n)==='Vencida').length;if(n)pending.push(['notas','invoice',n+' nota(s) fiscal(is) vencida(s)','Confira a próxima ação e o responsável']);}
+  if(session?.id==='u1'){const n=brigNCAbertas('c1').length;if(n)pending.unshift(['brigada','shieldCheck',n+' pendência(s) do check-list para sua gestão','Defina o atendimento, confira o serviço e registre a solução']);}
   const card=([k,icon,label,detail],className='field-link')=>`<button type="button" class="${className}" onclick="go('${k}')">${ic(icon)}<span><strong>${esc(label)}</strong>${detail?`<small>${esc(detail)}</small>`:''}</span>${ic('chevR')}</button>`;
   $('#content').innerHTML=`<div class="field-home">
     <section class="field-welcome"><div class="field-eyebrow">${esc(day)}</div><h1>Olá, ${esc(session.nome.split(' ')[0])}.</h1><p>Seu espaço de trabalho · ${esc(session.role)}</p><span class="field-scope">${ic('lock')}${a?.fullRead?'Visão completa da administração':'Somente as áreas liberadas para você'}</span></section>
