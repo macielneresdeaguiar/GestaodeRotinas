@@ -134,10 +134,10 @@ function assertManagerChecklist(incoming,current,a){
  }
  for(const t of Array.isArray(incoming.tasks)?incoming.tasks:[]){
   const old=(current.tasks||[]).find(x=>x.id===t.id);if(!old)continue;
-  if((t.status==='Concluída'&&old.status!=='Concluída')||(t.arquivada&&!old.arquivada)){
-   const related=(current.brigInsp||[]).filter(i=>t.brigInspId===i.id||t.brigInspIds?.includes(i.id)||i.chamadoId===t.id);
-   if(related.some(i=>(i.pontos||[]).some(p=>unresolvedChecklist(current,i,p))))reject('Somente Maciel confere o serviço vinculado ao check-list.');
-  }
+  const related=(current.brigInsp||[]).filter(i=>[old,t].some(x=>x.brigInspId===i.id||x.brigInspIds?.includes(i.id)||i.chamadoId===x.id));
+  const pending=related.some(i=>(i.pontos||[]).some(p=>unresolvedChecklist(current,i,p)));
+  if(pending&&(!same(t.brigInspId,old.brigInspId)||!same(t.brigInspIds,old.brigInspIds)))reject('Somente Maciel altera o vínculo de um serviço com pendência de check-list.');
+  if(pending&&((t.status==='Concluída'&&old.status!=='Concluída')||(t.arquivada&&!old.arquivada)))reject('Somente Maciel confere o serviço vinculado ao check-list.');
  }
 }
 
