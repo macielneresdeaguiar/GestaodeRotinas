@@ -62,7 +62,7 @@ async function serviceDeskPhoto(input){
  try{for(const f of files){const photo=await guardarFoto(await comprimirImagem(f));if(!AUTH.ok||AUTH.userId!==account)return;serviceDeskRepairPhotos.push(photo);}if($('#deskPhotoStatus'))$('#deskPhotoStatus').textContent=serviceDeskRepairPhotos.length+' foto(s) adicionada(s).';workflowDraftSave();}catch(e){toast('Não foi possível processar uma das fotos.');}
 }
 async function serviceDeskSave(id,action,version){
- if(serviceDeskBusy)return;serviceDeskBusy=true;
+ if(serviceDeskBusy||!serviceDeskAvailable())return;const account=AUTH.userId;serviceDeskBusy=true;
  try{
   const note=$('#deskNote').value.trim();if(['concluir','devolver'].includes(action)&&note.length<5)throw new Error('Descreva o reparo ou a pendência com mais detalhes.');
   if(serviceDeskRepairPhotos.length){await enviarFotos();if(serviceDeskRepairPhotos.some(ref=>_filaFotos.includes(idDaRef(ref))))throw new Error('As fotos ainda aguardam envio. Mantenha o formulário aberto e tente quando houver conexão.');}
