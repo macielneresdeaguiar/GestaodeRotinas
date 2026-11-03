@@ -192,7 +192,7 @@ test('the mobile app removes service desk and brigade repair controls while Maci
  saved={};failure='';const {w,errors}=await open();await until(()=>w.eval('AUTH.ready&&!AUTH.initializing'),'Profiles');w.document.querySelector('#loginPass').value=password;await w.doLogin();await settle(w);
  const headers={'Content-Type':'application/json',Cookie:cookie,Origin:base,'X-GRC-Client':'daily-2026-10-30','X-GRC-Scope':'scoped-2026-10-30','X-GRC-Workflow':'manager-review-v2','X-GRC-User':'u1'};
  const d=await (await fetch(base+'/api/dados',{headers})).json();
- d.snapshot.brigInsp=[{id:'owner_mobile',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-09-01',status:'Concluído',userId:'b1',pontos:[{desc:'Luminária do corredor',sit:'NÃO CONFORME',obs:'Falha de iluminação',fotos:[]}],historico:[]}];
+ d.snapshot.brigInsp=[{id:'owner_mobile',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-09-01',status:'Concluído',userId:'b1',pontos:[{desc:w.brigPontos('24','iluminacao')[0].d,sit:'NÃO CONFORME',obs:'Falha de iluminação',fotos:[]}],historico:[]}];
  const sent=await fetch(base+'/api/dados',{method:'POST',headers,body:JSON.stringify({snapshot:d.snapshot,versaoBase:d.versao})});assert.equal(sent.status,200);
  await w.syncBaixar();await settle(w);w.eval('SYNC.ligado=false;');
  w.go('inicio');assert.match(w.document.querySelector('#content').textContent,/pendência\(s\) do check-list para sua gestão/);
