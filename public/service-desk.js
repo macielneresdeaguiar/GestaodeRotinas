@@ -59,7 +59,7 @@ function serviceDeskActionForm(id,action,version){
 }
 async function serviceDeskPhoto(input){
  const account=AUTH.userId;const files=[...input.files].slice(0,8-serviceDeskRepairPhotos.length);
- try{for(const f of files){const photo=await guardarFoto(await comprimirImagem(f));if(!AUTH.ok||AUTH.userId!==account)return;serviceDeskRepairPhotos.push(photo);}if($('#deskPhotoStatus'))$('#deskPhotoStatus').textContent=serviceDeskRepairPhotos.length+' foto(s) adicionada(s).';}catch(e){toast('Não foi possível processar uma das fotos.');}
+ try{for(const f of files){const photo=await guardarFoto(await comprimirImagem(f));if(!AUTH.ok||AUTH.userId!==account)return;serviceDeskRepairPhotos.push(photo);}if($('#deskPhotoStatus'))$('#deskPhotoStatus').textContent=serviceDeskRepairPhotos.length+' foto(s) adicionada(s).';workflowDraftSave();}catch(e){toast('Não foi possível processar uma das fotos.');}
 }
 async function serviceDeskSave(id,action,version){
  if(serviceDeskBusy)return;serviceDeskBusy=true;
