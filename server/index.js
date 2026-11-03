@@ -1,7 +1,7 @@
 import express from 'express';
 import { initializeAuth, installAuth, publicSnapshot, sanitizeIncoming } from './auth.js';
 import path from 'node:path';
-import {initializeMaintenance,installMaintenance,maintenancePhotoAllowed,assertLinkedDefects} from './maintenance.js';
+import {initializeMaintenance,installMaintenance,maintenancePhotoAllowed} from './maintenance.js';
 import { db, isolatePrivate } from './db.js';
 import { accessFor, scopedSnapshot, mergeScoped, attachmentRefs } from './access.js';
 import zlib from 'node:zlib';
@@ -191,10 +191,9 @@ app.post('/api/dados', exigeToken, async (req, res) => {
   }
   try {
     const atual=await lerWorkspace(WS);
-    if(req.get('x-grc-scope')!=='scoped-2026-10-30'||req.get('x-grc-workflow')!=='monthly-review-v1')return res.status(426).json({erro:'Atualize o aplicativo para continuar.',atualizeApp:true});
+    if(req.get('x-grc-scope')!=='scoped-2026-10-30'||req.get('x-grc-workflow')!=='manager-review-v2')return res.status(426).json({erro:'Atualize o aplicativo para continuar.',atualizeApp:true});
     if(!Number.isSafeInteger(versaoBase)||versaoBase<0)return res.status(400).json({erro:'versao_base_obrigatoria'});
     if(atual&&versaoBase!==atual.versao)return res.status(409).json({ok:false,conflito:true,versao:atual.versao,atualizado:atual.atualizado,autor:atual.autor,snapshot:await outputSnapshot(atual.snapshot,req)});
-    await assertLinkedDefects(snapshot,atual?.snapshot||{});
     const access=accessFor(req.auth.user_id,atual?.snapshot);
     snapshot=mergeScoped(sanitizeIncoming(snapshot),atual?.snapshot||{v:2,CFG:{}},access);
     // Attachment IDs confer no authority: every referenced pre-existing file must already be in scope or owned by this account.
