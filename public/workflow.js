@@ -83,6 +83,7 @@ function workflowDraftSave(){
   const forms=workflowDrafts();const action=workflowDraftContext.key;const attachments={};
   if(/saveApont/i.test(action))attachments.apontamentos=_fotosTmp.filter(ehRef);
   if(/brigRondaSalvar/i.test(action))attachments.ronda=_rondaFotos.filter(ehRef);
+  if(/serviceDeskSave/i.test(action))attachments.reparo=serviceDeskRepairPhotos.filter(ehRef);
   forms[workflowDraftContext.key]={values,attachments,updatedAt:Date.now()};workflowDraftWrite(forms);
   const label=document.querySelector('#workflowDraftStatus');if(label)label.textContent='Rascunho salvo neste aparelho';
 }
@@ -95,6 +96,7 @@ function workflowDraftResume(){
     if(draft.attachments?.apontamentos){_fotosTmp=draft.attachments.apontamentos.slice();const box=document.querySelector('#apFotos');if(box)box.innerHTML=_fotosTmp.map((f,n)=>thumbFoto(f,n)).join('');}
     if(draft.attachments?.ronda){_rondaFotos=draft.attachments.ronda.slice();brigRondaFotosBox();}
     if(document.querySelector('#ltMedidor')){calcLeit();leitAvaliarObs();}
+    if(draft.attachments?.reparo){serviceDeskRepairPhotos=draft.attachments.reparo.slice();const box=document.querySelector('#deskPhotoStatus');if(box)box.textContent=serviceDeskRepairPhotos.length+' foto(s) recuperada(s).';}
     document.querySelector('#workflowDraftStatus').textContent='Rascunho recuperado · confira antes de salvar';
     document.querySelector('#workflowDraftResume').hidden=true;
   }finally{workflowDraftRestoring=false}
