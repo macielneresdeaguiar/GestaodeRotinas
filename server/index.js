@@ -1,4 +1,5 @@
 import express from 'express';
+import {initializeCleaning,installCleaning} from './cleaning.js';
 import { initializeAuth, installAuth, publicSnapshot, sanitizeIncoming } from './auth.js';
 import path from 'node:path';
 import {initializeMaintenance,installMaintenance,maintenancePhotoAllowed} from './maintenance.js';
@@ -52,6 +53,7 @@ app.disable('x-powered-by');
 /* Sessão diária validada no servidor; sem bypass por SITE_TOKEN. */
 installAuth(app);
 installMaintenance(app);
+installCleaning(app);
 async function viewFor(req){
   const ws=await lerWorkspace(WS);
   const access=accessFor(req.auth.user_id,ws?.snapshot);
@@ -315,6 +317,7 @@ migrate()
   .then(initializeAuth)
   .then(isolatePrivate)
   .then(initializeMaintenance)
+  .then(initializeCleaning)
   .then(() => {
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`[grc] no ar na porta ${PORT} (sessão diária protegida)`);

@@ -31,7 +31,7 @@ não são a aplicação publicada, nem devem ser usados para novas alterações.
 - `server/auth.js`: contas, cookie e autenticação.
 - `server/access.js`: regras de leitura/escrita e anexos.
 - `server/db.js`: persistência, concorrência, carteira separada e versões.
-- `server/backup.js`: backup privado completo das doze tabelas e restauração
+- `server/backup.js`: backup privado completo das treze tabelas e restauração
   somente em banco vazio separado. Nunca guardar seus resultados no Git.
 
 ## Antes de publicar
@@ -75,6 +75,15 @@ aparecer antes da resposta de sucesso do servidor e do envio dos anexos.
 - Somente u1 altera resolução, conferência do reparo ou encerra chamado legado vinculado a uma pendência aberta. A API impede outros perfis, inclusive o próprio autor e Alef, de encerrar falhas por alteração direta, remoção do ponto ou Conforme em mês posterior.
 - Protocolo de gravação X-GRC-Workflow: manager-review-v2. Clientes antigos recebem 426.
 - server/maintenance.js mantém apenas recuperação do acervo antigo para u1. Novos encaminhamentos e ações retornam 410; outros perfis recebem 403.
-- As tabelas maintenance_case/maintenance_event e seus anexos são preservados, mantendo backup integral de 12 tabelas.
+- As tabelas maintenance_case/maintenance_event e seus anexos são preservados, mantendo backup integral de 13 tabelas.
 - Ativos do módulo antigo continuam somente como histórico de código, sem carregamento no app nem inclusão no cache.
-- Cache: grc-v33-ronda-brigada. Validar as permissões no servidor, fluxo mensal e interface móvel antes da publicação.
+- Cache: grc-v34-materiais-limpeza. Validar as permissões no servidor, fluxo mensal e interface móvel antes da publicação.
+
+## Materiais de limpeza — 04/11/2026
+- Página limpeza e /api/limpeza somente para u1, u2 e u4. Fernanda não recebe acesso ao estoque geral.
+- u4 informa estoque e confirma contagem; u1/u2 cadastram materiais, ideal e preços, preparam e finalizam pedido para cotação.
+- cleaning_record armazena catálogo privado e um registro por mês com versão, itens e histórico. Nenhum dado do condomínio ou fornecedor fica em assets públicos.
+- Avisos dentro do app a partir do dia 15 (Brasília), pendentes até conferência; após confirmação, aviso para Maciel/Alef. Não há envio de push com o app fechado nem envio automático ao fornecedor.
+- Sugestão máximo(0, ideal - estoque); quantidades de compra inteiras, ajuste manual, preço editável e PDF real com ou sem preços. PDF exige pedido salvo e finalizado.
+- Meses iniciados preservam catálogo/preços próprios; reajuste do cadastro só vale nos próximos meses. Concorrência retorna 409 sem sobrescrever.
+- Backup privado inclui cleaning_record (13 tabelas); backup operacional antigo não inclui este módulo.

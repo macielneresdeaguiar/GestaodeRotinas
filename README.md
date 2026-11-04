@@ -14,7 +14,7 @@ Política `scoped-2026-10-30`, banco `DB_VER=2`.
 - API filtra leitura, gravação, anexos e respostas de conflito.
 - Carteira particular em tabela separada; cache por conta e permissões.
 - Início móvel por função, botões maiores, área de Trabalho, tabelas identificadas.
-- Versões anteriores recuperáveis e backup integral privado das doze tabelas.
+- Versões anteriores recuperáveis e backup integral privado das treze tabelas.
 
 ## Brigada mensal e gestão de Maciel — 03/11/2026
 - A brigada registra o check-list mensal e a ronda diária e mantém evidências das falhas.
@@ -22,7 +22,7 @@ Política `scoped-2026-10-30`, banco `DB_VER=2`.
 - O módulo separado Brigada e manutenção foi retirado. Seus registros antigos são preservados em arquivo somente para Maciel, sem novas ações.
 - A API protege resolução e conferência contra alterações por outros perfis e clientes antigos (manager-review-v2).
 - As pendências permanecem nos meses seguintes até a conferência de Maciel.
-- Cache grc-v33-ronda-brigada; backup integral mantém 12 tabelas.
+- Cache grc-v34-materiais-limpeza; backup integral mantém 13 tabelas.
 
 ## Executar
 
@@ -54,3 +54,12 @@ A interface legada segue sendo extraída por partes. Ela ainda concentra regras
 no HTML, mas os novos fluxos móveis e a política de acesso estão em arquivos
 separados. Evitar reescrita integral ou mudança de fórmulas financeiras junto
 com uma alteração visual. Validar as rotinas em aparelhos reais com a equipe.
+
+## Materiais de limpeza — 04/11/2026
+- Página limpeza e /api/limpeza somente para u1, u2 e u4. Fernanda não recebe acesso ao estoque geral.
+- u4 informa estoque e confirma contagem; u1/u2 cadastram materiais, ideal e preços, preparam e finalizam pedido para cotação.
+- cleaning_record armazena catálogo privado e um registro por mês com versão, itens e histórico. Nenhum dado do condomínio ou fornecedor fica em assets públicos.
+- Avisos dentro do app a partir do dia 15 (Brasília), pendentes até conferência; após confirmação, aviso para Maciel/Alef. Não há envio de push com o app fechado nem envio automático ao fornecedor.
+- Sugestão máximo(0, ideal - estoque); quantidades de compra inteiras, ajuste manual, preço editável e PDF real com ou sem preços. PDF exige pedido salvo e finalizado.
+- Meses iniciados preservam catálogo/preços próprios; reajuste do cadastro só vale nos próximos meses. Concorrência retorna 409 sem sobrescrever.
+- Backup privado inclui cleaning_record (13 tabelas); backup operacional antigo não inclui este módulo.

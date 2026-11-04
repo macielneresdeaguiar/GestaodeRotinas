@@ -80,13 +80,13 @@ test('ronda creates its linked maintenance incident without granting administrat
  const backups=await db.execute('SELECT snapshot,privado FROM workspace_backup ORDER BY versao');assert.ok(backups.rows.length>=3);assert.equal(JSON.parse(backups.rows[0].snapshot).tasks[0].titulo,'SECRET_ADMIN');assert.equal(JSON.parse(backups.rows[0].privado).unidSind[0].iptu,'SECRET_TAX');
 });
 
-test('full backup restores all twelve tables including credentials, attachments and private portfolio into a separate empty database',async()=>{
+test('full backup restores all thirteen tables including credentials, attachments and private portfolio into a separate empty database',async()=>{
  process.env.TURSO_DATABASE_URL='file:'+path.join(dir,'test.sqlite');
  const {exportDatabase,restoreEmptyDatabase,BACKUP_TABLES}=await import('../server/backup.js');
- const backup=await exportDatabase(db);assert.equal(backup.tables.length,12);
+ const backup=await exportDatabase(db);assert.equal(backup.tables.length,13);
  const target=createClient({url:'file:'+path.join(dir,'restored.sqlite')});
  try{
-  const result=await restoreEmptyDatabase(backup,target);assert.equal(result.tables,12);
+  const result=await restoreEmptyDatabase(backup,target);assert.equal(result.tables,13);
   for(const name of BACKUP_TABLES){const a=await db.execute('SELECT COUNT(*) n FROM '+name),b=await target.execute('SELECT COUNT(*) n FROM '+name);assert.equal(b.rows[0].n,a.rows[0].n,name);}
   assert.equal(JSON.parse((await target.execute('SELECT snapshot FROM workspace_private')).rows[0].snapshot).unidSind[0].iptu,'SECRET_TAX');
   assert.equal((await target.execute("SELECT scheme FROM auth_user WHERE id='u1'")).rows[0].scheme,'scrypt-v1');
@@ -150,4 +150,31 @@ test('retired maintenance records and evidence are preserved for Maciel without 
  for(const id of ['b1','u2','u3','p1']){assert.equal((await req('/api/atendimentos/'+c.id,undefined,id)).status,403);assert.equal((await req('/api/foto/archive_evidence',undefined,id)).status,404);}
  assert.equal((await req('/api/atendimentos/'+c.id+'/acao',{acao:'confirmar',versao:1},'u1')).status,410);
  assert.equal((await db.execute({sql:'SELECT state FROM maintenance_case WHERE id=?',args:[c.id]})).rows[0].state,'Encaminhado');
+});
+
+test('cleaning workflow isolates Fernanda stock, versions concurrent changes, preserves monthly prices and emits real PDFs',async()=>{
+ const month=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit'}).format(new Date());
+ for(const id of ids.filter(i=>!['u1','u2','u4'].includes(i))){assert.equal((await req('/api/limpeza',undefined,id)).status,403);assert.equal((await req('/api/limpeza/'+month,{action:'abrir',version:0},id)).status,403);}
+ for(const id of ['u1','u2','u4'])assert.ok((await get(id)).snapshot._access.pages.includes('limpeza'));
+ const catalog={version:0,company:'Condomínio de teste\nEndereço de teste',supplier:'Fornecedor de teste',items:[{id:'fixture_paper',name:'Papel para teste',unit:'Caixa',ideal:8,price:12.5,dispensers:3},{id:'fixture_soap',name:'Sabonete para teste',unit:'Refil',ideal:10,price:4,dispensers:2}]};
+ assert.equal((await req('/api/limpeza/catalogo',catalog,'u4')).status,403);
+ assert.equal((await req('/api/limpeza/catalogo',catalog,'u2')).status,200);
+ let r=await req('/api/limpeza/'+month,{action:'abrir',version:0},'u4');assert.equal(r.status,200,JSON.stringify(r.data));assert.equal(r.data.cycle.items[0].stock,null);assert.equal(r.data.cycle.items[0].price,undefined);assert.equal(r.data.cycle.company,undefined);
+ let version=r.data.cycle.version;
+ assert.equal((await req('/api/limpeza/'+month,{action:'pedido',version,items:[{id:'fixture_paper',quantity:2,price:12.5},{id:'fixture_soap',quantity:10,price:4}]},'u4')).status,403);
+ assert.equal((await req('/api/limpeza/'+month,{action:'confirmar',version,items:[{id:'fixture_paper',stock:4},{id:'fixture_soap',stock:null}]},'u4')).status,400);
+ assert.equal((await req('/api/limpeza/'+month,{action:'estoque',version,items:[{id:'fixture_paper',stock:4,price:0},{id:'fixture_soap',stock:0}]},'u4')).status,403);
+ r=await req('/api/limpeza/'+month,{action:'confirmar',version,items:[{id:'fixture_paper',stock:4},{id:'fixture_soap',stock:0}]},'u4');assert.equal(r.status,200);version=r.data.cycle.version;
+ assert.equal(r.data.cycle.confirmedBy,'Fernanda');assert.equal((await req('/api/limpeza',undefined,'u2')).data.reminder.title,'Estoque de limpeza conferido: preparar pedido');
+ assert.equal((await req('/api/limpeza/'+month,{action:'estoque',version:version-1,items:[]},'u4')).status,409);
+ const updated=structuredClone(catalog);updated.version=1;updated.items[0].price=15;assert.equal((await req('/api/limpeza/catalogo',updated,'u2')).status,200);
+ assert.equal((await req('/api/limpeza',undefined,'u2')).data.cycle.items[0].price,12.5,'Existing month keeps original reference');
+ r=await req('/api/limpeza/'+month,{action:'finalizar',version,items:[{id:'fixture_paper',quantity:4,price:13},{id:'fixture_soap',quantity:0,price:4}]},'u2');assert.equal(r.status,200);version=r.data.cycle.version;assert.equal(r.data.cycle.status,'Pedido preparado');assert.equal(r.data.reminder,null);
+ for(const suffix of ['', '?precos=1']){const pdf=await fetch(base+'/api/limpeza/'+month+'/pdf'+suffix,{headers:{Cookie:cookies.u2}});assert.equal(pdf.status,200);assert.match(pdf.headers.get('content-type'),/application\/pdf/);const bytes=Buffer.from(await pdf.arrayBuffer());assert.equal(bytes.subarray(0,5).toString(),'%PDF-');assert.ok(bytes.length>1000);}
+ assert.equal((await req('/api/limpeza/'+month+'/pdf',undefined,'u4')).status,403);
+ assert.equal((await req('/api/limpeza/'+month,{action:'estoque',version,items:[]},'u4')).status,400);
+ assert.equal((await req('/api/limpeza/'+month,{action:'reabrir',version},'u4')).status,403);
+ r=await req('/api/limpeza/'+month,{action:'reabrir',version},'u1');assert.equal(r.status,200);assert.ok(r.data.cycle.history.length>=4);
+ const {cleaningReminder}=await import('../server/cleaning.js');assert.equal(cleaningReminder('u4',null,'2026-11-14'),null);assert.ok(cleaningReminder('u4',null,'2026-11-15'));assert.ok(cleaningReminder('u4',null,'2026-11-30'));
+ const all=await get();assert.equal(all.snapshot.unidSind[0].iptu,'SECRET_TAX');assert.equal(all.snapshot.notas[0].obs,'SECRET_INVOICE');
 });

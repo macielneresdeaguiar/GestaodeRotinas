@@ -21,7 +21,7 @@ before(async()=>{
   const authTest=await readFile(new URL('./auth-diaria.test.js',import.meta.url),'utf8');
   const credentials=JSON.parse(authTest.match(/const creds=(\{[^\n]+\});/)[1]);
   await db.execute({sql:'INSERT INTO workspace VALUES(?,?,?,?,?)',args:['default',JSON.stringify({v:2,
-    CFG:{permsUsuarios:{},nomesUsuarios:{},coordPodeExcluirPrestador:false},creds:credentials,
+    CFG:{permsUsuarios:{},nomesUsuarios:{},coordPodeExcluirPrestador:false},creds:{...credentials,u2:credentials.u1,u4:credentials.u1},
     tasks:[],salas:[],notas:[],leituras:[],estoque:[],prestadores:[],apontamentos:[],pedidos:[]}),1,new Date().toISOString(),'Test fixture']});
   const listener=net.createServer();await new Promise(resolve=>listener.listen(0,'127.0.0.1',resolve));
   const port=listener.address().port;await new Promise(resolve=>listener.close(resolve));base='http://127.0.0.1:'+port;
@@ -213,5 +213,17 @@ test('the mobile app removes service desk and brigade repair controls while Maci
  w.brigAcompanharInsp('owner_mobile');assert.equal(w.document.querySelectorAll('#modal [onclick*="brigResolverPendencia"]').length,0);w.closeModal();
  w.eval('scopeApplyMetadata('+JSON.stringify(accessFor('u1',{CFG:{}}))+');session=USERS.find(u=>u.id==="u1");');
  w.prompt=()=> 'Serviço executado e conferido presencialmente';w.confirm=()=>true;w.brigResolverPendencia('owner_mobile',0);assert.equal(w.brigNCAbertas('c1').length,0);assert.equal(w.eval('_bi("owner_mobile").pontos[0].resolvidoPorId'),'u1');
+ assert.deepEqual(errors,[]);await settle(w);w.close();saved={};
+});
+
+test('Fernanda confirms cleaning stock and Alef receives suggestions, saves quantities and unlocks PDFs',async()=>{
+ saved={};cookie='';failure='';let {w,errors}=await open();await until(()=>w.eval('AUTH.ready&&!AUTH.initializing'),'profiles');w.pickUser('u1');w.document.querySelector('#loginPass').value=password;await w.doLogin();await settle(w);
+ await w.cleaningRequest('/catalogo',{version:0,company:'Condomínio teste',supplier:'',items:[{id:'paper_test',name:'Papel de teste',unit:'Caixa',ideal:8,price:12.5,dispensers:0}]});
+ await w.logout();await settle(w);w.pickUser('u4');w.document.querySelector('#loginPass').value=password;await w.doLogin();await settle(w);w.go('limpeza');await w.cleaningLoad();await until(()=>w.eval('CLEAN.data!==null'),'cleaning');
+ await w.cleaningAction('abrir');const stock=w.document.querySelector('[data-clean-field="stock"]');assert.ok(stock);assert.equal(w.document.querySelector('[data-clean-field="price"]'),null);assert.equal(w.document.querySelector('[data-clean-field="quantity"]'),null);
+ stock.value='3';stock.dispatchEvent(new w.Event('input',{bubbles:true}));assert.ok(w.cleaningDraftAvailable());await w.cleaningAction('confirmar');assert.match(w.document.querySelector('.clean-status').textContent,/Fernanda/);
+ await w.logout();await settle(w);w.pickUser('u2');w.document.querySelector('#loginPass').value=password;await w.doLogin();await settle(w);w.go('limpeza');await w.cleaningLoad();await until(()=>w.document.querySelector('[data-clean-field="quantity"]'),'order');
+ assert.equal(w.document.querySelector('[data-clean-field="quantity"]').value,'5');assert.match(w.cleaningNotice().title,/Estoque de limpeza conferido/);
+ w.document.querySelector('[data-clean-field="quantity"]').value='6';w.document.querySelector('[data-clean-field="price"]').value='13';await w.cleaningAction('finalizar');assert.match(w.document.querySelector('.clean-status').textContent,/Pedido preparado/);assert.match(w.document.querySelector('#cleanGrand').textContent,/78,00/);assert.equal(w.document.querySelectorAll('.clean-actions a[href*="/pdf"]').length,2);
  assert.deepEqual(errors,[]);await settle(w);w.close();saved={};
 });
