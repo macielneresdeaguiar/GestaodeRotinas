@@ -1,7 +1,7 @@
 name: Testes da aplicação
 on:
   push:
-    branches: [fix/ronda-brigada-20261104, main]
+    branches: [materiais-limpeza-20261104, main]
   pull_request:
     branches: [main]
 permissions:
