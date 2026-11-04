@@ -1,7 +1,7 @@
 name: Testes da aplicação
 on:
   push:
-    branches: [materiais-limpeza-20261104, main]
+    branches: [fix/limpeza-retomada-20261104, main]
   pull_request:
     branches: [main]
 permissions:

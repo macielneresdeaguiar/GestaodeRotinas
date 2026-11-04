@@ -14,10 +14,10 @@ function cleaningHome(){
 }
 async function cleaningLoad(force=true){
  const id=cleaningReset();if(!id||CLEAN.loading||(!force&&Date.now()-CLEAN.loaded<60000))return;
- CLEAN.loading=true;
- try{const d=await cleaningRequest('?mes='+CLEAN.month);if(cleaningUser()!==id)return;CLEAN.data=d;CLEAN.loaded=Date.now();CLEAN.error='';cleaningAddNotice();atualizaSino();if(page==='limpeza')cleaningPaint();else if(page==='inicio'){const slot=document.querySelector('#cleaningHome');if(slot){const n=cleaningNotice();slot.querySelector('strong').textContent=n?.title||'Materiais de limpeza';slot.querySelector('small').textContent=n?.detail||'Contagem mensal e pedido para cotação';}}}
+ const requestedMonth=CLEAN.month;CLEAN.loading=true;
+ try{const d=await cleaningRequest('?mes='+requestedMonth);if(cleaningUser()!==id||CLEAN.month!==requestedMonth)return;CLEAN.data=d;CLEAN.loaded=Date.now();CLEAN.error='';cleaningAddNotice();atualizaSino();if(page==='limpeza')cleaningPaint();else if(page==='inicio'){const slot=document.querySelector('#cleaningHome');if(slot){const n=cleaningNotice();slot.querySelector('strong').textContent=n?.title||'Materiais de limpeza';slot.querySelector('small').textContent=n?.detail||'Contagem mensal e pedido para cotação';}}}
  catch(e){if(cleaningUser()===id){CLEAN.error=e.message;if(page==='limpeza')cleaningPaint();}}
- finally{if(cleaningUser()===id)CLEAN.loading=false;}
+ finally{if(cleaningUser()===id){CLEAN.loading=false;if(CLEAN.month!==requestedMonth)cleaningLoad();}}
 }
 function viewLimpeza(){cleaningReset();cleaningPaint();cleaningLoad();}
 function cleaningDate(v){return v?new Date(v).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}):'';}
@@ -46,16 +46,16 @@ function cleaningPaint(){
  cleaningTotals();mobilePrepararPagina();
 }
 function cleaningTotals(){let total=0;document.querySelectorAll('[data-clean-item]').forEach(el=>{const q=Number(el.querySelector('[data-clean-field="quantity"]')?.value||0),p=Number(el.querySelector('[data-clean-field="price"]')?.value||0),t=Math.round(q*p*100)/100;total+=t;const box=el.querySelector('[data-clean-total]');if(box)box.textContent=brl(t);});const all=document.querySelector('#cleanGrand');if(all)all.textContent=brl(total);}
-function cleaningChangeMonth(month){if(cleaningDraftAvailable()&&!confirm('Há alterações locais. Elas serão mantidas como rascunho. Trocar de mês?'))return;CLEAN.month=month;CLEAN.data=null;viewLimpeza();}
+function cleaningChangeMonth(month){if(CLEAN.saving)return;if(cleaningDraftAvailable()&&!confirm('Há alterações locais. Elas serão mantidas como rascunho. Trocar de mês?'))return;CLEAN.month=month;CLEAN.data=null;viewLimpeza();}
 function cleaningReload(){if(!confirm('Recarregar os dados enviados? Alterações locais ficam disponíveis como rascunho.'))return;cleaningLoad();}
 function cleaningCorrectStock(){if(!confirm('Corrigir a contagem exigirá nova confirmação e limpará as quantidades sugeridas do pedido. Continuar?'))return;CLEAN.data.cycle.confirmedAt=null;cleaningPaint();}
 async function cleaningAction(action){
  if(CLEAN.saving)return;
  if(['confirmar','finalizar','reabrir'].includes(action)&&!confirm(({confirmar:'Conferiu todas as quantidades no local? Liberar estoque para Alef?',finalizar:'Salvar como pedido preparado e liberar os PDFs para cotação?',reabrir:'Reabrir este pedido para alteração? PDFs já baixados não serão atualizados.'})[action]))return;
- const id=cleaningUser(),cycle=CLEAN.data?.cycle,stock=['estoque','confirmar'].includes(action);const body={action,version:cycle?.version||0};
+ const id=cleaningUser(),requestedMonth=CLEAN.month,cycle=CLEAN.data?.cycle,stock=['estoque','confirmar'].includes(action);const body={action,version:cycle?.version||0};
  if(['estoque','confirmar','pedido','finalizar'].includes(action)){body.items=[...document.querySelectorAll('[data-clean-item]')].map(el=>{const val=name=>{const s=el.querySelector('[data-clean-field="'+name+'"]')?.value;return s===''||s===undefined?null:Number(s)};return stock?{id:el.dataset.cleanItem,stock:val('stock')}:{id:el.dataset.cleanItem,quantity:val('quantity'),price:val('price')};});}
  CLEAN.saving=true;document.querySelectorAll('.clean-actions button,.clean-toolbar button').forEach(b=>b.disabled=true);const msg=document.querySelector('#cleanDraftStatus');if(msg)msg.textContent='Enviando ao servidor…';
- try{const d=await cleaningRequest('/'+CLEAN.month,body);if(cleaningUser()!==id)return;localStorage.removeItem(cleaningDraftKey());CLEAN.data=d;CLEAN.error='';CLEAN.loaded=Date.now();cleaningPaint();gerarNotificacoes();toast('Salvo no servidor.');}catch(e){if(cleaningUser()===id){CLEAN.error=e.message;const warning=document.createElement('p');warning.className='clean-warning';warning.setAttribute('role','alert');warning.textContent=e.message+' Suas alterações continuam na tela; confira antes de tentar novamente.';document.querySelector('.clean-actions')?.after(warning);toast(e.message);}}finally{if(cleaningUser()===id){CLEAN.saving=false;document.querySelectorAll('.clean-actions button,.clean-toolbar button').forEach(b=>b.disabled=false);const sent=document.querySelector('#cleanDraftStatus');if(sent&&!CLEAN.error)sent.textContent='Salvo no servidor · versão '+CLEAN.data.cycle.version;}}
+ try{const d=await cleaningRequest('/'+requestedMonth,body);if(cleaningUser()!==id||CLEAN.month!==requestedMonth)return;localStorage.removeItem(cleaningDraftKey());CLEAN.data=d;CLEAN.error='';CLEAN.loaded=Date.now();cleaningPaint();gerarNotificacoes();toast('Salvo no servidor.');}catch(e){if(cleaningUser()===id){CLEAN.error=e.message;const warning=document.createElement('p');warning.className='clean-warning';warning.setAttribute('role','alert');warning.textContent=e.message+' Suas alterações continuam na tela; confira antes de tentar novamente.';document.querySelector('.clean-actions')?.after(warning);toast(e.message);}}finally{if(cleaningUser()===id){CLEAN.saving=false;document.querySelectorAll('.clean-actions button,.clean-toolbar button').forEach(b=>b.disabled=false);const sent=document.querySelector('#cleanDraftStatus');if(sent&&!CLEAN.error)sent.textContent='Salvo no servidor · versão '+CLEAN.data.cycle.version;}}
 }
 function cleaningCatalog(){
  const d=CLEAN.data;if(!d?.canManage)return;
@@ -68,3 +68,5 @@ async function cleaningCatalogSave(version){const btn=document.querySelector('#c
 setInterval(()=>{if(typeof AUTH==='undefined'||typeof session==='undefined')return;if(!cleaningReset())return;if(page!=='limpeza')cleaningLoad(false);},60000);
 
 setTimeout(()=>{if(typeof AUTH!=='undefined'&&typeof session!=='undefined'&&cleaningReset())cleaningLoad(false);},3000);
+
+function cleaningDiscard(){for(const key of Object.keys(localStorage))if(key.startsWith('grc.cleaning.draft.'))localStorage.removeItem(key);CLEAN={user:null,data:null,month:'',loading:false,saving:false,loaded:0,error:''};}

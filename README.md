@@ -22,7 +22,7 @@ Política `scoped-2026-10-30`, banco `DB_VER=2`.
 - O módulo separado Brigada e manutenção foi retirado. Seus registros antigos são preservados em arquivo somente para Maciel, sem novas ações.
 - A API protege resolução e conferência contra alterações por outros perfis e clientes antigos (manager-review-v2).
 - As pendências permanecem nos meses seguintes até a conferência de Maciel.
-- Cache grc-v34-materiais-limpeza; backup integral mantém 13 tabelas.
+- Cache grc-v35-limpeza-retomada; backup integral mantém 13 tabelas.
 
 ## Executar
 

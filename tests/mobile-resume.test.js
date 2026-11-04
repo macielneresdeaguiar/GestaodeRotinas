@@ -225,5 +225,6 @@ test('Fernanda confirms cleaning stock and Alef receives suggestions, saves quan
  await w.logout();await settle(w);w.pickUser('u2');w.document.querySelector('#loginPass').value=password;await w.doLogin();await settle(w);w.go('limpeza');await w.cleaningLoad();await until(()=>w.document.querySelector('[data-clean-field="quantity"]'),'order');
  assert.equal(w.document.querySelector('[data-clean-field="quantity"]').value,'5');assert.match(w.cleaningNotice().title,/Estoque de limpeza conferido/);
  w.document.querySelector('[data-clean-field="quantity"]').value='6';w.document.querySelector('[data-clean-field="price"]').value='13';await w.cleaningAction('finalizar');assert.match(w.document.querySelector('.clean-status').textContent,/Pedido preparado/);assert.match(w.document.querySelector('#cleanGrand').textContent,/78,00/);assert.equal(w.document.querySelectorAll('.clean-actions a[href*="/pdf"]').length,2);
+ w.localStorage.setItem('grc.cleaning.draft.u2.fake','private draft');w.cleaningDiscard();assert.equal(w.localStorage.getItem('grc.cleaning.draft.u2.fake'),null);
  assert.deepEqual(errors,[]);await settle(w);w.close();saved={};
 });

@@ -77,7 +77,7 @@ aparecer antes da resposta de sucesso do servidor e do envio dos anexos.
 - server/maintenance.js mantém apenas recuperação do acervo antigo para u1. Novos encaminhamentos e ações retornam 410; outros perfis recebem 403.
 - As tabelas maintenance_case/maintenance_event e seus anexos são preservados, mantendo backup integral de 13 tabelas.
 - Ativos do módulo antigo continuam somente como histórico de código, sem carregamento no app nem inclusão no cache.
-- Cache: grc-v34-materiais-limpeza. Validar as permissões no servidor, fluxo mensal e interface móvel antes da publicação.
+- Cache: grc-v35-limpeza-retomada. Validar as permissões no servidor, fluxo mensal e interface móvel antes da publicação.
 
 ## Materiais de limpeza — 04/11/2026
 - Página limpeza e /api/limpeza somente para u1, u2 e u4. Fernanda não recebe acesso ao estoque geral.
