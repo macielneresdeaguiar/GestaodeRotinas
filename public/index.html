@@ -1285,6 +1285,8 @@ body.crit-open{overflow:hidden}
 <script src="/access-client.js"></script>
 <script src="/field-ui.js"></script>
 <script src="/workflow.js"></script>
+<link rel="stylesheet" href="/cleaning.css">
+<script src="/cleaning.js"></script>
 <script src="/mobile.js" defer></script>
 </head>
 <body>
@@ -2901,6 +2903,7 @@ function itensNavegacao(){
     if(P().manutobrig) items.push(['manutobrig','shieldCheck','Manutenções Obrigatórias']); }
   if(P().estoque) items.push(['estoque','box','Controle de Estoque'],['pedidos','cart','Pedidos de Material']);
   if(P().tipos.length) items.push(['#','','Gestão'],['relatorios','chart','Relatórios'],['relmensal','doc','Relatório Mensal']);
+  if(['u1','u2','u4'].includes(session?.id))items.push(['limpeza','cart','Materiais de limpeza']);
   items.push(['config','settings','Configurações']);
   return AUTH.access?items.filter(i=>i[0]==='#'||AUTH.access.pages.includes(i[0])):items;
 }
@@ -2979,6 +2982,7 @@ function renderConteudo(){
   if(page==='brigada-form'){ return viewBrigForm() }
   if(page==='brigada'){ return viewBrigada() }
   if(page==='brigada-ronda'){ return viewBrigRonda() }
+  if(page==='limpeza'){ $('#pageTitle').textContent='Materiais de limpeza';return viewLimpeza() }
   if(page==='afazeres'){ return viewAfazeres() }
   if(page==='tarefas-adm'){tipoLock='Administrativo';return viewTasks()}
   if(page==='tarefas-gestor'){tipoLock='Gestor';return viewTasks()}
@@ -12462,7 +12466,7 @@ function tabsDoPerfilBase(){
       ['menu','menu','Mais']];
     /* Limpeza e portaria: leitura e ronda */
     if(P().leituras||P().ronda) return [['inicio','gauge','Início'],
-      ['leituras','water','Leituras'],['brigada-ronda','route','Ronda'],
+      ['leituras','water','Leituras'],['limpeza','cart','Limpeza'],['brigada-ronda','route','Ronda'],
       ['menu','menu','Mais']];
     /* Manutenção (Cleiton) — fluxo de campo */
     return [['inicio','gauge','Início'],['apontamentos','wrench','Serviços'],
@@ -12688,6 +12692,7 @@ function gerarNotificacoes(){
     pushNotif('delegada','Tarefa delegada a você: '+t.titulo,
       `por ${t.delegadoPor||'—'} · ${condoName(t.condoId)} · prazo ${t.vencimento?fmt(t.vencimento):'sem data'}`,
       'alta',`openTask('${t.id}')`,t.id));
+  cleaningAddNotice();
   const ordem={alta:0,media:1,baixa:2};
   notifs.sort((a,b)=>ordem[a.prio]-ordem[b.prio]);
   atualizaSino();
@@ -12830,6 +12835,7 @@ function nfIrPara(id){
   go('notas');
 }
 function alertaCritico(forcar){
+  if(!session||!AUTH.ok)return;
   const cr=moCriticas();
   if(!cr.length) return false;
   const venc=cr.filter(m=>m._dias<0), prox=cr.filter(m=>m._dias>=0);
