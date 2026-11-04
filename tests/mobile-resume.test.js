@@ -201,9 +201,11 @@ test('the mobile app removes service desk and brigade repair controls while Maci
  w.brigAcompanharInsp('owner_mobile');assert.ok(w.document.querySelector('#modalFoot [onclick*="brigResolverPendencia"]'));w.closeModal();
  const {accessFor}=await import('../server/access.js');const a=accessFor('b1',{CFG:{}});
  w.eval('scopeApplyMetadata('+JSON.stringify(a)+');session=USERS.find(u=>u.id==="b1");');
- assert.ok(!w.itensNavegacao().some(i=>['atendimentos','brigada-ronda','dashboard'].includes(i[0])));
- assert.ok(!w.tabsDoPerfil().some(i=>i[0]==='brigada-ronda'));
- w.go('brigada-ronda');assert.notEqual(w.eval('page'),'brigada-ronda');w.go('atendimentos');assert.notEqual(w.eval('page'),'atendimentos');
+ assert.ok(!w.itensNavegacao().some(i=>['atendimentos','dashboard'].includes(i[0])));
+ assert.ok(w.tabsDoPerfil().some(i=>i[0]==='brigada-ronda'));
+ assert.ok(w.itensNavegacao().some(i=>i[0]==='brigada-ronda'));
+ w.go('inicio');assert.match(w.document.querySelector('#content').textContent,/Ronda diária/);
+ w.go('brigada-ronda');assert.equal(w.eval('page'),'brigada-ronda');w.go('atendimentos');assert.notEqual(w.eval('page'),'atendimentos');
  const before=w.eval('JSON.stringify(_bi("owner_mobile"))');w.brigResolverPendencia('owner_mobile',0,'Tentativa sem autoridade');assert.equal(w.eval('JSON.stringify(_bi("owner_mobile"))'),before);
  const next=w.brigNova('24','iluminacao');next.id='brigade-monthly';next.data='2026-11-03';w.eval('brigInsp.push('+JSON.stringify(next)+');');
  w.brigSit(next.id,0,'CONFORME');assert.equal(w.eval('_bi("brigade-monthly").pontos[0].sit'),'NÃO CONFORME');
