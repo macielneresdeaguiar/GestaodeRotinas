@@ -35,6 +35,7 @@ export function accessFor(id,snapshot){
   if(p.manutencao)pages.add('apontamentos');if(p.manutobrig)pages.add('manutobrig');
   if(p.estoque){pages.add('estoque');pages.add('pedidos');}
   if(FULL_READ.has(id))all.forEach(k=>pages.add(k));
+  if(['u1','u2','u4'].includes(id))pages.add('limpeza');
   const key=createHash('sha256').update(JSON.stringify({id,p})).digest('hex').slice(0,20);
   return {policy:'scoped-2026-10-30',userId:id,key,fullRead:FULL_READ.has(id),manageAccess:id==='u1',perms:p,pages:[...pages],name:snapshot?.CFG?.nomesUsuarios?.[id]||names[id]||id};
 }
