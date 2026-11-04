@@ -8,7 +8,7 @@ function viewInicio(){
     p.manutencao&&!p.tipos.length?['apontamentos','wrench','Atender serviços','Veja os chamados e registre o atendimento']:
     p.leituras&&!p.tipos.length?['leituras','water','Registrar leitura','Confira o medidor e registre o valor']:
     ['hoje','today','Organizar meu dia','Tarefas, prioridades e próximas entregas'];
-  const shortcuts=[['hoje','today','Meu dia'],['brigada-inicio','shieldCheck','Check-list'],['brigada-ronda','route','Fazer ronda'],
+  const shortcuts=[['hoje','today','Meu dia'],['brigada-inicio','shieldCheck','Check-list'],['brigada-ronda','route','Ronda diária'],
     ['leituras','water','Leituras'],['apontamentos','wrench','Serviços'],['estoque','box','Estoque'],['pedidos','cart','Materiais'],
     ['notas','invoice','Notas fiscais'],['ocupacao','building','Ocupação'],['analises','helmet','Projetos'],['config','settings','Minha conta']].filter(([k])=>allowed(k)&&k!==primary[0]);
   const done=s=>/Conclu|Resolvido|Cancelad|Registrada/.test(s||'');
