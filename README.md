@@ -17,12 +17,12 @@ Política `scoped-2026-10-30`, banco `DB_VER=2`.
 - Versões anteriores recuperáveis e backup integral privado das doze tabelas.
 
 ## Brigada mensal e gestão de Maciel — 03/11/2026
-- A brigada registra somente o check-list mensal e mantém evidências das falhas.
+- A brigada registra o check-list mensal e a ronda diária e mantém evidências das falhas.
 - Maciel recebe as pendências no Meu espaço e no Check-list por Andar; somente ele confere e registra a solução.
 - O módulo separado Brigada e manutenção foi retirado. Seus registros antigos são preservados em arquivo somente para Maciel, sem novas ações.
 - A API protege resolução e conferência contra alterações por outros perfis e clientes antigos (manager-review-v2).
 - As pendências permanecem nos meses seguintes até a conferência de Maciel.
-- Cache grc-v32-conferencia-maciel; backup integral mantém 12 tabelas.
+- Cache grc-v33-ronda-brigada; backup integral mantém 12 tabelas.
 
 ## Executar
 

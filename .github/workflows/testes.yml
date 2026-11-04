@@ -1,7 +1,7 @@
 name: Testes da aplicação
 on:
   push:
-    branches: [conferencia-maciel-20261103, main]
+    branches: [fix/ronda-brigada-20261104, main]
   pull_request:
     branches: [main]
 permissions:

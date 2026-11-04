@@ -12,7 +12,7 @@ function defaults(id){
   if(FULL_READ.has(id))return {...p,condos:['c1','c2'],tipos:['Administrativo','Gestor'],manutencao:true,manutobrig:true,estoque:true,estoqueTotal:id==='u1',apontamentos:true,brigada:true,leituras:true,ronda:true,ia:true,sindico:true,edit:true,complete:true,delete:id==='u1'};
   if(id==='u3')return {...p,manutencao:true,apontamentos:true,estoque:true,estoqueTotal:true,edit:true,complete:true};
   if(id==='u4')return {...p,leituras:true,ronda:true};
-  if(/^b[1-4]$/.test(id))return {...p,brigada:true};
+  if(/^b[1-4]$/.test(id))return {...p,brigada:true,ronda:true};
   if(/^p[1-6]$/.test(id))return {...p,leituras:true,leiturasSimples:true};
   return {...p,condos:[],create:false};
 }
@@ -24,7 +24,7 @@ export function accessFor(id,snapshot){
   // Explicit owner requirement: these two accounts always see every module.
   if(FULL_READ.has(id))Object.assign(p,defaults(id));
   if(!FULL_READ.has(id))p.sindico=false;
-  if(/^b[1-4]$/.test(id)){Object.assign(p,{ronda:false,manutencao:false,apontamentos:false,manutobrig:false,estoque:false,estoqueTotal:false,leituras:false,leiturasSimples:false,ia:false,edit:false,complete:false,delete:false});p.tipos=[];}
+  if(/^b[1-4]$/.test(id)){Object.assign(p,{ronda:true,manutencao:false,apontamentos:false,manutobrig:false,estoque:false,estoqueTotal:false,leituras:false,leiturasSimples:false,ia:false,edit:false,complete:false,delete:false});p.tipos=[];}
   const pages=new Set(['inicio','config']);
   if(!p.leiturasSimples&&!/^b[1-4]$/.test(id))pages.add('dashboard');
   if(p.tipos.length)for(const k of ['hoje','rotina','tarefas-adm','afazeres','calendario','notas','cessoes','vendascustas','publicidade','emails','leituras','analises','unidades','ocupacao','locacao','relatorios','relmensal'])pages.add(k);

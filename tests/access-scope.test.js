@@ -96,18 +96,27 @@ test('full backup restores all twelve tables including credentials, attachments 
 });
 
 
-test('brigada has only the monthly checklist; the retired service desk stays unavailable',async()=>{
+test('brigada has monthly checklists and daily rounds; the retired service desk stays unavailable',async()=>{
  for(const id of ids){
   const s=await get(id);assert.ok(!s.snapshot._access.pages.includes('atendimentos'),id);
   if(id.startsWith('b')){
-   assert.deepEqual(s.snapshot._access.pages,['inicio','config','brigada-inicio','brigada','brigada-form']);
-   assert.deepEqual(s.snapshot.brigRondas,[]);assert.deepEqual(s.snapshot.tasks,[]);
+   assert.deepEqual(s.snapshot._access.pages,['inicio','config','brigada-inicio','brigada','brigada-form','brigada-ronda']);
+   assert.ok(s.snapshot.brigRondas.some(r=>r.id==='round'));assert.ok(s.snapshot.tasks.every(t=>t.origem==='ronda'));assert.ok(!JSON.stringify(s.snapshot).includes('SECRET_NOTE'));
   }
   if(id!=='u1'){assert.equal((await req('/api/atendimentos',undefined,id)).status,403);assert.equal((await req('/api/atendimentos',{inspectionId:'check',pointIndex:0},id)).status,403);}
  }
  const archive=await req('/api/atendimentos',undefined,'u1');assert.equal(archive.status,200);assert.equal(archive.data.desativado,true);
  assert.equal((await req('/api/atendimentos',{inspectionId:'check',pointIndex:0},'u1')).status,410);
- const attempt=await get('b1');attempt.snapshot.brigRondas=[{id:'denied-round',condoId:'c1',userId:'b1',ok:true}];assert.equal((await put(attempt.snapshot,attempt.versao,'b1')).status,403);
+ for(const id of ['b1','b2','b3','b4']){
+  const attempt=await get(id);attempt.snapshot.brigRondas.push({id:'daily-'+id,condoId:'c1',userId:id,ok:true});assert.equal((await put(attempt.snapshot,attempt.versao,id)).status,200);
+ }
+ const report=await get('b1');report.snapshot.brigRondas.push({id:'brig-incident',condoId:'c1',userId:'b1',ok:false,chamadoId:'brig-call',obs:'Porta danificada'});
+ report.snapshot.tasks.push({id:'brig-call',condoId:'c1',tipo:'Manutencao',origem:'ronda',status:'Pendente',titulo:'Porta danificada'});
+ assert.equal((await put(report.snapshot,report.versao,'b1')).status,200);
+ const repeat=await get('b2');repeat.snapshot.brigRondas.push({id:'brig-repeat',condoId:'c1',userId:'b2',ok:false,chamadoId:'brig-call',repeteDe:'brig-incident'});repeat.snapshot.tasks.find(t=>t.id==='brig-call').vistoDeNovo=1;
+ assert.equal((await put(repeat.snapshot,repeat.versao,'b2')).status,200);
+ const tamper=await get('b1');tamper.snapshot.tasks.find(t=>t.id==='brig-call').status='Concluída';assert.equal((await put(tamper.snapshot,tamper.versao,'b1')).status,403);
+ const all=await get();assert.equal(all.snapshot.tasks.find(t=>t.id==='brig-call').responsavel,'Cleiton');assert.equal(all.snapshot.tasks.find(t=>t.id==='brig-call').vistoDeNovo,1);
 });
 test('only Maciel can verify and close checklist defects, including own reports, monthly carryovers and linked legacy tasks',async()=>{
  const create=await get('b2');
