@@ -60,9 +60,8 @@ mês seguinte, preservando observações, itens e evidências. A conferência ex
 anterior. Um reparo só encerra a falha mediante confirmação ou resolução
 registrada; nunca voltar todos os pontos a Conforme ao criar um mês.
 
-Uma pendência compartilhada pode ser resolvida por outro brigadista com patch
-restrito no servidor. Isso não autoriza reescrever o relato, autoria ou andar do
-colega. Mantenha testes de três meses, deduplicação, evidências e acesso negado.
+Somente Maciel (u1) pode conferir e resolver uma pendência compartilhada.
+Brigadistas preservam o relato, autoria e andar do colega. Mantenha testes de três meses, deduplicação, evidências e acesso negado.
 
 Rascunhos locais pertencem à conta e assinatura de permissões, duram até sete
 dias e exigem escolha para retomar. Excluir senhas e limpar no logout/troca de
@@ -71,11 +70,11 @@ aparecer antes da resposta de sucesso do servidor e do envio dos anexos.
 
 ## Conferência exclusiva de Maciel — 03/11/2026
 - O módulo Brigada e manutenção foi retirado por solicitação do gestor. Não recriar menu, encaminhamento ou conferência para a brigada.
-- Brigadistas b1–b4 usam somente check-list mensal (início, andares e formulário), além da conta; não recebem ronda, tarefas nem manutenção.
+- Brigadistas b1–b4 usam check-list mensal e ronda diária, além da conta. Ronda aparece no início, menu e barra inferior; somente chamados originados de ronda ficam visíveis, sem acesso às demais tarefas ou manutenção.
 - Maciel vê as pendências no Meu espaço e no Check-list por Andar, define o atendimento e confere a execução no local antes de resolver.
 - Somente u1 altera resolução, conferência do reparo ou encerra chamado legado vinculado a uma pendência aberta. A API impede outros perfis, inclusive o próprio autor e Alef, de encerrar falhas por alteração direta, remoção do ponto ou Conforme em mês posterior.
 - Protocolo de gravação X-GRC-Workflow: manager-review-v2. Clientes antigos recebem 426.
 - server/maintenance.js mantém apenas recuperação do acervo antigo para u1. Novos encaminhamentos e ações retornam 410; outros perfis recebem 403.
 - As tabelas maintenance_case/maintenance_event e seus anexos são preservados, mantendo backup integral de 12 tabelas.
 - Ativos do módulo antigo continuam somente como histórico de código, sem carregamento no app nem inclusão no cache.
-- Cache: grc-v32-conferencia-maciel. Validar as permissões no servidor, fluxo mensal e interface móvel antes da publicação.
+- Cache: grc-v33-ronda-brigada. Validar as permissões no servidor, fluxo mensal e interface móvel antes da publicação.
