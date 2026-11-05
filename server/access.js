@@ -122,11 +122,16 @@ function assertManagerChecklist(incoming,current,a){
  for(const i of current.brigInsp||[])for(const p of i.pontos||[])if(unresolvedChecklist(current,i,p))open.add(checklistKey(i,p));
  for(const i of Array.isArray(incoming.brigInsp)?incoming.brigInsp:[]){
   const old=oldMap.get(i.id);
+  if(old&&same(i,old))continue;
   if(!same(i.resolvido,old?.resolvido))reject('Somente Maciel confere e encerra pendências do check-list.');
   for(const [idx,p] of (i.pontos||[]).entries()){
    const prior=old?.pontos?.[idx];
    for(const key of protectedPoint)if(!same(p[key],prior?.[key]))reject('Somente Maciel registra a conferência e a resolução do serviço.');
-   if(p.sit!=='NÃO CONFORME'&&open.has(checklistKey(i,p)))reject('Esta pendência aguarda a conferência de Maciel. Registre a revisão mensal sem encerrá-la.');
+   // An older conforming inspection is included in every snapshot. Only
+   // new or changed inspection results can close a later open defect.
+   const resultChanged=!prior||p.sit!==prior.sit||checklistKey(i,p)!==checklistKey(old,prior)||
+     i.data!==old.data||i.hora!==old.hora||i.status!==old.status;
+   if(resultChanged&&p.sit!=='NÃO CONFORME'&&open.has(checklistKey(i,p)))reject('Esta pendência aguarda a conferência de Maciel. Registre a revisão mensal sem encerrá-la.');
   }
   for(const [idx,p]of (old?.pontos||[]).entries())if(unresolvedChecklist(current,old,p)){
    const next=i.pontos?.[idx];
