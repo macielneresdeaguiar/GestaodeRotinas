@@ -119,9 +119,18 @@ test('brigada has monthly checklists and daily rounds; the retired service desk 
  const all=await get();assert.equal(all.snapshot.tasks.find(t=>t.id==='brig-call').responsavel,'Cleiton');assert.equal(all.snapshot.tasks.find(t=>t.id==='brig-call').vistoDeNovo,1);
 });
 test('only Maciel can verify and close checklist defects, including own reports, monthly carryovers and linked legacy tasks',async()=>{
+ const historical=await get();
+ historical.snapshot.brigInsp.push({id:'older_conforming',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-08-01',userId:'b1',status:'Concluído',pontos:[{desc:'Luminária do corredor',sit:'CONFORME'}]});
+ assert.equal((await put(historical.snapshot,historical.versao)).status,200);
  const create=await get('b2');
  create.snapshot.brigInsp.push({id:'manager_defect',condoId:'c1',andar:'24',sistema:'iluminacao',data:'2026-09-01',userId:'b2',status:'Concluído',pontos:[{desc:'Luminária do corredor',sit:'NÃO CONFORME',obs:'Sem acender',fotos:[]}],historico:[]});
  assert.equal((await put(create.snapshot,create.versao,'b2')).status,200);
+ const unrelated=await get('b1');
+ unrelated.snapshot.brigInsp.push({id:'extinguisher_floor_9',condoId:'c1',andar:'9',sistema:'extintores',data:'2026-11-04',userId:'b1',status:'Concluído',pontos:[{desc:'Extintor',sit:'CONFORME'}]});
+ assert.equal((await put(unrelated.snapshot,unrelated.versao,'b1')).status,200);
+ assert.equal((await get('b1')).snapshot.brigInsp.find(i=>i.id==='extinguisher_floor_9').status,'Concluído');
+ const backdate=await get('b1');backdate.snapshot.brigInsp.find(i=>i.id==='older_conforming').data='2026-11-04';
+ assert.equal((await put(backdate.snapshot,backdate.versao,'b1')).status,403);
  for(const id of ['b1','b2','u2']){
   let s=await get(id),row=s.snapshot.brigInsp.find(i=>i.id==='manager_defect');
   Object.assign(row.pontos[0],{resolvido:true,resolvidoPor:id,obsResolucao:'Serviço conferido'});row.resolvido=true;
