@@ -31,3 +31,8 @@ test('closed monthly reports preserve original values through later advertising 
  const closed=B.build(s,'11/2026','c1');assert.equal(closed.frozen,true);assert.equal(closed.totals.sgq,237.03);assert.equal(closed.sgq[0].valor,200);assert.equal(closed.canExport('sgq'),true);
  delete s.CFG.vcRelatorios.meses.c1['11/2026'].fechamento;assert.notEqual(B.build(s,'11/2026','c1').totals.sgq,237.03);
 });
+
+test('September-to-October readings billed in November are due November 15 even if generated in October',()=>{
+ const s=fixture();Object.assign(s.vcVendas[1],{dia:1,vencMeses:-1,refMeses:2});
+ const m=B.build(s,'11/2026','c1'),water=m.sales.find(v=>v.id==='agua');assert.equal(m.agua.competencia,'10/2026');assert.equal(water.venc,'2026-11-15');assert.equal(water.motivo,'CONSUMO 09/2026');
+});
