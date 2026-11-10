@@ -87,3 +87,14 @@ aparecer antes da resposta de sucesso do servidor e do envio dos anexos.
 - Sugestão máximo(0, ideal - estoque); quantidades de compra inteiras, ajuste manual, preço editável e PDF real com ou sem preços. PDF exige pedido salvo e finalizado.
 - Meses iniciados preservam catálogo/preços próprios; reajuste do cadastro só vale nos próximos meses. Concorrência retorna 409 sem sobrescrever.
 - Backup privado inclui cleaning_record (13 tabelas); backup operacional antigo não inclui este módulo.
+
+## Vendas, custas e SGQ — 10/11/2026
+- Página existente vendascustas, sem ampliação de acesso. public/billing-model.js concentra cálculo compartilhado; public/billing.js e billing.css apresentam o fluxo mensal.
+- Competência é o mês do vencimento; pode gerar o arquivo no mês anterior. Consumos e custas vencem no dia configurado (padrão 15), independentemente do dia da geração. Referência escrita segue o cadastro do lançamento. Padrão: ciclos exatos do mês anterior, selecionáveis explicitamente por mês em CFG.vcRelatorios.meses. Nunca usar leitura antiga/futura como substituição silenciosa.
+- Consumo mantém a precisão da leitura; tarifa usa precisão integral. Cada cobrança é arredondada em centavos e totais somam essas cobranças. Ausência de leitura/tarifa não equivale a zero.
+- CFG.vcRelatorios.cadastros guarda vínculos privados de publicidade: CUSTA entra na SGQ e ADM; VENDA deve apontar para lançamento ADM existente; NAO_COBRAR exclui explicitamente. Nunca duplicar um lançamento vinculado. Água das lojas M usa os ciclos e nomes registrados, com inclusão por unidade.
+- Vínculos reais e nomes dos modelos enviados devem ser preenchidos somente pelo app autenticado. Não incorporar planilhas originais ou seus valores ao Git.
+- /api/faturamento/exportar exige sessão, escopo da página/condomínio, versão atual e ausência de pendências do relatório. Recalcula no servidor; responde no-store. Nunca gerar arquivo com dados locais não confirmados.
+- Excel administrativo tem faturamento e água na primeira aba, energia na segunda. SGQ tem unidade, titular, tipo, quantidade, unitário e total. server/billing-layouts.json contém somente formatação/logos/fontes com licença, sem registros financeiros. Fontes PDF são incorporadas.
+- Fechamento explícito preserva valores, nomes, leituras e tarifas daquele mês em CFG.vcRelatorios.meses; reajustes posteriores não alteram os relatórios fechados. Reabrir exige ação explícita e auditoria. Não fechar ou preencher repasses em nome do gestor sem instrução.
+- Cache grc-v36-vendas-custas-sgq. Banco e backup continuam com treze tabelas; as configurações mensais integram workspace e seu histórico.
