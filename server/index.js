@@ -1,4 +1,5 @@
 import express from 'express';
+import {installBilling} from './billing.js';
 import {initializeCleaning,installCleaning} from './cleaning.js';
 import { initializeAuth, installAuth, publicSnapshot, sanitizeIncoming } from './auth.js';
 import path from 'node:path';
@@ -54,6 +55,7 @@ app.disable('x-powered-by');
 installAuth(app);
 installMaintenance(app);
 installCleaning(app);
+installBilling(app);
 async function viewFor(req){
   const ws=await lerWorkspace(WS);
   const access=accessFor(req.auth.user_id,ws?.snapshot);
