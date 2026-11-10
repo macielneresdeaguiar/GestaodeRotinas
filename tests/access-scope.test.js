@@ -187,3 +187,25 @@ test('cleaning workflow isolates Fernanda stock, versions concurrent changes, pr
  const {cleaningReminder}=await import('../server/cleaning.js');assert.equal(cleaningReminder('u4',null,'2026-11-14'),null);assert.ok(cleaningReminder('u4',null,'2026-11-15'));assert.ok(cleaningReminder('u4',null,'2026-11-30'));
  const all=await get();assert.equal(all.snapshot.unidSind[0].iptu,'SECRET_TAX');assert.equal(all.snapshot.notas[0].obs,'SECRET_INVOICE');
 });
+
+
+test('billing exports enforce authentication, scope, saved version and complete inputs',async()=>{
+ const s=await get('u1');
+ const body={tipo:'sgq',formato:'xlsx',competencia:'11/2026',condoId:'c1',versao:s.versao};
+ assert.equal((await fetch(base+'/api/faturamento/exportar',{method:'POST',headers:{'Content-Type':'application/json',Origin:base,'X-GRC-Client':'daily-2026-10-30'},body:JSON.stringify(body)})).status,401);
+ for(const id of ['u3','u4','b1','p1'])assert.equal((await req('/api/faturamento/exportar',body,id)).status,403);
+ assert.equal((await req('/api/faturamento/exportar',{...body,versao:s.versao-1})).status,409);
+ assert.equal((await req('/api/faturamento/exportar',body)).status,422);
+ for(const id of ['u1','u2'])assert.equal((await req('/api/faturamento/exportar',{...body,formato:'bad'},id)).status,400);
+});
+
+test('authorized billing export returns real XLSX and PDF from the saved data, including Alef',async()=>{
+ const s=await get();s.snapshot.vcCiclos=[{id:'billing_test',condoId:'c1',servico:'agua',competencia:'10/2026',valorFatura:100,consumoFatura:10,linhas:[{unidadeId:'m',unidade:'LOJA M01',nome:'Titular de teste',tipo:'CUSTA',anterior:100,atual:102}]}];s.snapshot.vcVendas=[];s.snapshot.anuncios=[];
+ const saved=await put(s.snapshot,s.versao);assert.equal(saved.status,200);
+ for(const id of ['u1','u2'])for(const formato of ['xlsx','pdf']){
+  const b={tipo:'sgq',formato,competencia:'11/2026',condoId:'c1',versao:saved.data.versao};
+  const r=await fetch(base+'/api/faturamento/exportar',{method:'POST',headers:{'Content-Type':'application/json',Origin:base,'X-GRC-Client':'daily-2026-10-30','X-GRC-User':id,Cookie:cookies[id]},body:JSON.stringify(b)});
+  assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'no-store');const bytes=Buffer.from(await r.arrayBuffer());assert.ok(bytes.length>1000);assert.equal(bytes.subarray(0,formato==='pdf'?4:2).toString(),formato==='pdf'?'%PDF':'PK');
+  if(formato==='xlsx'){assert.ok(bytes.includes(Buffer.from('Titular de teste')));assert.ok(bytes.includes(Buffer.from('ROUND(E10*F10,2)')));}
+ }
+});
