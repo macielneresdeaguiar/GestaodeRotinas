@@ -8994,7 +8994,7 @@ function vcFormVenda(id){
           <option value="" ${v&&(v.cicloMeses===null||v.cicloMeses===undefined)?'selected':''}>seguir a regra padrão</option>
           ${[0,1,2,3,4,5].map(n=>`<option value="${n}" ${v&&v.cicloMeses===n?'selected':''}>ciclo de ${n===0?'o próprio mês':n+' mês(es) antes'}</option>`).join('')}
         </select>
-        <div class="t-sub">Nos novos relatórios, os ciclos são escolhidos na aba Medições. O motivo de água e energia cita o mês anterior ao ciclo escolhido.</div></div>
+        <div class="t-sub">Nos novos relatórios, os ciclos são escolhidos em Medições. A referência escrita segue este cadastro; o consumo vence no dia das custas (padrão: 15) do mês do faturamento.</div></div>
     </div>
     <div class="check"><input type="checkbox" id="vvAtivo" ${v?(v.ativo!==false?'checked':''):'checked'}>
       <div style="flex:1"><div class="ct">Lançamento ativo</div><div class="t-sub">Entra na planilha de todo mês</div></div></div>`;
