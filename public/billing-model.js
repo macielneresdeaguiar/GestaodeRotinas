@@ -39,7 +39,7 @@
   });
   const sgq=[],linkedSales=new Set();
   for(const u of (s.vcUnidades||[]).filter(u=>u.condoId===cid&&u.servico==='agua'&&u.ativo!==false&&u.tipo==='CUSTA'&&shop(u.unidade)&&catalog.lojas?.[u.id]?.incluir!==false))if(!water.some(l=>l.unidadeId===u.id))issues.push({kind:'todos',text:`${u.unidade}: unidade cadastrada sem linha no ciclo de água selecionado.`});
-  const activeAds=(s.anuncios||[]).filter(a=>a.condoId===cid&&a.status==='Ativo'&&!a.fila);
+  const activeAds=(s.anuncios||[]).filter(a=>a.condoId===cid&&a.status==='Ativo'&&!a.fila).sort((a,b)=>(catalog.portas?.[a.id]?.ordem??9999)-(catalog.portas?.[b.id]?.ordem??9999));
   for(const a of activeAds){
    const link=catalog.portas?.[a.id];
    if(!link||!['VENDA','CUSTA','NAO_COBRAR'].includes(link.tipo)){issues.push({kind:'todos',id:a.id,text:`Classifique a publicidade de ${a.empresa} para evitar omissão ou duplicidade.`});continue;}
@@ -61,10 +61,10 @@
    else sales.push({id:a.id,unidade:'SALA '+row.unidade,cnpj:'',motivo:`MERCHANDISING ${a.elevador||''}`.trim(),venc:due(comp,catalog.diaCustas||15),valor:row.valor,tipo:'CUSTA',origem:'publicidade',source:a.elevador||''});
   }
   for(const l of water.filter(l=>l.tipo==='CUSTA'&&shop(l.unidade))){
-   if(catalog.lojas?.[l.unidadeId]?.incluir===false)continue;
+   const incluir=catalog.lojas?.[l.unidadeId]?.incluir!==false;
    const row={id:l.unidadeId,unidade:shop(l.unidade),nome:l.nome,motivo:'CONSUMO DE AGUA',quantidade:1,unitario:l.valor,valor:l.valor,origem:'agua',source:agua.competencia};
    if(l.valor===null)issues.push({kind:'todos',id:l.unidadeId,text:`${l.unidade}: falta leitura válida ou tarifa da água.`});
-   sgq.push(row);
+   if(incluir)sgq.push(row);
    if(!sales.some(v=>v.origem==='agua'&&v.item?.unidadeId===l.unidadeId))sales.push({id:l.unidadeId,unidade:l.nome,cnpj:l.cnpj||'',motivo:`CONSUMO DE AGUA ${shift(agua.competencia,1)}`,venc:due(comp,catalog.diaCustas||15),valor:l.valor,tipo:'CUSTA',origem:'agua',source:agua.competencia});
   }
   return {comp,cid,options,catalog,agua,energia,tariffs:{agua:rate(agua,cfg),energia:rate(energia,cfg)},water,energy,sales,sgq,issues,warnings,totals:{adm:sum(sales),sgq:sum(sgq),water:sum(water),energy:sum(energy)},canExport:kind=>!issues.some(i=>i.kind==='todos'||i.kind===kind)};
