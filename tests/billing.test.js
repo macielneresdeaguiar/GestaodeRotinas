@@ -17,7 +17,7 @@ test('billing uses the exact previous competence and never falls back to a futur
 test('SGQ derives water and advertising, synchronizes prices, and avoids double counting a linked ADM sale',()=>{
  const s=fixture(),m=B.build(s,'11/2026','c1');assert.equal(m.sgq.length,2);assert.equal(m.totals.sgq,237.03);assert.equal(m.sales.filter(v=>v.id==='vv').length,1);assert.equal(m.sales.filter(v=>v.origem==='publicidade').length,1);assert.equal(m.canExport('sgq'),true);assert.equal(m.canExport('adm'),true);
  s.anuncios[0].valorMensal=250;const raised=B.build(s,'11/2026','c1');assert.equal(raised.totals.sgq,287.03);assert.equal(raised.sales.find(v=>v.id==='ad').valor,250);
- s.CFG.vcRelatorios.cadastros.c1.lojas={m:{incluir:false}};assert.equal(B.build(s,'11/2026','c1').sgq.length,1);
+ s.CFG.vcRelatorios.cadastros.c1.lojas={m:{incluir:false}};const excluded=B.build(s,'11/2026','c1');assert.equal(excluded.sgq.length,1);assert.ok(excluded.sales.some(v=>v.id==='m'),'Excluir da SGQ não retira uma cobrança do relatório ADM');
 });
 test('unknown advertising, missing readings, and cross-condominium cycle selection block affected exports',()=>{
  const s=fixture();delete s.CFG.vcRelatorios.cadastros.c1.portas.ad;assert.equal(B.build(s,'11/2026','c1').canExport('sgq'),false);
@@ -35,4 +35,10 @@ test('closed monthly reports preserve original values through later advertising 
 test('September-to-October readings billed in November are due November 15 even if generated in October',()=>{
  const s=fixture();Object.assign(s.vcVendas[1],{dia:1,vencMeses:-1,refMeses:2});
  const m=B.build(s,'11/2026','c1'),water=m.sales.find(v=>v.id==='agua');assert.equal(m.agua.competencia,'10/2026');assert.equal(water.venc,'2026-11-15');assert.equal(water.motivo,'CONSUMO 09/2026');
+});
+
+
+test('SGQ respects the configured template order independently of advertising insertion order',()=>{
+ const s=fixture();s.CFG.vcRelatorios.cadastros.c1.portas.ad.ordem=2;s.CFG.vcRelatorios.cadastros.c1.portas.other={tipo:'CUSTA',unidade:'601',nome:'Outro titular de teste',ordem:1};s.anuncios.push({id:'other',condoId:'c1',status:'Ativo',empresa:'Outro anúncio de teste',valorMensal:200});
+ assert.deepEqual(B.build(s,'11/2026','c1').sgq.map(l=>l.unidade),['601','501','M01']);
 });
