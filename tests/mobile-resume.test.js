@@ -228,3 +228,15 @@ test('Fernanda confirms cleaning stock and Alef receives suggestions, saves quan
  w.localStorage.setItem('grc.cleaning.draft.u2.fake','private draft');w.cleaningDiscard();assert.equal(w.localStorage.getItem('grc.cleaning.draft.u2.fake'),null);
  assert.deepEqual(errors,[]);await settle(w);w.close();saved={};
 });
+
+test('billing workflow renders populated mobile steps, preserves selected competence and keeps SGQ independent of pending ADM repasse',async()=>{
+ saved={};failure='';const {w,errors}=await open(360);await until(()=>w.eval('AUTH.ready&&!AUTH.initializing'),'Profiles');w.document.querySelector('#loginPass').value=password;await w.doLogin();await settle(w);
+ w.eval(`vcUnidades=[{id:'m',condoId:'c1',servico:'agua',tipo:'CUSTA',unidade:'LOJA M01',nome:'Titular de teste',ativo:true}];vcCiclos=[{id:'w',condoId:'c1',servico:'agua',competencia:'10/2026',valorFatura:100,consumoFatura:10,linhas:[{unidadeId:'m',unidade:'LOJA M01',nome:'Titular de teste',tipo:'CUSTA',anterior:100,atual:102}]}];vcVendas=[{id:'v',condoId:'c1',origem:'variavel',unidade:'Repasse de teste',motivo:'REPASSE',ativo:true,valores:{}}];anuncios=[];BILLING.month='11/2026';`);
+ for(const width of [360,390,430]){w.innerWidth=width;for(const tab of ['resumo','medicoes','faturamento','sgq','cadastros']){w.eval(`BILLING.tab='${tab}'`);w.go('vendascustas');assert.ok(w.document.querySelector('.billing'),tab);assert.match(w.document.querySelector('.billing').textContent,/11\/2026|Cadastros/);}}
+ w.billingTab('sgq');assert.equal(w.document.querySelector('.billing-table tbody tr td').textContent,'M01');assert.equal(w.document.querySelector('button[onclick*="billingExport"]').disabled,false);
+ w.billingTab('faturamento');assert.equal(w.document.querySelector('button[onclick*="billingExport"]').disabled,true);assert.match(w.document.querySelector('.billing-notice').textContent,/Repasse de teste/);
+ w.billingVariable('v','0,00');await pause(30);assert.equal(w.eval("vcVendas[0].valores['11/2026']"),0);
+ w.billingTab('medicoes');w.billingSelectCycle('agua','w');assert.equal(w.eval("CFG.vcRelatorios.meses.c1['11/2026'].aguaId"),'w');assert.equal(w.eval('BILLING.month'),'11/2026');
+ w.vcFormVenda('v');assert.equal(w.document.querySelector('#vvTipo').value,'VENDA');w.closeModal();w.billingSetup();assert.ok(w.document.querySelector('[data-billing-shop="m"]'));w.closeModal();
+ assert.deepEqual(errors,[]);await settle(w);w.close();
+});
