@@ -22,7 +22,7 @@ Política `scoped-2026-10-30`, banco `DB_VER=2`.
 - O módulo separado Brigada e manutenção foi retirado. Seus registros antigos são preservados em arquivo somente para Maciel, sem novas ações.
 - A API protege resolução e conferência contra alterações por outros perfis e clientes antigos (manager-review-v2).
 - As pendências permanecem nos meses seguintes até a conferência de Maciel.
-- Cache grc-v35-limpeza-retomada; backup integral mantém 13 tabelas.
+- Cache grc-v36-vendas-custas-sgq; backup integral mantém 13 tabelas.
 
 ## Executar
 
@@ -63,3 +63,7 @@ com uma alteração visual. Validar as rotinas em aparelhos reais com a equipe.
 - Sugestão máximo(0, ideal - estoque); quantidades de compra inteiras, ajuste manual, preço editável e PDF real com ou sem preços. PDF exige pedido salvo e finalizado.
 - Meses iniciados preservam catálogo/preços próprios; reajuste do cadastro só vale nos próximos meses. Concorrência retorna 409 sem sobrescrever.
 - Backup privado inclui cleaning_record (13 tabelas); backup operacional antigo não inclui este módulo.
+
+
+## Vendas e custas SGQ — 10/11/2026
+O módulo usa competência mensal, seleção explícita de ciclos, faturamento ADM e custas SGQ automáticas de água das lojas M e publicidade vinculada. Os relatórios Excel e PDF seguem as estruturas dos modelos do condomínio. Pendências impedem emissão; a API usa a versão salva e o escopo autorizado. O fechamento mensal preserva valores anteriores contra reajustes futuros e permite reabertura auditada. Dados reais e vínculos permanecem exclusivamente na base privada. Ver detalhes em AGENTS.md.
