@@ -1287,6 +1287,9 @@ body.crit-open{overflow:hidden}
 <script src="/workflow.js"></script>
 <link rel="stylesheet" href="/cleaning.css">
 <script src="/cleaning.js"></script>
+<link rel="stylesheet" href="/billing.css">
+<script src="/billing-model.js"></script>
+<script src="/billing.js"></script>
 <script src="/mobile.js" defer></script>
 </head>
 <body>
@@ -7455,14 +7458,11 @@ function vcTaxa(c){
 }
 function vcValorUnit(c){ return Math.round(vcTaxa(c)*100)/100 }
 function vcConsumoLinha(l){
-  if(l.atual===null||l.atual===undefined||l.atual==='') return null;
-  const a=Number(l.anterior)||0, b=Number(l.atual);
-  return Math.round((b-a)*100)/100;
+  return GRCBilling.consumption(l);
 }
 function vcValorLinha(c,l){
   const cons=vcConsumoLinha(l);
-  if(cons===null) return null;
-  return Math.round(cons*vcTaxa(c)*100)/100;
+  return GRCBilling.charge(c,l,CFG);
 }
 function vcTotais(c){
   const un=vcValorUnit(c); let venda=0,custa=0,total=0,cons=0,medidos=0,pend=0,semFoto=0;
@@ -8495,20 +8495,11 @@ function vcCicloMeses(v){
   if(v.refMeses!==null&&v.refMeses!==undefined) return Math.max(0,v.refMeses-1);
   return 1;
 }
-/* Acha o ciclo de medição do lançamento. Preferência: o mês exato da regra;
-   se ainda não existir, usa a medição mais recente já lançada (nunca deixa em branco). */
+/* Exige o período configurado: nunca substituir por outro mês silenciosamente. */
 function vcCicloVenda(v,comp){
   const alvo=compSub(comp,vcCicloMeses(v));
-  const tem=c=>(c.linhas||[]).some(l=>l.unidadeId===v.unidadeId&&l.atual!==null&&l.atual!==undefined);
-  const cands=vcCiclos.filter(c=>c.servico===v.origem&&c.condoId===v.condoId&&tem(c));
-  if(!cands.length) return {ciclo:null,alvo,exato:false};
-  const ex=cands.find(c=>c.competencia===alvo);
-  if(ex) return {ciclo:ex,alvo,exato:true};
-  const rec=cands.filter(c=>compKey(c.competencia)<=compKey(comp))
-    .sort((a,b)=>compKey(b.competencia).localeCompare(compKey(a.competencia)))[0];
-  if(rec) return {ciclo:rec,alvo,exato:false};
-  const pos=cands.slice().sort((a,b)=>compKey(b.competencia).localeCompare(compKey(a.competencia)))[0];
-  return {ciclo:pos,alvo,exato:false};
+  const ciclo=vcCiclos.find(c=>c.servico===v.origem&&c.condoId===v.condoId&&c.competencia===alvo&&(c.linhas||[]).some(l=>l.unidadeId===v.unidadeId&&GRCBilling.consumption(l)!==null))||null;
+  return {ciclo,alvo,exato:!!ciclo};
 }
 // valor: fixo repete · água/energia vem do rateio · variável vem do que foi digitado
 function vcValorVenda(v,comp){
@@ -8544,13 +8535,13 @@ function vcSalvarVenda(id,dados){
     vencMeses:Number($('#vvVenc')?$('#vvVenc').value:0)||0,
     periodoMeses:($('#vvPer')&&$('#vvPer').value!=='')?Number($('#vvPer').value):null,
     cicloMeses:($('#vvCiclo')&&$('#vvCiclo').value!=='')?Number($('#vvCiclo').value):null,
-    unidadeId:$('#vvLink')?$('#vvLink').value:'',tipo:'VENDA',ativo:$('#vvAtivo').checked};
+    unidadeId:$('#vvLink')?$('#vvLink').value:'',tipo:$('#vvTipo')?$('#vvTipo').value:'VENDA',ativo:$('#vvAtivo').checked};
   if(!o.unidade||!o.motivo) return toast('Informe a unidade e o motivo.');
   if((o.origem==='agua'||o.origem==='energia')&&!o.unidadeId)
     return toast('Escolha a unidade medida de onde vem o consumo.');
   if(id){ const v=vcVendas.find(x=>x.id===id); if(!v) return; Object.assign(v,o); toast('Lançamento atualizado.'); }
   else { vcVendas.push(Object.assign({id:uid('vv'),valores:{}},o)); toast('Lançamento criado.'); }
-  closeModal(); render();
+  save(); closeModal(); render();
 }
 function vcExcluirVenda(id){
   const v=vcVendas.find(x=>x.id===id); if(!v) return;
@@ -8961,7 +8952,7 @@ function vcFormVenda(id){
   const v=id?vcVendas.find(x=>x.id===id):null;
   const cid=condoFilter==='all'?'c1':condoFilter;
   const medidas=vcUnidades.filter(u=>u.condoId===cid);
-  $('#modalTitle').textContent=v?'Editar lançamento de venda':'Novo lançamento de venda';
+  $('#modalTitle').textContent=v?'Editar lançamento de faturamento':'Novo lançamento de faturamento';
   $('#modalBody').innerHTML=`
     <div class="f2">
       <div class="field"><label>Condomínio</label><select id="vvCondo">${condosDo('vendascustas').map(x=>`<option value="${x.id}" ${v?.condoId===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></div>
@@ -8969,6 +8960,7 @@ function vcFormVenda(id){
       <div class="field"><label>CNPJ</label><input id="vvCnpj" value="${esc(v?.cnpj||'')}" placeholder="00.000.000/0001-00"></div>
       <div class="field"><label>Dia do vencimento</label><input id="vvDia" type="number" min="1" max="31" value="${v?.dia||1}"></div>
     </div>
+    <div class="field"><label>Tipo</label><select id="vvTipo"><option value="VENDA" ${v?.tipo!=='CUSTA'?'selected':''}>VENDA</option><option value="CUSTA" ${v?.tipo==='CUSTA'?'selected':''}>CUSTA</option></select></div>
     <div class="field"><label>Motivo</label><input id="vvMotivo" value="${esc(v?.motivo||'')}" placeholder="ALUGUEL DO ESPAÇO"></div>
     <div class="f2">
       <div class="field"><label>Origem do valor</label><select id="vvOrigem" onchange="vcVendaOrigemMudou()">
@@ -8997,12 +8989,12 @@ function vcFormVenda(id){
           <option value="-1" ${v&&v.vencMeses===-1?'selected':''}>um mês antes (caso Capital Espresso)</option>
           <option value="1" ${v&&v.vencMeses===1?'selected':''}>um mês depois</option>
         </select></div>
-      <div class="field" id="vvCicloBox"><label>Medição usada</label>
+      <div class="field" id="vvCicloBox" style="display:none"><label>Medição usada (legado)</label>
         <select id="vvCiclo">
           <option value="" ${v&&(v.cicloMeses===null||v.cicloMeses===undefined)?'selected':''}>seguir a regra padrão</option>
           ${[0,1,2,3,4,5].map(n=>`<option value="${n}" ${v&&v.cicloMeses===n?'selected':''}>ciclo de ${n===0?'o próprio mês':n+' mês(es) antes'}</option>`).join('')}
         </select>
-        <div class="t-sub">O rótulo é o mês anterior ao da medição, então o ciclo fica 1 mês à frente do texto.</div></div>
+        <div class="t-sub">Nos novos relatórios, os ciclos são escolhidos na aba Medições. O motivo de água e energia cita o mês anterior ao ciclo escolhido.</div></div>
     </div>
     <div class="check"><input type="checkbox" id="vvAtivo" ${v?(v.ativo!==false?'checked':''):'checked'}>
       <div style="flex:1"><div class="ct">Lançamento ativo</div><div class="t-sub">Entra na planilha de todo mês</div></div></div>`;
@@ -9097,7 +9089,8 @@ function vcViewUnidades(){
         `${esc(u.unidade)} <button class="btn ghost sm" onclick="vcReativar('${u.id}')">reativar</button>`).join(' · ')}</div>`:''})()}
   </div>`;
 }
-function viewVendasCustas(){
+function viewVendasCustas(){ return billingView(); }
+function viewVendasCustasLegacy(){
   const cid=condoFilter==='all'?'c1':condoFilter;
   const cics=vcCiclosDo(vcTab,cid);
   if(vcCicloAtivo&&!cics.some(c=>c.id===vcCicloAtivo)) vcCicloAtivo=null;
