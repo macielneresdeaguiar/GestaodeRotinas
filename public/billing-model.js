@@ -29,13 +29,13 @@
    let valor=null,source='',motivo=v.motivo||'';
    if(v.origem==='fixo')valor=number(v.valor);
    else if(v.origem==='variavel')valor=number(v.valores?.[comp]);
-   else {const c=v.origem==='agua'?agua:energia;const l=c?.linhas?.find(l=>l.unidadeId===v.unidadeId);valor=l?charge(c,l,cfg):null;source=c?.competencia||'';if(c)motivo+=' '+shift(c.competencia,1);}
+   else {const c=v.origem==='agua'?agua:energia;const l=c?.linhas?.find(l=>l.unidadeId===v.unidadeId);valor=l?charge(c,l,cfg):null;source=c?.competencia||'';if(c)motivo+=' '+(present(v.refMeses)?shift(comp,Number(v.refMeses)):shift(c.competencia,1));}
    if(!['agua','energia'].includes(v.origem)){
     if(present(v.periodoMeses)){const per=shift(comp,Number(v.periodoMeses)),[m,y]=per.split('/').map(Number);motivo+=` 01/${per} A ${new Date(Date.UTC(y,m,0)).getUTCDate()}/${per}`;}
     else if(present(v.refMeses))motivo+=' '+shift(comp,Number(v.refMeses));
    }
    if(valor===null||valor<0){valor=null;issues.push({kind:'adm',id:v.id,text:`${v.unidade}: falta ${v.origem==='variavel'?'informar o valor do mês':v.origem==='fixo'?'o valor fixo':'a leitura ou tarifa de '+v.origem}.`});}
-   return {id:v.id,unidade:v.unidade,cnpj:v.cnpj||'',motivo,venc:due(comp,v.dia,v.vencMeses),valor,tipo:v.tipo||'VENDA',origem:v.origem,source,item:v};
+   return {id:v.id,unidade:v.unidade,cnpj:v.cnpj||'',motivo,venc:['agua','energia'].includes(v.origem)?due(comp,catalog.diaCustas||15):due(comp,v.dia,v.vencMeses),valor,tipo:v.tipo||'VENDA',origem:v.origem,source,item:v};
   });
   const sgq=[],linkedSales=new Set();
   for(const u of (s.vcUnidades||[]).filter(u=>u.condoId===cid&&u.servico==='agua'&&u.ativo!==false&&u.tipo==='CUSTA'&&shop(u.unidade)&&catalog.lojas?.[u.id]?.incluir!==false))if(!water.some(l=>l.unidadeId===u.id))issues.push({kind:'todos',text:`${u.unidade}: unidade cadastrada sem linha no ciclo de água selecionado.`});
